@@ -5,7 +5,9 @@ import {
   FALLBACK_TAGS,
   TAG_TRANSLATIONS,
 } from "../data/fallbackDreams.js";
+import { getHtmlLang, LANGUAGE_OPTIONS } from "../lib/language.js";
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient.js";
+import { collectRecordForUser, saveRecordForUser } from "../lib/recordsService.js";
 
 const CATEGORY_STYLES = {
   Environment:
@@ -35,6 +37,12 @@ const CATEGORY_LABELS = {
     Entities: "實體",
     Anomalies: "異常",
   },
+  es: {
+    All: "Todas las categorías",
+    Environment: "Entorno",
+    Entities: "Entidades",
+    Anomalies: "Anomalías",
+  },
 };
 
 const UI_COPY = {
@@ -51,6 +59,7 @@ const UI_COPY = {
     languageLabel: "Switch interface language",
     englishLabel: "English interface",
     chineseLabel: "Traditional Chinese interface",
+    spanishLabel: "Spanish interface",
     heroKicker: "Classified Research Interface // Collective Dream Logs",
     heroTitle: "Collective Dream Database",
     heroText:
@@ -91,6 +100,9 @@ const UI_COPY = {
     generatedImageAlt: "Generated visual for dream titled",
     visualHash: "Visual hash",
     signalCoherence: "Signal coherence",
+    collectDream: "Collect",
+    collectedDream: "Collected",
+    signInToCollect: "Sign in to collect",
   },
   zh: {
     documentTitle: "集體夢境資料庫",
@@ -105,6 +117,7 @@ const UI_COPY = {
     languageLabel: "切換介面語言",
     englishLabel: "英文介面",
     chineseLabel: "繁體中文介面",
+    spanishLabel: "西班牙文介面",
     heroKicker: "機密研究介面 // 集體夢境紀錄",
     heroTitle: "集體夢境資料庫",
     heroText:
@@ -144,13 +157,83 @@ const UI_COPY = {
     generatedImageAlt: "夢境生成視覺，標題為",
     visualHash: "視覺雜湊",
     signalCoherence: "訊號一致性",
+    collectDream: "收藏",
+    collectedDream: "已收藏",
+    signInToCollect: "登入後可收藏",
+  },
+  es: {
+    documentTitle: "Base de Sueños Colectivos",
+    homeLabel: "Inicio de la Base de Sueños Colectivos",
+    terminalName: "Terminal de Observación de Sueños",
+    mobileDatabase: "Base",
+    mobileSubmit: "Enviar",
+    globalDatabase: "Base global",
+    submitObservation: "Enviar observación",
+    searchLabel: "Buscar observaciones de sueños",
+    searchPlaceholder: "Buscar sueños, pseudo-ID, anomalías...",
+    languageLabel: "Cambiar idioma de la interfaz",
+    englishLabel: "Interfaz en inglés",
+    chineseLabel: "Interfaz en chino tradicional",
+    spanishLabel: "Interfaz en español",
+    heroKicker: "Interfaz de investigación clasificada // Registros colectivos",
+    heroTitle: "Base de Sueños Colectivos",
+    heroText:
+      "Las observaciones anónimas de sueños se organizan en una ontología de entornos, entidades y anomalías. La interfaz permite una lectura visual rápida sin perder la estructura sobria de un archivo de investigación.",
+    accessLabel: "Acceso",
+    accessValue: "Anónimo",
+    datasetLabel: "Datos",
+    visibleLabel: "Visible",
+    anomalyFiltersLabel: "Filtros de anomalía",
+    loadStates: {
+      loading: "Conectando con Supabase",
+      live: "Datos activos de Supabase",
+      fallback: "Datos locales de respaldo",
+    },
+    loadError:
+      "Supabase devolvió un error, por eso la interfaz muestra los datos locales:",
+    schemaFocus: "Enfoque del Esquema",
+    anomalySearch: "Búsqueda por etiquetas",
+    ontologyConsistency: "Consistencia ontológica",
+    identityExposure: "Exposición de identidad",
+    databaseNote: "Nota de base de datos",
+    databaseNoteText:
+      "La tabla de unión usa un índice inverso sobre tag_id y dream_id, así las consultas de anomalías pueden encontrar registros sin escanear todo el archivo.",
+    filterTitle: "Filtrado Avanzado",
+    filterText:
+      "Filtra por categoría ontológica o combina etiquetas específicas. Coincidir todo sirve para investigación precisa; coincidir cualquiera sirve para exploración.",
+    matchAll: "Coincidir todo",
+    matchAny: "Cualquiera",
+    categorySelectLabel: "Filtrar etiquetas por categoría",
+    sortSelectLabel: "Ordenar sueños",
+    sortCoherence: "Orden: Coherencia",
+    sortNewest: "Orden: Más reciente",
+    sortTitle: "Orden: Título",
+    clearFilters: "Limpiar filtros",
+    noMatchesTitle: "No hay observaciones coincidentes",
+    noMatchesText:
+      "Quita una etiqueta, cambia a cualquiera o amplía la búsqueda para recuperar la señal.",
+    generatedImage: "Imagen generada",
+    generatedImageAlt: "Visual generado para el sueño titulado",
+    visualHash: "Hash visual",
+    signalCoherence: "Coherencia de señal",
+    collectDream: "Coleccionar",
+    collectedDream: "Coleccionado",
+    signInToCollect: "Inicia sesión para coleccionar",
   },
 };
 
 const INITIAL_LOAD_STATE = isSupabaseConfigured ? "loading" : "fallback";
 
-export default function CollectiveDreamDashboard() {
-  const [language, setLanguage] = useState("en");
+export default function CollectiveDreamDashboard({
+  language: selectedLanguage,
+  setLanguage: setSelectedLanguage,
+  currentUser,
+  onOpenAuth,
+  onOpenRecord,
+}) {
+  const [localLanguage, setLocalLanguage] = useState("zh");
+  const language = selectedLanguage || localLanguage;
+  const setLanguage = setSelectedLanguage || setLocalLanguage;
   const [dreams, setDreams] = useState(FALLBACK_DREAMS);
   const [tags, setTags] = useState(FALLBACK_TAGS);
   const [query, setQuery] = useState("");
@@ -160,10 +243,10 @@ export default function CollectiveDreamDashboard() {
   const [sortMode, setSortMode] = useState("coherence");
   const [loadState, setLoadState] = useState(INITIAL_LOAD_STATE);
   const [loadError, setLoadError] = useState(null);
-  const copy = UI_COPY[language];
+  const copy = UI_COPY[language] || UI_COPY.zh;
 
   useEffect(() => {
-    document.documentElement.lang = language === "zh" ? "zh-Hant" : "en";
+    document.documentElement.lang = getHtmlLang(language);
     document.title = copy.documentTitle;
   }, [copy.documentTitle, language]);
 
@@ -263,7 +346,7 @@ export default function CollectiveDreamDashboard() {
         if (sortMode === "title") {
           return getDreamTitle(a, language).localeCompare(
             getDreamTitle(b, language),
-            language === "zh" ? "zh-Hant" : "en"
+            language === "zh" ? "zh-Hant" : language === "es" ? "es" : "en"
           );
         }
 
@@ -294,6 +377,7 @@ export default function CollectiveDreamDashboard() {
         language={language}
         setLanguage={setLanguage}
         copy={copy}
+        onOpenAuth={onOpenAuth}
       />
 
       <section className="relative mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
@@ -321,7 +405,13 @@ export default function CollectiveDreamDashboard() {
           copy={copy}
         />
 
-        <ObservationGrid dreams={filteredDreams} language={language} copy={copy} />
+        <ObservationGrid
+          dreams={filteredDreams}
+          language={language}
+          copy={copy}
+          currentUser={currentUser}
+          onOpenRecord={onOpenRecord}
+        />
       </section>
     </main>
   );
@@ -337,10 +427,13 @@ function normalizeDreamCard(row) {
     dream_id: row.dream_id || row.id,
     title: row.title,
     title_zh: row.title_zh || row.titleZh,
+    title_es: row.title_es || row.titleEs,
     excerpt,
     excerpt_zh: row.excerpt_zh || row.excerptZh,
+    excerpt_es: row.excerpt_es || row.excerptEs,
     dream_text: row.dream_text,
     dream_text_zh: row.dream_text_zh || row.dreamTextZh,
+    dream_text_es: row.dream_text_es || row.dreamTextEs,
     dream_date: row.dream_date,
     generated_image_url: row.generated_image_url,
     pseudo_id: row.pseudo_id,
@@ -350,28 +443,69 @@ function normalizeDreamCard(row) {
   };
 }
 
-function getDreamTranslation(dream) {
-  return DREAM_TRANSLATIONS[dream.dream_id] || {};
+function getDreamTranslation(dream, language) {
+  const translation = DREAM_TRANSLATIONS[dream.dream_id] || {};
+
+  if (language === "es") return translation.es || {};
+  if (language === "zh") return translation;
+
+  return {};
 }
 
 function getDreamTitle(dream, language) {
-  if (language !== "zh") return dream.title;
-  return getDreamTranslation(dream).title || dream.title_zh || dream.title;
+  if (language === "zh") {
+    return getDreamTranslation(dream, language).title || dream.title_zh || dream.title;
+  }
+
+  if (language === "es") {
+    return getDreamTranslation(dream, language).title || dream.title_es || dream.title;
+  }
+
+  return dream.title;
 }
 
 function getDreamExcerpt(dream, language) {
-  if (language !== "zh") return dream.excerpt;
-  return getDreamTranslation(dream).excerpt || dream.excerpt_zh || dream.excerpt;
+  if (language === "zh") {
+    return getDreamTranslation(dream, language).excerpt || dream.excerpt_zh || dream.excerpt;
+  }
+
+  if (language === "es") {
+    return getDreamTranslation(dream, language).excerpt || dream.excerpt_es || dream.excerpt;
+  }
+
+  return dream.excerpt;
 }
 
 function getDreamText(dream, language) {
-  if (language !== "zh") return dream.dream_text;
-  return getDreamTranslation(dream).dream_text || dream.dream_text_zh || dream.dream_text;
+  if (language === "zh") {
+    return (
+      getDreamTranslation(dream, language).dream_text ||
+      dream.dream_text_zh ||
+      dream.dream_text
+    );
+  }
+
+  if (language === "es") {
+    return (
+      getDreamTranslation(dream, language).dream_text ||
+      dream.dream_text_es ||
+      dream.dream_text
+    );
+  }
+
+  return dream.dream_text;
 }
 
 function getTagName(tag, language) {
-  if (language !== "zh") return tag.name;
-  return TAG_TRANSLATIONS[tag.slug]?.zh || tag.name_zh || tag.nameZh || tag.name;
+  if (language === "zh") {
+    return TAG_TRANSLATIONS[tag.slug]?.zh || tag.name_zh || tag.nameZh || tag.name;
+  }
+
+  if (language === "es") {
+    return TAG_TRANSLATIONS[tag.slug]?.es || tag.name_es || tag.nameEs || tag.name;
+  }
+
+  return tag.name;
 }
 
 function getCategoryLabel(category, language) {
@@ -389,7 +523,7 @@ function BackgroundField() {
   );
 }
 
-function TopNav({ query, setQuery, language, setLanguage, copy }) {
+function TopNav({ query, setQuery, language, setLanguage, copy, onOpenAuth }) {
   return (
     <nav className="sticky top-0 z-40 border-b border-cyan-300/10 bg-black/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
@@ -412,13 +546,13 @@ function TopNav({ query, setQuery, language, setLanguage, copy }) {
 
           <div className="flex gap-2 lg:hidden">
             <NavButton active>{copy.mobileDatabase}</NavButton>
-            <NavButton>{copy.mobileSubmit}</NavButton>
+            <NavButton onClick={onOpenAuth}>{copy.mobileSubmit}</NavButton>
           </div>
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
           <NavButton active>{copy.globalDatabase}</NavButton>
-          <NavButton>{copy.submitObservation}</NavButton>
+          <NavButton onClick={onOpenAuth}>{copy.submitObservation}</NavButton>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:w-[34rem]">
@@ -441,11 +575,6 @@ function TopNav({ query, setQuery, language, setLanguage, copy }) {
 }
 
 function LanguageToggle({ language, setLanguage, copy }) {
-  const options = [
-    { value: "en", label: "En", title: copy.englishLabel },
-    { value: "zh", label: "中", title: copy.chineseLabel },
-  ];
-
   return (
     <div
       className="relative flex h-11 shrink-0 items-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-1 shadow-[0_0_24px_rgba(34,211,238,.16)]"
@@ -454,15 +583,21 @@ function LanguageToggle({ language, setLanguage, copy }) {
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
 
-      {options.map((option) => {
+      {LANGUAGE_OPTIONS.map((option) => {
         const active = language === option.value;
+        const title =
+          option.value === "zh"
+            ? copy.chineseLabel
+            : option.value === "es"
+              ? copy.spanishLabel
+              : copy.englishLabel;
 
         return (
           <button
             key={option.value}
             type="button"
             aria-pressed={active}
-            title={option.title}
+            title={title}
             onClick={() => setLanguage(option.value)}
             className={[
               "relative z-10 flex h-8 min-w-9 items-center justify-center rounded-lg px-2 font-mono text-xs font-bold transition",
@@ -581,10 +716,10 @@ function FilterPanel({
             className="rounded-full border border-white/10 bg-black/40 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-200 outline-none transition focus:border-cyan-300/40 focus:ring-2 focus:ring-cyan-300/20"
             aria-label={copy.categorySelectLabel}
           >
-            <option value="All">{CATEGORY_LABELS[language].All}</option>
-            <option value="Environment">{CATEGORY_LABELS[language].Environment}</option>
-            <option value="Entities">{CATEGORY_LABELS[language].Entities}</option>
-            <option value="Anomalies">{CATEGORY_LABELS[language].Anomalies}</option>
+            <option value="All">{getCategoryLabel("All", language)}</option>
+            <option value="Environment">{getCategoryLabel("Environment", language)}</option>
+            <option value="Entities">{getCategoryLabel("Entities", language)}</option>
+            <option value="Anomalies">{getCategoryLabel("Anomalies", language)}</option>
           </select>
 
           <select
@@ -639,7 +774,7 @@ function FilterPanel({
   );
 }
 
-function ObservationGrid({ dreams, language, copy }) {
+function ObservationGrid({ dreams, language, copy, currentUser, onOpenRecord }) {
   if (dreams.length === 0) {
     return (
       <section className="rounded-3xl border border-dashed border-cyan-300/20 bg-cyan-300/5 p-10 text-center">
@@ -656,15 +791,68 @@ function ObservationGrid({ dreams, language, copy }) {
   return (
     <section className="columns-1 gap-5 sm:columns-2 xl:columns-3 2xl:columns-4">
       {dreams.map((dream) => (
-        <ObservationCard key={dream.dream_id} dream={dream} language={language} copy={copy} />
+        <ObservationCard
+          key={dream.dream_id}
+          dream={dream}
+          language={language}
+          copy={copy}
+          currentUser={currentUser}
+          onOpenRecord={onOpenRecord}
+        />
       ))}
     </section>
   );
 }
 
-function ObservationCard({ dream, language, copy }) {
+function ObservationCard({ dream, language, copy, currentUser, onOpenRecord }) {
+  const [collectStatus, setCollectStatus] = useState("");
+
+  async function handleCollect(event) {
+    event.stopPropagation();
+
+    if (!currentUser?.uid) {
+      setCollectStatus(copy.signInToCollect);
+      return;
+    }
+
+    const recordReference = {
+      ...dream,
+      id: dream.dream_id,
+      titleZh: getDreamTitle(dream, "zh"),
+      titleEs: getDreamTitle(dream, "es"),
+      textZh: getDreamText(dream, "zh"),
+      textEs: getDreamText(dream, "es"),
+      date: dream.dream_date,
+      pseudoId: dream.pseudo_id,
+    };
+
+    try {
+      await Promise.all([
+        saveRecordForUser(currentUser, recordReference),
+        collectRecordForUser(currentUser, recordReference),
+      ]);
+      setCollectStatus(copy.collectedDream);
+    } catch (error) {
+      setCollectStatus(error.message);
+    }
+  }
+
   return (
-    <article className="group mb-5 inline-block w-full break-inside-avoid overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(34,211,238,.04),0_18px_60px_rgba(0,0,0,.35)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_0_46px_rgba(34,211,238,.12)]">
+    <article
+      onClick={() =>
+        onOpenRecord?.({
+          ...dream,
+          id: dream.dream_id,
+          titleZh: getDreamTitle(dream, "zh"),
+          titleEs: getDreamTitle(dream, "es"),
+          textZh: getDreamText(dream, "zh"),
+          textEs: getDreamText(dream, "es"),
+          date: dream.dream_date,
+          pseudoId: dream.pseudo_id,
+        })
+      }
+      className="group mb-5 inline-block w-full cursor-pointer break-inside-avoid overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(34,211,238,.04),0_18px_60px_rgba(0,0,0,.35)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_0_46px_rgba(34,211,238,.12)]"
+    >
       <ObservationThumbnail dream={dream} language={language} copy={copy} />
 
       <div className="p-5">
@@ -703,6 +891,13 @@ function ObservationCard({ dream, language, copy }) {
               style={{ width: `${dream.signal_coherence}%` }}
             />
           </div>
+          <button
+            type="button"
+            onClick={handleCollect}
+            className="mt-4 w-full rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/15"
+          >
+            {collectStatus || copy.collectDream}
+          </button>
         </div>
       </div>
     </article>
@@ -758,10 +953,11 @@ function ObservationThumbnail({ dream, language, copy }) {
   );
 }
 
-function NavButton({ children, active = false }) {
+function NavButton({ children, active = false, onClick }) {
   return (
-    <a
-      href="#"
+    <button
+      type="button"
+      onClick={onClick}
       className={[
         "rounded-full px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] transition",
         active
@@ -770,7 +966,7 @@ function NavButton({ children, active = false }) {
       ].join(" ")}
     >
       {children}
-    </a>
+    </button>
   );
 }
 

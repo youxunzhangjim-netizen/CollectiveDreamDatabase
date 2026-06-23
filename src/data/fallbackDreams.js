@@ -1,18 +1,23 @@
 export const TAG_TRANSLATIONS = {
   "cyberpunk-city": {
     zh: "賽博龐克城市",
+    es: "Ciudad cyberpunk",
   },
   "endless-water": {
     zh: "無盡水域",
+    es: "Aguas infinitas",
   },
   "non-human": {
     zh: "非人類",
+    es: "No humano",
   },
   "gravity-reversal": {
     zh: "重力反轉",
+    es: "Inversión de gravedad",
   },
   "time-stop": {
     zh: "時間停止",
+    es: "Tiempo detenido",
   },
 };
 
@@ -23,6 +28,13 @@ export const DREAM_TRANSLATIONS = {
       "觀測者站在一條小巷裡，雨水從路面往上爬升。每一滴雨都映出同一座高塔的不同版本。",
     dream_text:
       "觀測者站在一條小巷裡，雨水從路面往上爬升。每一滴雨都映出同一座高塔的不同版本。行人沒有面孔地移動，交通號誌以不可能的順序閃爍。",
+    es: {
+      title: "Lluvia de neón ascendiendo desde la calle",
+      excerpt:
+        "El observador estaba en un callejón donde la lluvia subía desde el pavimento. Cada gota reflejaba una versión distinta de la misma torre.",
+      dream_text:
+        "El observador estaba en un callejón donde la lluvia subía desde el pavimento. Cada gota reflejaba una versión distinta de la misma torre. Los peatones avanzaban sin rostro y los semáforos parpadeaban en una secuencia imposible.",
+    },
   },
   "20000000-0000-4000-8000-000000000002": {
     title: "沒有海岸線的海",
@@ -30,6 +42,13 @@ export const DREAM_TRANSLATIONS = {
       "一片黑色海洋延伸在紫色天空下。受試者漂浮在水面之上，無法判斷表面究竟是液體還是玻璃。",
     dream_text:
       "一片黑色海洋延伸在紫色天空下。受試者漂浮在水面之上，無法判斷表面究竟是液體還是玻璃。海浪底下有個聲音反覆念出同一組座標。",
+    es: {
+      title: "El océano sin línea de costa",
+      excerpt:
+        "Un mar negro se extendía bajo un cielo violeta. La persona flotaba sobre el agua sin saber si la superficie era líquido o vidrio.",
+      dream_text:
+        "Un mar negro se extendía bajo un cielo violeta. La persona flotaba sobre el agua sin saber si la superficie era líquido o vidrio. Una voz bajo las olas repetía las mismas coordenadas.",
+    },
   },
   "20000000-0000-4000-8000-000000000003": {
     title: "車站時鐘拒絕前進",
@@ -37,6 +56,13 @@ export const DREAM_TRANSLATIONS = {
       "火車站裡擠滿人群，但每位乘客都凍結在動作之間。只有車站時鐘像是活著，在玻璃後方輕輕呼吸。",
     dream_text:
       "火車站裡擠滿人群，但每位乘客都凍結在動作之間。只有車站時鐘像是活著，在玻璃後方輕輕呼吸。觀測者不認識任何人，卻知道每一個名字。",
+    es: {
+      title: "El reloj de la estación se negó a avanzar",
+      excerpt:
+        "La estación estaba llena, pero cada pasajero quedó congelado entre gestos. Solo el reloj parecía vivo, respirando detrás del vidrio.",
+      dream_text:
+        "La estación estaba llena, pero cada pasajero quedó congelado entre gestos. Solo el reloj parecía vivo, respirando detrás del vidrio. El observador no reconocía a nadie y aun así sabía todos los nombres.",
+    },
   },
   "20000000-0000-4000-8000-000000000004": {
     title: "懸在水下的城市",
@@ -44,6 +70,13 @@ export const DREAM_TRANSLATIONS = {
       "城市倒掛在透明海洋之下。車輛沿著橋樑底面行駛，魚群從辦公室窗戶之間穿過。",
     dream_text:
       "城市倒掛在透明海洋之下。車輛沿著橋樑底面行駛，魚群從辦公室窗戶之間穿過。觀測者確信這個場景正被其他人歸檔。",
+    es: {
+      title: "Una ciudad suspendida bajo el agua",
+      excerpt:
+        "La ciudad colgaba invertida bajo un océano transparente. Los vehículos avanzaban por la parte inferior de los puentes.",
+      dream_text:
+        "La ciudad colgaba invertida bajo un océano transparente. Los vehículos avanzaban por la parte inferior de los puentes mientras los peces cruzaban entre ventanas de oficinas. El observador estaba seguro de que alguien archivaba la escena.",
+    },
   },
   "20000000-0000-4000-8000-000000000005": {
     title: "非人類檔案管理者",
@@ -51,6 +84,13 @@ export const DREAM_TRANSLATIONS = {
       "一個由瓷器與觸角構成的高大身影，要求觀測者依天氣分類記憶。檔案櫃裡裝滿潮濕的沙。",
     dream_text:
       "一個由瓷器與觸角構成的高大身影，要求觀測者依天氣分類記憶。檔案櫃裡裝滿潮濕的沙。每個抽屜都通往同一間淹水的公寓。",
+    es: {
+      title: "El archivista no humano",
+      excerpt:
+        "Una figura alta hecha de porcelana y antenas pidió al observador clasificar recuerdos por clima. Los archivadores contenían arena húmeda.",
+      dream_text:
+        "Una figura alta hecha de porcelana y antenas pidió al observador clasificar recuerdos por clima. Los archivadores contenían arena húmeda. Cada cajón se abría hacia el mismo apartamento inundado.",
+    },
   },
 };
 
