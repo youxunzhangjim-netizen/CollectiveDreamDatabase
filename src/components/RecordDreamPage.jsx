@@ -5,6 +5,10 @@ import {
   loginWithGoogle,
   signupWithEmail,
 } from "../lib/authService.js";
+import {
+  getKnownAuthErrorMessage,
+  reportAuthError,
+} from "../lib/authErrorMessages.js";
 import { auth } from "../lib/firebaseClient.js";
 import { LANGUAGE_OPTIONS } from "../lib/language.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
@@ -351,6 +355,9 @@ export default function RecordDreamPage({
   function getAuthErrorMessage(error) {
     if (!error?.code) return copy.authError;
 
+    const knownMessage = getKnownAuthErrorMessage(error, language);
+    if (knownMessage) return knownMessage;
+
     if (
       [
         "auth/operation-not-allowed",
@@ -388,16 +395,23 @@ export default function RecordDreamPage({
     setAuthLoading(action);
 
     try {
+      let credential = null;
+
       if (action === "login") {
-        await loginWithEmail(email, password);
+        credential = await loginWithEmail(email, password);
       } else if (action === "signup") {
-        await signupWithEmail(email, password);
+        credential = await signupWithEmail(email, password);
       } else {
-        await loginWithGoogle();
+        credential = await loginWithGoogle();
+      }
+
+      if (action === "google" && !credential?.user) {
+        return;
       }
 
       setAuthNotice(copy.linkedNotice);
     } catch (error) {
+      reportAuthError("recorder account link", error);
       setAuthError(getAuthErrorMessage(error));
     } finally {
       setAuthLoading("");

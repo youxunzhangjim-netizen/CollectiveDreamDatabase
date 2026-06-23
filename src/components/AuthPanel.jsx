@@ -5,6 +5,10 @@ import {
   loginWithGoogle,
   signupWithEmail,
 } from "../lib/authService.js";
+import {
+  getKnownAuthErrorMessage,
+  reportAuthError,
+} from "../lib/authErrorMessages.js";
 import { LANGUAGE_OPTIONS } from "../lib/language.js";
 
 const AUTH_COPY = {
@@ -169,6 +173,9 @@ export default function AuthPanel({
   function getAuthErrorMessage(error) {
     if (!error?.code) return copy.genericAuthError;
 
+    const knownMessage = getKnownAuthErrorMessage(error, language);
+    if (knownMessage) return knownMessage;
+
     const errorMessages = {
       "auth/operation-not-allowed": copy.authUnavailable,
       "auth/admin-restricted-operation": copy.authUnavailable,
@@ -210,8 +217,11 @@ export default function AuthPanel({
               ? await loginAnonymously()
               : await loginWithGoogle();
 
-      onAuthenticated?.(credential.user);
+      if (credential?.user) {
+        onAuthenticated?.(credential.user);
+      }
     } catch (error) {
+      reportAuthError("main access", error);
       setError(getAuthErrorMessage(error));
     } finally {
       setLoading("");
