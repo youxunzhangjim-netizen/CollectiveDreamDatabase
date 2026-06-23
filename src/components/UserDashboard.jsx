@@ -17,6 +17,7 @@ import {
   LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
+import { getTagLabel, RECORD_TAGS } from "../lib/tagTaxonomy.js";
 
 const DASHBOARD_COPY = {
   en: {
@@ -864,6 +865,12 @@ function normalizeRecordItem(item, index) {
     visibility: item.visibility || (item.isPublic === false ? "private" : "public"),
     tags: Array.isArray(item.tags) ? item.tags : [],
     emotionTags: Array.isArray(item.emotionTags) ? item.emotionTags : [],
+    styleTags: Array.isArray(item.styleTags) ? item.styleTags : [],
+    eraTags: Array.isArray(item.eraTags) ? item.eraTags : [],
+    weatherTags: Array.isArray(item.weatherTags) ? item.weatherTags : [],
+    dreamTypeTags: Array.isArray(item.dreamTypeTags) ? item.dreamTypeTags : [],
+    perspectiveTags: Array.isArray(item.perspectiveTags) ? item.perspectiveTags : [],
+    customTags: Array.isArray(item.customTags) ? item.customTags : [],
     adultContent: Boolean(item.adultContent || item.adult_content || item.isAdult || item.is_adult),
     minimumViewerAge: item.minimumViewerAge || item.minimum_viewer_age || 0,
     date: formatRecordDate(item.dream_date || item.date || item.createdAt || item.savedAt),
@@ -981,6 +988,10 @@ function getEmotionLabels(item, language) {
 }
 
 function getEmotionFallbackLabel(emotion, language) {
+  if (RECORD_TAGS[emotion]) {
+    return getTagLabel(RECORD_TAGS[emotion], language);
+  }
+
   const labels = {
     awe: { en: "Awe", zh: "敬畏", es: "Asombro" },
     fear: { en: "Fear", zh: "恐懼", es: "Miedo" },

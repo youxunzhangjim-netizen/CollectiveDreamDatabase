@@ -14,6 +14,11 @@ import {
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient.js";
 import { collectRecordForUser, saveRecordForUser } from "../lib/recordsService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
+import {
+  getCategoryLabel as getTaxonomyCategoryLabel,
+  RECORD_TAGS,
+  TAG_CATEGORY_ORDER,
+} from "../lib/tagTaxonomy.js";
 
 const CATEGORY_STYLES = {
   Environment:
@@ -24,6 +29,18 @@ const CATEGORY_STYLES = {
     "border-fuchsia-300/25 bg-fuchsia-300/10 text-fuchsia-100 shadow-[0_0_18px_rgba(217,70,239,.10)]",
   Emotions:
     "border-emerald-300/20 bg-emerald-300/10 text-emerald-100 shadow-[0_0_18px_rgba(110,231,183,.08)]",
+  Styles:
+    "border-sky-300/20 bg-sky-300/10 text-sky-100 shadow-[0_0_18px_rgba(125,211,252,.08)]",
+  Eras:
+    "border-indigo-300/20 bg-indigo-300/10 text-indigo-100 shadow-[0_0_18px_rgba(129,140,248,.08)]",
+  Weather:
+    "border-teal-300/20 bg-teal-300/10 text-teal-100 shadow-[0_0_18px_rgba(45,212,191,.08)]",
+  "Dream Types":
+    "border-rose-300/20 bg-rose-300/10 text-rose-100 shadow-[0_0_18px_rgba(251,113,133,.08)]",
+  Perspective:
+    "border-lime-300/20 bg-lime-300/10 text-lime-100 shadow-[0_0_18px_rgba(190,242,100,.08)]",
+  Custom:
+    "border-zinc-300/20 bg-zinc-300/10 text-zinc-100 shadow-[0_0_18px_rgba(212,212,216,.08)]",
   Content:
     "border-amber-300/25 bg-amber-300/10 text-amber-100 shadow-[0_0_18px_rgba(251,191,36,.10)]",
 };
@@ -33,44 +50,17 @@ const CATEGORY_DOT_STYLES = {
   Entities: "bg-violet-300",
   Anomalies: "bg-fuchsia-300",
   Emotions: "bg-emerald-300",
+  Styles: "bg-sky-300",
+  Eras: "bg-indigo-300",
+  Weather: "bg-teal-300",
+  "Dream Types": "bg-rose-300",
+  Perspective: "bg-lime-300",
+  Custom: "bg-zinc-300",
   Content: "bg-amber-300",
 };
 
-const CATEGORY_LABELS = {
-  en: {
-    All: "All categories",
-    Environment: "Environment",
-    Entities: "Entities",
-    Anomalies: "Anomalies",
-    Emotions: "Emotions",
-    Content: "Content safety",
-  },
-  zh: {
-    All: "全部類別",
-    Environment: "環境",
-    Entities: "實體",
-    Anomalies: "異常",
-    Emotions: "情緒",
-    Content: "內容安全",
-  },
-  es: {
-    All: "Todas las categorías",
-    Environment: "Entorno",
-    Entities: "Entidades",
-    Anomalies: "Anomalías",
-    Emotions: "Emociones",
-    Content: "Seguridad",
-  },
-};
-
-const CATEGORY_FILTERS = [
-  "All",
-  "Environment",
-  "Entities",
-  "Anomalies",
-  "Emotions",
-  "Content",
-];
+const CATEGORY_FILTERS = ["All", ...TAG_CATEGORY_ORDER];
+const DEFAULT_TAGS = Object.values(RECORD_TAGS);
 
 const UI_COPY = {
   en: {
@@ -323,7 +313,7 @@ export default function CollectiveDreamDashboard({
   const language = selectedLanguage || localLanguage;
   const setLanguage = setSelectedLanguage || setLocalLanguage;
   const [dreams, setDreams] = useState(FALLBACK_DREAMS);
-  const [tags, setTags] = useState(FALLBACK_TAGS);
+  const [tags, setTags] = useState(() => mergeTagSets(DEFAULT_TAGS, FALLBACK_TAGS));
   const [query, setQuery] = useState("");
   const [selectedTagSlugs, setSelectedTagSlugs] = useState([]);
   const [matchMode, setMatchMode] = useState("all");
@@ -371,7 +361,7 @@ export default function CollectiveDreamDashboard({
       }
 
       setDreams(dreamResponse.data.map(normalizeDreamCard));
-      setTags(tagResponse.data);
+      setTags(mergeTagSets(DEFAULT_TAGS, tagResponse.data));
       setLoadState("live");
     }
 
@@ -783,7 +773,21 @@ function getTagName(tag, language) {
 }
 
 function getCategoryLabel(category, language) {
-  return CATEGORY_LABELS[language]?.[category] || category;
+  return getTaxonomyCategoryLabel(category, language);
+}
+
+function mergeTagSets(...tagSets) {
+  const merged = new Map();
+
+  tagSets.flat().forEach((tag) => {
+    if (!tag?.slug) return;
+    merged.set(tag.slug, {
+      ...merged.get(tag.slug),
+      ...tag,
+    });
+  });
+
+  return [...merged.values()];
 }
 
 function buildResearchStats(dreams, visibleDreams, language) {

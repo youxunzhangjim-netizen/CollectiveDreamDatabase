@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebaseClient.js";
 import { LANGUAGE_OPTIONS, normalizeLanguage } from "./language.js";
+import { buildRecordTags, getTagSlugsByCategory } from "./tagTaxonomy.js";
 
 function requireFirestore() {
   if (!isFirebaseConfigured || !db) {
@@ -27,65 +28,6 @@ function mapRecordSnapshot(snapshot) {
     ...recordDoc.data(),
   }));
 }
-
-const RECORD_TAGS = {
-  awe: {
-    id: "emotion-awe",
-    category: "Emotions",
-    name: "Awe",
-    name_zh: "敬畏",
-    name_es: "Asombro",
-    slug: "awe",
-  },
-  fear: {
-    id: "emotion-fear",
-    category: "Emotions",
-    name: "Fear",
-    name_zh: "恐懼",
-    name_es: "Miedo",
-    slug: "fear",
-  },
-  calm: {
-    id: "emotion-calm",
-    category: "Emotions",
-    name: "Calm",
-    name_zh: "平靜",
-    name_es: "Calma",
-    slug: "calm",
-  },
-  grief: {
-    id: "emotion-grief",
-    category: "Emotions",
-    name: "Grief",
-    name_zh: "悲傷",
-    name_es: "Duelo",
-    slug: "grief",
-  },
-  desire: {
-    id: "emotion-desire",
-    category: "Emotions",
-    name: "Desire",
-    name_zh: "渴望",
-    name_es: "Deseo",
-    slug: "desire",
-  },
-  confusion: {
-    id: "emotion-confusion",
-    category: "Emotions",
-    name: "Confusion",
-    name_zh: "困惑",
-    name_es: "Confusion",
-    slug: "confusion",
-  },
-  "adult-content": {
-    id: "content-adult",
-    category: "Content",
-    name: "Adult content",
-    name_zh: "成人內容",
-    name_es: "Contenido adulto",
-    slug: "adult-content",
-  },
-};
 
 export async function fetchOwnedRecords(currentUser) {
   if (!currentUser?.uid) return [];
@@ -136,13 +78,18 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     recordIdentityMode === "account"
       ? profile?.avatarUrl || currentUser.photoURL || ""
       : "";
-  const emotionTags = Array.isArray(draft?.emotionTags)
-    ? draft.emotionTags.filter((tag) => RECORD_TAGS[tag])
-    : [];
-  const tagSlugs = adultContent
-    ? [...new Set([...emotionTags, "adult-content"])]
-    : [...new Set(emotionTags)];
-  const tags = tagSlugs.map((slug) => RECORD_TAGS[slug]).filter(Boolean);
+  const tags = buildRecordTags(
+    draft?.selectedTagSlugs || draft?.emotionTags || [],
+    draft?.customTagLabels || [],
+    adultContent
+  );
+  const emotionTags = getTagSlugsByCategory(tags, "Emotions");
+  const styleTags = getTagSlugsByCategory(tags, "Styles");
+  const eraTags = getTagSlugsByCategory(tags, "Eras");
+  const weatherTags = getTagSlugsByCategory(tags, "Weather");
+  const dreamTypeTags = getTagSlugsByCategory(tags, "Dream Types");
+  const perspectiveTags = getTagSlugsByCategory(tags, "Perspective");
+  const customTags = getTagSlugsByCategory(tags, "Custom");
   const languageFields = buildOriginalLanguageFields(
     originalLanguage,
     title,
@@ -186,6 +133,12 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     adultContent,
     minimumViewerAge: adultContent ? 18 : 0,
     emotionTags,
+    styleTags,
+    eraTags,
+    weatherTags,
+    dreamTypeTags,
+    perspectiveTags,
+    customTags,
     tags,
     anomaly_tag_slugs: tags
       .filter((tag) => tag.category === "Anomalies")
@@ -308,6 +261,16 @@ function normalizeRecordReference(record) {
       record?.minimumViewerAge ||
       record?.minimum_viewer_age ||
       (adultContent ? 18 : 0),
+    tags: Array.isArray(record?.tags) ? record.tags : [],
+    emotionTags: Array.isArray(record?.emotionTags) ? record.emotionTags : [],
+    styleTags: Array.isArray(record?.styleTags) ? record.styleTags : [],
+    eraTags: Array.isArray(record?.eraTags) ? record.eraTags : [],
+    weatherTags: Array.isArray(record?.weatherTags) ? record.weatherTags : [],
+    dreamTypeTags: Array.isArray(record?.dreamTypeTags) ? record.dreamTypeTags : [],
+    perspectiveTags: Array.isArray(record?.perspectiveTags)
+      ? record.perspectiveTags
+      : [],
+    customTags: Array.isArray(record?.customTags) ? record.customTags : [],
   };
 }
 

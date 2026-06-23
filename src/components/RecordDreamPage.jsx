@@ -8,8 +8,14 @@ import {
 import { LANGUAGE_OPTIONS } from "../lib/language.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import { createDreamRecord } from "../lib/recordsService.js";
-
-const EMOTION_OPTIONS = ["awe", "fear", "calm", "grief", "desire", "confusion"];
+import {
+  getCategoryLabel,
+  getTagLabel,
+  normalizeCustomTagLabel,
+  RECORDER_TAG_GROUPS,
+  RECORD_TAGS,
+  tagExists,
+} from "../lib/tagTaxonomy.js";
 
 const RECORD_COPY = {
   en: {
@@ -36,7 +42,12 @@ const RECORD_COPY = {
     originalLanguage: "Original language",
     ageAtDream: "Age at dream",
     agePlaceholder: "Optional",
-    emotionTags: "Emotion tags",
+    tagSectionTitle: "Dream tags",
+    customTags: "Custom tags",
+    customTagPlaceholder: "Add a missing tag",
+    addCustomTag: "Add tag",
+    duplicateTag: "A matching tag already exists.",
+    customTagHelp: "Add a custom tag only when the existing tags do not match the dream.",
     adultContent: "Includes adult content",
     recordIdentity: "Public recorder identity",
     recordAsAccount: "Show account",
@@ -82,14 +93,6 @@ const RECORD_COPY = {
       "Keep the original words in the language you used, then label that original language.",
       "Mark adult content so age limits can protect readers.",
     ],
-    emotions: {
-      awe: "Awe",
-      fear: "Fear",
-      calm: "Calm",
-      grief: "Grief",
-      desire: "Desire",
-      confusion: "Confusion",
-    },
   },
   zh: {
     documentTitle: "記錄夢境",
@@ -115,7 +118,12 @@ const RECORD_COPY = {
     originalLanguage: "原始語言",
     ageAtDream: "做夢時年齡",
     agePlaceholder: "選填",
-    emotionTags: "情緒標籤",
+    tagSectionTitle: "夢境標籤",
+    customTags: "自訂標籤",
+    customTagPlaceholder: "新增缺少的標籤",
+    addCustomTag: "新增標籤",
+    duplicateTag: "已經有相同或相近的標籤。",
+    customTagHelp: "只有在現有標籤不符合夢境時，才新增自訂標籤。",
     adultContent: "包含成人內容",
     recordIdentity: "公開記錄身分",
     recordAsAccount: "顯示帳戶",
@@ -159,14 +167,6 @@ const RECORD_COPY = {
       "保留你最初使用語言的原文，並標示原始語言。",
       "如果包含成人內容，請加上標記，讓年齡限制保護讀者。",
     ],
-    emotions: {
-      awe: "敬畏",
-      fear: "恐懼",
-      calm: "平靜",
-      grief: "悲傷",
-      desire: "渴望",
-      confusion: "困惑",
-    },
   },
   es: {
     documentTitle: "Registrar un Sueño",
@@ -192,7 +192,12 @@ const RECORD_COPY = {
     originalLanguage: "Idioma original",
     ageAtDream: "Edad en el sueño",
     agePlaceholder: "Opcional",
-    emotionTags: "Etiquetas emocionales",
+    tagSectionTitle: "Etiquetas del sueño",
+    customTags: "Etiquetas personalizadas",
+    customTagPlaceholder: "Añade una etiqueta faltante",
+    addCustomTag: "Añadir etiqueta",
+    duplicateTag: "Ya existe una etiqueta equivalente.",
+    customTagHelp: "Añade una etiqueta propia solo cuando las existentes no describen el sueño.",
     adultContent: "Incluye contenido adulto",
     recordIdentity: "Identidad pública",
     recordAsAccount: "Mostrar cuenta",
@@ -238,14 +243,6 @@ const RECORD_COPY = {
       "Conserva las palabras originales en el idioma que usaste y etiqueta ese idioma original.",
       "Marca el contenido adulto para que el límite de edad proteja a los lectores.",
     ],
-    emotions: {
-      awe: "Asombro",
-      fear: "Miedo",
-      calm: "Calma",
-      grief: "Duelo",
-      desire: "Deseo",
-      confusion: "Confusión",
-    },
   },
 };
 
@@ -266,7 +263,10 @@ export default function RecordDreamPage({
   const [originalLanguage, setOriginalLanguage] = useState(language || "zh");
   const [ageAtDream, setAgeAtDream] = useState("");
   const [adultContent, setAdultContent] = useState(false);
-  const [emotionTags, setEmotionTags] = useState([]);
+  const [selectedTagSlugs, setSelectedTagSlugs] = useState([]);
+  const [customTagText, setCustomTagText] = useState("");
+  const [customTagLabels, setCustomTagLabels] = useState([]);
+  const [tagNotice, setTagNotice] = useState("");
   const [recordIdentityMode, setRecordIdentityMode] = useState("anonymous");
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -293,12 +293,31 @@ export default function RecordDreamPage({
     }
   }, [accountBacked]);
 
-  function toggleEmotion(slug) {
-    setEmotionTags((current) =>
+  function toggleTag(slug) {
+    setSelectedTagSlugs((current) =>
       current.includes(slug)
         ? current.filter((item) => item !== slug)
         : [...current, slug]
     );
+  }
+
+  function addCustomTag() {
+    const label = normalizeCustomTagLabel(customTagText);
+
+    if (!label) return;
+
+    if (tagExists(label, customTagLabels)) {
+      setTagNotice(copy.duplicateTag);
+      return;
+    }
+
+    setCustomTagLabels((current) => [...current, label]);
+    setCustomTagText("");
+    setTagNotice("");
+  }
+
+  function removeCustomTag(label) {
+    setCustomTagLabels((current) => current.filter((item) => item !== label));
   }
 
   function getAuthErrorMessage(error) {
@@ -394,7 +413,8 @@ export default function RecordDreamPage({
           originalLanguage,
           ageAtDream,
           adultContent,
-          emotionTags,
+          selectedTagSlugs,
+          customTagLabels,
           recordIdentityMode,
         },
         profile
@@ -540,31 +560,66 @@ export default function RecordDreamPage({
                 </label>
               </div>
 
-              <div>
-                <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                  {copy.emotionTags}
+              <div className="space-y-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                  {copy.tagSectionTitle}
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {EMOTION_OPTIONS.map((slug) => {
-                    const active = emotionTags.includes(slug);
 
-                    return (
-                      <button
-                        key={slug}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => toggleEmotion(slug)}
-                        className={[
-                          "rounded-full border px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] transition",
-                          active
-                            ? "border-fuchsia-300/40 bg-fuchsia-300/15 text-fuchsia-100"
-                            : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
-                        ].join(" ")}
-                      >
-                        #{copy.emotions[slug]}
-                      </button>
-                    );
-                  })}
+                {RECORDER_TAG_GROUPS.map((group) => (
+                  <TagGroup
+                    key={group.category}
+                    group={group}
+                    language={language}
+                    selectedTagSlugs={selectedTagSlugs}
+                    onToggleTag={toggleTag}
+                  />
+                ))}
+
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    {copy.customTags}
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <input
+                      value={customTagText}
+                      onChange={(event) => {
+                        setCustomTagText(event.target.value);
+                        setTagNotice("");
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          addCustomTag();
+                        }
+                      }}
+                      placeholder={copy.customTagPlaceholder}
+                      className="min-w-0 flex-1 rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={addCustomTag}
+                      className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15"
+                    >
+                      {copy.addCustomTag}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-zinc-500">
+                    {tagNotice || copy.customTagHelp}
+                  </p>
+                  {customTagLabels.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {customTagLabels.map((label) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => removeCustomTag(label)}
+                          className="rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-red-300/40 hover:bg-red-400/10"
+                        >
+                          #{label} x
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -771,6 +826,39 @@ function SessionBadge({ copy, accountBacked }) {
         {accountBacked ? copy.accountEditable : copy.anonymousLocked}
       </p>
     </div>
+  );
+}
+
+function TagGroup({ group, language, selectedTagSlugs, onToggleTag }) {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-200/70">
+        {getCategoryLabel(group.category, language)}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {group.slugs.map((slug) => {
+          const active = selectedTagSlugs.includes(slug);
+          const tagData = RECORD_TAGS[slug];
+
+          return (
+            <button
+              key={slug}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onToggleTag(slug)}
+              className={[
+                "rounded-full border px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.14em] transition",
+                active
+                  ? "border-fuchsia-300/40 bg-fuchsia-300/15 text-fuchsia-100"
+                  : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+              ].join(" ")}
+            >
+              #{getTagLabel(tagData || slug, language)}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
