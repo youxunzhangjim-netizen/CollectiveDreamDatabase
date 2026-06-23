@@ -7,6 +7,11 @@ import UserDashboard from "./components/UserDashboard.jsx";
 import { useAuth } from "./hooks/useAuth.js";
 import { logout } from "./lib/authService.js";
 import {
+  getAppearanceFromStorage,
+  isSupportedAppearance,
+  saveAppearanceToStorage,
+} from "./lib/appearance.js";
+import {
   getHtmlLang,
   getLanguageFromStorage,
   isSupportedLanguage,
@@ -20,6 +25,7 @@ import { fetchRecordById } from "./lib/recordsService.js";
 
 export default function App() {
   const [language, setLanguageState] = useState(getLanguageFromStorage);
+  const [appearance, setAppearance] = useState(getAppearanceFromStorage);
   const [activeView, setActiveView] = useState("auth");
   const [lastListView, setLastListView] = useState("database");
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -28,6 +34,10 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = getHtmlLang(language);
   }, [language]);
+
+  useEffect(() => {
+    document.documentElement.dataset.appearance = appearance;
+  }, [appearance]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -79,6 +89,13 @@ export default function App() {
     }
   }
 
+  function handleAppearanceChange(nextAppearance) {
+    if (!isSupportedAppearance(nextAppearance)) return;
+
+    setAppearance(nextAppearance);
+    saveAppearanceToStorage(nextAppearance);
+  }
+
   async function handleSignOut() {
     await logout();
     setSelectedRecord(null);
@@ -115,70 +132,153 @@ export default function App() {
   }
 
   if (authLoading) {
-    return <AuthLoadingScreen language={language} />;
+    return (
+      <>
+        <AppearanceToggle
+          language={language}
+          appearance={appearance}
+          setAppearance={handleAppearanceChange}
+        />
+        <AuthLoadingScreen language={language} />
+      </>
+    );
   }
 
   if (activeView === "database") {
     return (
-      <CollectiveDreamDashboard
-        language={language}
-        setLanguage={handleLanguageChange}
-        currentUser={currentUser}
-        onOpenAuth={() => setActiveView(currentUser ? "dashboard" : "auth")}
-        onOpenRecorder={() => setActiveView("record")}
-        onOpenRecord={(record) => openDreamRecord(record, "database")}
-      />
+      <>
+        <AppearanceToggle
+          language={language}
+          appearance={appearance}
+          setAppearance={handleAppearanceChange}
+        />
+        <CollectiveDreamDashboard
+          language={language}
+          setLanguage={handleLanguageChange}
+          currentUser={currentUser}
+          onOpenAuth={() => setActiveView(currentUser ? "dashboard" : "auth")}
+          onOpenRecorder={() => setActiveView("record")}
+          onOpenRecord={(record) => openDreamRecord(record, "database")}
+        />
+      </>
     );
   }
 
   if (activeView === "record") {
     return (
-      <RecordDreamPage
-        language={language}
-        setLanguage={handleLanguageChange}
-        currentUser={currentUser}
-        onOpenDatabase={() => setActiveView("database")}
-        onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
-        onSubmitted={(record) => openDreamRecord(record, "record")}
-      />
+      <>
+        <AppearanceToggle
+          language={language}
+          appearance={appearance}
+          setAppearance={handleAppearanceChange}
+        />
+        <RecordDreamPage
+          language={language}
+          setLanguage={handleLanguageChange}
+          currentUser={currentUser}
+          onOpenDatabase={() => setActiveView("database")}
+          onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
+          onSubmitted={(record) => openDreamRecord(record, "record")}
+        />
+      </>
     );
   }
 
   if (selectedRecord && activeView === "dream") {
     return (
-      <DreamRecordPage
-        record={selectedRecord}
-        currentUser={currentUser}
-        language={language}
-        setLanguage={handleLanguageChange}
-        onBack={() => setActiveView(lastListView)}
-        onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
-      />
+      <>
+        <AppearanceToggle
+          language={language}
+          appearance={appearance}
+          setAppearance={handleAppearanceChange}
+        />
+        <DreamRecordPage
+          record={selectedRecord}
+          currentUser={currentUser}
+          language={language}
+          setLanguage={handleLanguageChange}
+          onBack={() => setActiveView(lastListView)}
+          onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
+        />
+      </>
     );
   }
 
   if (currentUser && activeView === "dashboard") {
     return (
-      <UserDashboard
-        language={language}
-        setLanguage={handleLanguageChange}
-        user={currentUser}
-        onSignOut={handleSignOut}
-        onOpenDatabase={() => setActiveView("database")}
-        onOpenRecorder={() => setActiveView("record")}
-        onOpenRecord={(record) => openDreamRecord(record, "dashboard")}
-      />
+      <>
+        <AppearanceToggle
+          language={language}
+          appearance={appearance}
+          setAppearance={handleAppearanceChange}
+        />
+        <UserDashboard
+          language={language}
+          setLanguage={handleLanguageChange}
+          user={currentUser}
+          onSignOut={handleSignOut}
+          onOpenDatabase={() => setActiveView("database")}
+          onOpenRecorder={() => setActiveView("record")}
+          onOpenRecord={(record) => openDreamRecord(record, "dashboard")}
+        />
+      </>
     );
   }
 
   return (
-    <AuthPanel
-      language={language}
-      setLanguage={handleLanguageChange}
-      onAuthenticated={handleAuthenticated}
-      onOpenDatabase={() => setActiveView("database")}
-      onOpenRecorder={() => setActiveView("record")}
-    />
+    <>
+      <AppearanceToggle
+        language={language}
+        appearance={appearance}
+        setAppearance={handleAppearanceChange}
+      />
+      <AuthPanel
+        language={language}
+        setLanguage={handleLanguageChange}
+        onAuthenticated={handleAuthenticated}
+        onOpenDatabase={() => setActiveView("database")}
+        onOpenRecorder={() => setActiveView("record")}
+      />
+    </>
+  );
+}
+
+function AppearanceToggle({ language, appearance, setAppearance }) {
+  const copy =
+    language === "zh"
+      ? { label: "切換外觀", morning: "晨", night: "夜" }
+      : language === "es"
+        ? { label: "Cambiar apariencia", morning: "Día", night: "Noche" }
+        : { label: "Switch appearance", morning: "Morning", night: "Night" };
+
+  return (
+    <div
+      className="fixed bottom-4 left-4 z-50 flex items-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-1 shadow-[0_0_24px_rgba(34,211,238,.16)] backdrop-blur"
+      role="group"
+      aria-label={copy.label}
+    >
+      {["morning", "night"].map((option) => {
+        const active = appearance === option;
+
+        return (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={active}
+            title={option === "morning" ? copy.morning : copy.night}
+            onClick={() => setAppearance(option)}
+            className={[
+              "min-h-8 min-w-10 rounded-lg px-3 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition",
+              active
+                ? "bg-cyan-200 text-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.25)]"
+                : "text-cyan-100 hover:bg-white/10 hover:text-cyan-50",
+            ].join(" ")}
+          >
+            {option === "morning" ? copy.morning : copy.night}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

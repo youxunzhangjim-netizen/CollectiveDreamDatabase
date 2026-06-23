@@ -39,6 +39,10 @@ const CATEGORY_STYLES = {
     "border-rose-300/20 bg-rose-300/10 text-rose-100 shadow-[0_0_18px_rgba(251,113,133,.08)]",
   Perspective:
     "border-lime-300/20 bg-lime-300/10 text-lime-100 shadow-[0_0_18px_rgba(190,242,100,.08)]",
+  "Psychological Observables":
+    "border-pink-300/20 bg-pink-300/10 text-pink-100 shadow-[0_0_18px_rgba(249,168,212,.08)]",
+  "Dream Analysis":
+    "border-blue-300/20 bg-blue-300/10 text-blue-100 shadow-[0_0_18px_rgba(147,197,253,.08)]",
   Custom:
     "border-zinc-300/20 bg-zinc-300/10 text-zinc-100 shadow-[0_0_18px_rgba(212,212,216,.08)]",
   Content:
@@ -55,6 +59,8 @@ const CATEGORY_DOT_STYLES = {
   Weather: "bg-teal-300",
   "Dream Types": "bg-rose-300",
   Perspective: "bg-lime-300",
+  "Psychological Observables": "bg-pink-300",
+  "Dream Analysis": "bg-blue-300",
   Custom: "bg-zinc-300",
   Content: "bg-amber-300",
 };

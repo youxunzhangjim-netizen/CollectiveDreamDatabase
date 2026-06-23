@@ -89,7 +89,12 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   const weatherTags = getTagSlugsByCategory(tags, "Weather");
   const dreamTypeTags = getTagSlugsByCategory(tags, "Dream Types");
   const perspectiveTags = getTagSlugsByCategory(tags, "Perspective");
-  const customTags = getTagSlugsByCategory(tags, "Custom");
+  const psychologicalObservableTags = getTagSlugsByCategory(
+    tags,
+    "Psychological Observables"
+  );
+  const dreamAnalysisTags = getTagSlugsByCategory(tags, "Dream Analysis");
+  const customTags = tags.filter((tag) => tag.custom).map((tag) => tag.slug);
   const languageFields = buildOriginalLanguageFields(
     originalLanguage,
     title,
@@ -138,6 +143,8 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     weatherTags,
     dreamTypeTags,
     perspectiveTags,
+    psychologicalObservableTags,
+    dreamAnalysisTags,
     customTags,
     tags,
     anomaly_tag_slugs: tags
@@ -269,6 +276,12 @@ function normalizeRecordReference(record) {
     dreamTypeTags: Array.isArray(record?.dreamTypeTags) ? record.dreamTypeTags : [],
     perspectiveTags: Array.isArray(record?.perspectiveTags)
       ? record.perspectiveTags
+      : [],
+    psychologicalObservableTags: Array.isArray(record?.psychologicalObservableTags)
+      ? record.psychologicalObservableTags
+      : [],
+    dreamAnalysisTags: Array.isArray(record?.dreamAnalysisTags)
+      ? record.dreamAnalysisTags
       : [],
     customTags: Array.isArray(record?.customTags) ? record.customTags : [],
   };
@@ -526,6 +539,31 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
       recordIdentityMode === "account" ? updates.creatorDisplayName || "" : "";
     metadata.creatorAvatarUrl =
       recordIdentityMode === "account" ? updates.creatorAvatarUrl || "" : "";
+  }
+
+  if ("selectedTagSlugs" in updates || "customTagLabels" in updates) {
+    const tags = buildRecordTags(
+      updates.selectedTagSlugs || [],
+      updates.customTagLabels || [],
+      Boolean(metadata.adultContent ?? updates.adultContent)
+    );
+
+    metadata.tags = tags;
+    metadata.emotionTags = getTagSlugsByCategory(tags, "Emotions");
+    metadata.styleTags = getTagSlugsByCategory(tags, "Styles");
+    metadata.eraTags = getTagSlugsByCategory(tags, "Eras");
+    metadata.weatherTags = getTagSlugsByCategory(tags, "Weather");
+    metadata.dreamTypeTags = getTagSlugsByCategory(tags, "Dream Types");
+    metadata.perspectiveTags = getTagSlugsByCategory(tags, "Perspective");
+    metadata.psychologicalObservableTags = getTagSlugsByCategory(
+      tags,
+      "Psychological Observables"
+    );
+    metadata.dreamAnalysisTags = getTagSlugsByCategory(tags, "Dream Analysis");
+    metadata.customTags = tags.filter((tag) => tag.custom).map((tag) => tag.slug);
+    metadata.anomaly_tag_slugs = tags
+      .filter((tag) => tag.category === "Anomalies")
+      .map((tag) => tag.slug);
   }
 
   await setDoc(doc(requireFirestore(), "Records", recordId), metadata, { merge: true });

@@ -8,6 +8,8 @@ export const TAG_CATEGORY_ORDER = [
   "Weather",
   "Dream Types",
   "Perspective",
+  "Psychological Observables",
+  "Dream Analysis",
   "Custom",
   "Content",
 ];
@@ -24,6 +26,8 @@ export const TAG_CATEGORY_LABELS = {
     Weather: "Weather",
     "Dream Types": "Dream types",
     Perspective: "Point of view",
+    "Psychological Observables": "Psychological observables",
+    "Dream Analysis": "Dream analysis",
     Custom: "Custom",
     Content: "Content safety",
   },
@@ -38,6 +42,8 @@ export const TAG_CATEGORY_LABELS = {
     Weather: "天氣",
     "Dream Types": "夢境類型",
     Perspective: "視角",
+    "Psychological Observables": "心理觀察項",
+    "Dream Analysis": "夢境分析觀察項",
     Custom: "自訂",
     Content: "內容安全",
   },
@@ -52,6 +58,8 @@ export const TAG_CATEGORY_LABELS = {
     Weather: "Clima",
     "Dream Types": "Tipos de sueño",
     Perspective: "Punto de vista",
+    "Psychological Observables": "Observables psicológicos",
+    "Dream Analysis": "Análisis del sueño",
     Custom: "Personalizadas",
     Content: "Seguridad",
   },
@@ -148,6 +156,42 @@ export const RECORD_TAGS = {
   "shifting-perspective": tag("perspective-shifting-perspective", "Perspective", "Shifting perspective", "視角轉換", "Perspectiva cambiante"),
   "observer-view": tag("perspective-observer-view", "Perspective", "Observer view", "旁觀視角", "Vista de observador"),
   "out-of-body": tag("perspective-out-of-body", "Perspective", "Out of body", "離體視角", "Fuera del cuerpo"),
+
+  "psychology-agency": tag("psychology-agency", "Psychological Observables", "Agency", "行動主導感", "Agencia"),
+  "psychology-control-loss": tag("psychology-control-loss", "Psychological Observables", "Loss of control", "失控感", "Pérdida de control"),
+  "psychology-vulnerability": tag("psychology-vulnerability", "Psychological Observables", "Vulnerability", "脆弱感", "Vulnerabilidad"),
+  "psychology-conflict": tag("psychology-conflict", "Psychological Observables", "Conflict", "衝突", "Conflicto"),
+  "psychology-intimacy": tag("psychology-intimacy", "Psychological Observables", "Intimacy", "親密感", "Intimidad"),
+  "psychology-separation": tag("psychology-separation", "Psychological Observables", "Separation", "分離", "Separación"),
+  "psychology-social-judgment": tag("psychology-social-judgment", "Psychological Observables", "Social judgment", "社會評價感", "Juicio social"),
+  "psychology-responsibility": tag("psychology-responsibility", "Psychological Observables", "Responsibility", "責任感", "Responsabilidad"),
+  "psychology-protection": tag("psychology-protection", "Psychological Observables", "Protection", "保護", "Protección"),
+  "psychology-avoidance": tag("psychology-avoidance", "Psychological Observables", "Avoidance", "迴避", "Evitación"),
+  "psychology-reunion": tag("psychology-reunion", "Psychological Observables", "Reunion", "重逢", "Reencuentro"),
+  "psychology-identity-question": tag("psychology-identity-question", "Psychological Observables", "Identity question", "身分疑問", "Pregunta de identidad"),
+  "psychology-boundary-crossing": tag("psychology-boundary-crossing", "Psychological Observables", "Boundary crossing", "界線跨越", "Cruce de límites"),
+  "psychology-trust-mistrust": tag("psychology-trust-mistrust", "Psychological Observables", "Trust / mistrust", "信任／不信任", "Confianza / desconfianza"),
+  "psychology-power-difference": tag("psychology-power-difference", "Psychological Observables", "Power difference", "權力差異", "Diferencia de poder"),
+
+  "analysis-memory-fragment": tag("analysis-memory-fragment", "Dream Analysis", "Memory fragment", "記憶碎片", "Fragmento de memoria"),
+  "analysis-scene-shift": tag("analysis-scene-shift", "Dream Analysis", "Scene shift", "場景轉換", "Cambio de escena"),
+  "analysis-time-distortion": tag("analysis-time-distortion", "Dream Analysis", "Time distortion", "時間扭曲", "Distorsión temporal"),
+  "analysis-impossible-logic": tag("analysis-impossible-logic", "Dream Analysis", "Impossible logic", "不可能邏輯", "Lógica imposible"),
+  "analysis-symbolic-object": tag("analysis-symbolic-object", "Dream Analysis", "Symbolic object", "象徵物件", "Objeto simbólico"),
+  "analysis-repeated-symbol": tag("analysis-repeated-symbol", "Dream Analysis", "Repeated symbol", "重複象徵", "Símbolo repetido"),
+  "analysis-threshold-door": tag("analysis-threshold-door", "Dream Analysis", "Threshold / door", "門檻／門", "Umbral / puerta"),
+  "analysis-mirror": tag("analysis-mirror", "Dream Analysis", "Mirror", "鏡子", "Espejo"),
+  "analysis-double-self": tag("analysis-double-self", "Dream Analysis", "Double self", "另一個自己", "Doble yo"),
+  "analysis-familiar-place-changed": tag("analysis-familiar-place-changed", "Dream Analysis", "Familiar place changed", "熟悉地點變形", "Lugar familiar cambiado"),
+  "analysis-language-speech": tag("analysis-language-speech", "Dream Analysis", "Language / speech", "語言／說話", "Lenguaje / habla"),
+  "analysis-body-sensation": tag("analysis-body-sensation", "Dream Analysis", "Body sensation", "身體感覺", "Sensación corporal"),
+  "analysis-sound-focus": tag("analysis-sound-focus", "Dream Analysis", "Sound focus", "聲音焦點", "Foco sonoro"),
+  "analysis-color-focus": tag("analysis-color-focus", "Dream Analysis", "Color focus", "顏色焦點", "Foco de color"),
+  "analysis-number-symbol": tag("analysis-number-symbol", "Dream Analysis", "Number / symbol", "數字／符號", "Número / símbolo"),
+  "analysis-map-coordinate": tag("analysis-map-coordinate", "Dream Analysis", "Map / coordinate", "地圖／座標", "Mapa / coordenada"),
+  "analysis-ritual": tag("analysis-ritual", "Dream Analysis", "Ritual", "儀式", "Ritual"),
+  "analysis-message-received": tag("analysis-message-received", "Dream Analysis", "Message received", "收到訊息", "Mensaje recibido"),
+  "analysis-choice-point": tag("analysis-choice-point", "Dream Analysis", "Choice point", "選擇點", "Punto de elección"),
 };
 
 export const RECORDER_TAG_GROUPS = [
@@ -157,6 +201,8 @@ export const RECORDER_TAG_GROUPS = [
   { category: "Weather", slugs: ["sunny", "rain", "storm", "snow", "fog", "wind", "humid", "heat", "cold", "night-sky", "eclipse"] },
   { category: "Dream Types", slugs: ["lucid", "recurring", "nightmare", "false-awakening", "sleep-paralysis", "flying", "falling", "chase", "exam", "lost", "visitation", "prophetic-feeling", "body-transformation", "impossible-space"] },
   { category: "Perspective", slugs: ["first-person", "second-person", "third-person", "shifting-perspective", "observer-view", "out-of-body"] },
+  { category: "Psychological Observables", slugs: ["psychology-agency", "psychology-control-loss", "psychology-vulnerability", "psychology-conflict", "psychology-intimacy", "psychology-separation", "psychology-social-judgment", "psychology-responsibility", "psychology-protection", "psychology-avoidance", "psychology-reunion", "psychology-identity-question", "psychology-boundary-crossing", "psychology-trust-mistrust", "psychology-power-difference"] },
+  { category: "Dream Analysis", slugs: ["analysis-memory-fragment", "analysis-scene-shift", "analysis-time-distortion", "analysis-impossible-logic", "analysis-symbolic-object", "analysis-repeated-symbol", "analysis-threshold-door", "analysis-mirror", "analysis-double-self", "analysis-familiar-place-changed", "analysis-language-speech", "analysis-body-sensation", "analysis-sound-focus", "analysis-color-focus", "analysis-number-symbol", "analysis-map-coordinate", "analysis-ritual", "analysis-message-received", "analysis-choice-point"] },
 ];
 
 export function getCategoryLabel(category, language = "en") {
@@ -173,7 +219,7 @@ export function getTagLabel(tagOrSlug, language = "en") {
   return tagData.name;
 }
 
-export function buildRecordTags(selectedTagSlugs = [], customTagLabels = [], adultContent = false) {
+export function buildRecordTags(selectedTagSlugs = [], customTagEntries = [], adultContent = false) {
   const slugs = new Set(
     selectedTagSlugs.filter((slug) => RECORD_TAGS[slug]).map((slug) => String(slug))
   );
@@ -184,7 +230,7 @@ export function buildRecordTags(selectedTagSlugs = [], customTagLabels = [], adu
 
   const builtInTags = [...slugs].map((slug) => RECORD_TAGS[slug]).filter(Boolean);
   const existingNames = new Set(
-    builtInTags.flatMap((item) => [
+    Object.values(RECORD_TAGS).flatMap((item) => [
       item.slug,
       normalizeTagName(item.name),
       normalizeTagName(item.name_zh),
@@ -193,10 +239,13 @@ export function buildRecordTags(selectedTagSlugs = [], customTagLabels = [], adu
   );
   const customTags = [];
 
-  customTagLabels.forEach((label) => {
-    const normalizedLabel = normalizeCustomTagLabel(label);
+  customTagEntries.forEach((entry) => {
+    const normalizedEntry = normalizeCustomTagEntry(entry);
+    const normalizedLabel = normalizedEntry.label;
     const normalizedKey = normalizeTagName(normalizedLabel);
-    const slug = makeCustomTagSlug(normalizedLabel);
+    const categoryPrefix = makeCustomTagSlug(normalizedEntry.category);
+    const baseSlug = makeCustomTagSlug(normalizedLabel);
+    const slug = `${categoryPrefix}-${baseSlug}`;
 
     if (!normalizedLabel || existingNames.has(normalizedKey) || slugs.has(slug)) return;
 
@@ -204,7 +253,7 @@ export function buildRecordTags(selectedTagSlugs = [], customTagLabels = [], adu
     slugs.add(slug);
     customTags.push({
       id: `custom-${slug}`,
-      category: "Custom",
+      category: normalizedEntry.category,
       name: normalizedLabel,
       name_zh: normalizedLabel,
       name_es: normalizedLabel,
@@ -224,7 +273,25 @@ export function normalizeCustomTagLabel(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 40);
 }
 
-export function tagExists(labelOrSlug, selectedCustomLabels = []) {
+export function normalizeCustomTagEntry(entry) {
+  if (typeof entry === "string") {
+    return {
+      label: normalizeCustomTagLabel(entry),
+      category: "Custom",
+    };
+  }
+
+  const category = TAG_CATEGORY_ORDER.includes(entry?.category)
+    ? entry.category
+    : "Custom";
+
+  return {
+    label: normalizeCustomTagLabel(entry?.label),
+    category,
+  };
+}
+
+export function tagExists(labelOrSlug, selectedCustomEntries = []) {
   const normalized = normalizeTagName(labelOrSlug);
 
   return (
@@ -234,7 +301,10 @@ export function tagExists(labelOrSlug, selectedCustomLabels = []) {
         .map(normalizeTagName)
         .includes(normalized)
     ) ||
-    selectedCustomLabels.some((label) => normalizeTagName(label) === normalized)
+    selectedCustomEntries.some((entry) => {
+      const normalizedEntry = normalizeCustomTagEntry(entry);
+      return normalizeTagName(normalizedEntry.label) === normalized;
+    })
   );
 }
 

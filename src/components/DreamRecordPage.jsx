@@ -10,6 +10,21 @@ import {
   normalizeLanguage,
 } from "../lib/language.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
+import {
+  getCategoryLabel,
+  getTagLabel,
+  normalizeCustomTagLabel,
+  RECORDER_TAG_GROUPS,
+  RECORD_TAGS,
+  tagExists,
+} from "../lib/tagTaxonomy.js";
+
+const EDITABLE_TAG_SLUGS = new Set(
+  RECORDER_TAG_GROUPS.flatMap((group) => group.slugs)
+);
+const EDITABLE_TAG_CATEGORIES = new Set(
+  RECORDER_TAG_GROUPS.map((group) => group.category)
+);
 
 const DETAIL_COPY = {
   en: {
@@ -30,6 +45,11 @@ const DETAIL_COPY = {
     recordIdentity: "Record Identity",
     recordAsAccount: "Use account",
     recordAsAnonymous: "Stay anonymous",
+    recordTags: "Record Tags",
+    customTagPlaceholder: "Add a missing tag to this type",
+    addCustomTag: "Add tag",
+    duplicateTag: "A matching tag already exists.",
+    customTagHelp: "Add only when the existing options in this type do not match.",
     anonymousCreator: "Anonymous recorder",
     creator: "Creator",
     recordDate: "Record Date",
@@ -51,7 +71,7 @@ const DETAIL_COPY = {
     denyAdult: "Not now",
     metadataSaved: "Dream metadata saved",
     signInToCollect: "Sign in to collect this dream",
-    recorderRulesTitle: "Recorder Rules",
+    recorderRulesTitle: "Recording Standards",
     recorderRules: [
       "Record only dreams you personally observed or have permission to archive.",
       "First-person wording such as I, me, and my is allowed and does not count as exposing a private real name.",
@@ -85,6 +105,11 @@ const DETAIL_COPY = {
     recordIdentity: "紀錄身分",
     recordAsAccount: "使用帳戶",
     recordAsAnonymous: "保持匿名",
+    recordTags: "紀錄標籤",
+    customTagPlaceholder: "在此類型新增缺少的標籤",
+    addCustomTag: "新增標籤",
+    duplicateTag: "已經有相同或相近的標籤。",
+    customTagHelp: "只有在此類型的現有選項不符合時才新增。",
     anonymousCreator: "匿名記錄者",
     creator: "創作者",
     recordDate: "紀錄日期",
@@ -104,7 +129,7 @@ const DETAIL_COPY = {
     denyAdult: "暫不閱讀",
     metadataSaved: "夢境資料已儲存",
     signInToCollect: "登入後可收藏此夢境",
-    recorderRulesTitle: "記錄者規則",
+    recorderRulesTitle: "記錄標準",
     recorderRules: [
       "只記錄你親自經歷，或已獲得同意可歸檔的夢境。",
       "可以使用「我」、「我的」等第一人稱，這不算暴露私人真實姓名。",
@@ -138,6 +163,11 @@ const DETAIL_COPY = {
     recordIdentity: "Identidad del Registro",
     recordAsAccount: "Usar cuenta",
     recordAsAnonymous: "Seguir anónimo",
+    recordTags: "Etiquetas del registro",
+    customTagPlaceholder: "Añade una etiqueta faltante a este tipo",
+    addCustomTag: "Añadir etiqueta",
+    duplicateTag: "Ya existe una etiqueta equivalente.",
+    customTagHelp: "Añade solo cuando las opciones de este tipo no encajan.",
     anonymousCreator: "Registrador anónimo",
     creator: "Creador",
     recordDate: "Fecha del Registro",
@@ -159,7 +189,7 @@ const DETAIL_COPY = {
     denyAdult: "Ahora no",
     metadataSaved: "Metadatos guardados",
     signInToCollect: "Inicia sesión para coleccionar este sueño",
-    recorderRulesTitle: "Reglas para Registrar",
+    recorderRulesTitle: "Reglas de registro",
     recorderRules: [
       "Registra solo sueños que observaste personalmente o que tienes permiso para archivar.",
       "La primera persona como yo, me y mi está permitida y no cuenta como exponer un nombre real privado.",
@@ -201,6 +231,14 @@ export default function DreamRecordPage({
   const [recordIdentityMode, setRecordIdentityMode] = useState(
     normalizedRecord.recordIdentityMode
   );
+  const [selectedTagSlugs, setSelectedTagSlugs] = useState(() =>
+    getEditableSelectedTagSlugs(normalizedRecord)
+  );
+  const [customTagDrafts, setCustomTagDrafts] = useState({});
+  const [customTagEntries, setCustomTagEntries] = useState(() =>
+    getCustomTagEntries(normalizedRecord)
+  );
+  const [tagNotices, setTagNotices] = useState({});
   const [profile, setProfile] = useState(null);
   const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [status, setStatus] = useState("");
@@ -223,6 +261,10 @@ export default function DreamRecordPage({
     setAgeAtDream(normalizedRecord.ageAtDream || "");
     setAdultContent(isAdultRecord(normalizedRecord));
     setRecordIdentityMode(normalizedRecord.recordIdentityMode);
+    setSelectedTagSlugs(getEditableSelectedTagSlugs(normalizedRecord));
+    setCustomTagDrafts({});
+    setCustomTagEntries(getCustomTagEntries(normalizedRecord));
+    setTagNotices({});
     setAdultConfirmed(false);
   }, [normalizedRecord]);
 
@@ -246,6 +288,40 @@ export default function DreamRecordPage({
       ignore = true;
     };
   }, [currentUser]);
+
+  function toggleTag(slug) {
+    setSelectedTagSlugs((current) =>
+      current.includes(slug)
+        ? current.filter((item) => item !== slug)
+        : [...current, slug]
+    );
+  }
+
+  function updateCustomTagDraft(category, value) {
+    setCustomTagDrafts((current) => ({ ...current, [category]: value }));
+    setTagNotices((current) => ({ ...current, [category]: "" }));
+  }
+
+  function addCustomTag(category) {
+    const label = normalizeCustomTagLabel(customTagDrafts[category]);
+
+    if (!label) return;
+
+    if (tagExists(label, customTagEntries)) {
+      setTagNotices((current) => ({ ...current, [category]: copy.duplicateTag }));
+      return;
+    }
+
+    setCustomTagEntries((current) => [...current, { label, category }]);
+    setCustomTagDrafts((current) => ({ ...current, [category]: "" }));
+    setTagNotices((current) => ({ ...current, [category]: "" }));
+  }
+
+  function removeCustomTag(category, label) {
+    setCustomTagEntries((current) =>
+      current.filter((item) => item.category !== category || item.label !== label)
+    );
+  }
 
   async function handleCollect() {
     if (!currentUser?.uid) {
@@ -290,6 +366,8 @@ export default function DreamRecordPage({
         recordIdentityMode,
         creatorDisplayName: profile?.displayName || currentUser?.displayName || "",
         creatorAvatarUrl: profile?.avatarUrl || currentUser?.photoURL || "",
+        selectedTagSlugs,
+        customTagLabels: customTagEntries,
       });
       setStatus(copy.metadataSaved);
     } catch (error) {
@@ -500,6 +578,35 @@ export default function DreamRecordPage({
                       </IdentityModeButton>
                     </div>
                   </div>
+                  <div className="mt-4">
+                    <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      {copy.recordTags}
+                    </p>
+                    <div className="max-h-[24rem] space-y-3 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-3 pr-2 [scrollbar-color:rgba(34,211,238,.45)_rgba(255,255,255,.08)] [scrollbar-width:thin]">
+                      {RECORDER_TAG_GROUPS.map((group) => (
+                        <EditableTagGroup
+                          key={group.category}
+                          group={group}
+                          language={language}
+                          selectedTagSlugs={selectedTagSlugs}
+                          onToggleTag={toggleTag}
+                          copy={copy}
+                          customTagValue={customTagDrafts[group.category] || ""}
+                          customTags={customTagEntries.filter(
+                            (entry) => entry.category === group.category
+                          )}
+                          tagNotice={tagNotices[group.category] || ""}
+                          onCustomTagChange={(value) =>
+                            updateCustomTagDraft(group.category, value)
+                          }
+                          onAddCustomTag={() => addCustomTag(group.category)}
+                          onRemoveCustomTag={(label) =>
+                            removeCustomTag(group.category, label)
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={handleSaveMetadata}
@@ -559,6 +666,22 @@ function normalizeDreamRecord(record) {
     creatorAvatarUrl: record?.creatorAvatarUrl || "",
     pseudoId: record?.pseudo_id || record?.pseudoId || record?.creatorId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
+    tags: Array.isArray(record?.tags) ? record.tags : [],
+    emotionTags: Array.isArray(record?.emotionTags) ? record.emotionTags : [],
+    styleTags: Array.isArray(record?.styleTags) ? record.styleTags : [],
+    eraTags: Array.isArray(record?.eraTags) ? record.eraTags : [],
+    weatherTags: Array.isArray(record?.weatherTags) ? record.weatherTags : [],
+    dreamTypeTags: Array.isArray(record?.dreamTypeTags) ? record.dreamTypeTags : [],
+    perspectiveTags: Array.isArray(record?.perspectiveTags)
+      ? record.perspectiveTags
+      : [],
+    psychologicalObservableTags: Array.isArray(record?.psychologicalObservableTags)
+      ? record.psychologicalObservableTags
+      : [],
+    dreamAnalysisTags: Array.isArray(record?.dreamAnalysisTags)
+      ? record.dreamAnalysisTags
+      : [],
+    customTags: Array.isArray(record?.customTags) ? record.customTags : [],
     adultContent: Boolean(
       record?.adultContent ||
         record?.adult_content ||
@@ -622,6 +745,124 @@ function getLanguageSpecificRecordValue(record, field, language) {
   }
 
   return record.text || record.textEn || record.text_en || record.dream_text || "";
+}
+
+function getEditableSelectedTagSlugs(record) {
+  const slugs = new Set();
+
+  record.tags
+    ?.filter((tag) => !tag.custom && EDITABLE_TAG_SLUGS.has(tag.slug))
+    .forEach((tag) => slugs.add(tag.slug));
+
+  [
+    record.emotionTags,
+    record.styleTags,
+    record.eraTags,
+    record.weatherTags,
+    record.dreamTypeTags,
+    record.perspectiveTags,
+    record.psychologicalObservableTags,
+    record.dreamAnalysisTags,
+  ]
+    .flat()
+    .filter((slug) => EDITABLE_TAG_SLUGS.has(slug))
+    .forEach((slug) => slugs.add(slug));
+
+  return [...slugs];
+}
+
+function getCustomTagEntries(record) {
+  return (record.tags || [])
+    .filter((tag) => tag.custom && EDITABLE_TAG_CATEGORIES.has(tag.category))
+    .map((tag) => ({
+      category: tag.category,
+      label: tag.name || tag.name_zh || tag.name_es || tag.slug,
+    }));
+}
+
+function EditableTagGroup({
+  group,
+  language,
+  selectedTagSlugs,
+  onToggleTag,
+  copy,
+  customTagValue,
+  customTags,
+  tagNotice,
+  onCustomTagChange,
+  onAddCustomTag,
+  onRemoveCustomTag,
+}) {
+  return (
+    <section className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
+      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-200/70">
+        {getCategoryLabel(group.category, language)}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {group.slugs.map((slug) => {
+          const active = selectedTagSlugs.includes(slug);
+          const tagData = RECORD_TAGS[slug];
+
+          return (
+            <button
+              key={slug}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onToggleTag(slug)}
+              className={[
+                "rounded-full border px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition",
+                active
+                  ? "border-fuchsia-300/40 bg-fuchsia-300/15 text-fuchsia-100"
+                  : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+              ].join(" ")}
+            >
+              #{getTagLabel(tagData || slug, language)}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-3 border-t border-white/10 pt-3">
+        <div className="flex flex-col gap-2">
+          <input
+            value={customTagValue}
+            onChange={(event) => onCustomTagChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onAddCustomTag();
+              }
+            }}
+            placeholder={copy.customTagPlaceholder}
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-2 font-mono text-xs text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+          />
+          <button
+            type="button"
+            onClick={onAddCustomTag}
+            className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15"
+          >
+            {copy.addCustomTag}
+          </button>
+        </div>
+        <p className="mt-2 text-xs leading-5 text-zinc-500">
+          {tagNotice || copy.customTagHelp}
+        </p>
+        {customTags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {customTags.map((entry) => (
+              <button
+                key={`${entry.category}-${entry.label}`}
+                type="button"
+                onClick={() => onRemoveCustomTag(entry.label)}
+                className="rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-fuchsia-100 transition hover:border-red-300/40 hover:bg-red-400/10"
+              >
+                #{entry.label} x
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }
 
 function LanguageToggle({ language, setLanguage, copy }) {

@@ -5,6 +5,7 @@ import {
   loginWithGoogle,
   signupWithEmail,
 } from "../lib/authService.js";
+import { auth } from "../lib/firebaseClient.js";
 import { LANGUAGE_OPTIONS } from "../lib/language.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import { createDreamRecord } from "../lib/recordsService.js";
@@ -36,18 +37,18 @@ const RECORD_COPY = {
     dreamTextLabel: "Dream words",
     dreamTextPlaceholder:
       "Write fragments, scenes, feelings, places, dialogue, colors, sounds... exact order is not required.",
-    optionalTitle: "Optional title",
-    titlePlaceholder: "Leave blank to generate from the first line",
+    optionalTitle: "Outline / main idea (optional)",
+    titlePlaceholder: "Dreams do not need a topic; leave blank if none is clear",
     dreamDate: "Dream date",
     originalLanguage: "Original language",
     ageAtDream: "Age at dream",
     agePlaceholder: "Optional",
     tagSectionTitle: "Dream tags",
     customTags: "Custom tags",
-    customTagPlaceholder: "Add a missing tag",
+    customTagPlaceholder: "Add a missing tag to this type",
     addCustomTag: "Add tag",
     duplicateTag: "A matching tag already exists.",
-    customTagHelp: "Add a custom tag only when the existing tags do not match the dream.",
+    customTagHelp: "Add only when the existing options in this type do not match.",
     adultContent: "Includes adult content",
     recordIdentity: "Public recorder identity",
     recordAsAccount: "Show account",
@@ -57,6 +58,12 @@ const RECORD_COPY = {
     submitting: "Publishing record",
     textRequired: "Write at least a few words before publishing.",
     publishError: "The record could not be published. Check your connection and try again.",
+    publishPermissionDenied:
+      "The archive permission blocked publishing. Please paste the latest Firestore rules, then try again.",
+    publishAuthMismatch:
+      "Your account session was still syncing. Try publishing once more.",
+    publishUnavailable:
+      "The archive is not reachable right now. Try again in a moment.",
     accountEditable:
       "Account-backed records can be edited or deleted later from your account.",
     anonymousLocked:
@@ -80,7 +87,7 @@ const RECORD_COPY = {
     emailRequired: "Enter an email address.",
     passwordRequired: "Enter a password.",
     authError: "Account access could not be confirmed. The draft is still here.",
-    rulesTitle: "Recorder privacy rules",
+    rulesTitle: "Recording standards",
     rules: [
       "Dream records need written words; images are optional.",
       "First-person wording such as I, me, and my is welcome; dreamers do not need to rewrite their own voice.",
@@ -112,18 +119,18 @@ const RECORD_COPY = {
     dreamTextLabel: "夢境文字",
     dreamTextPlaceholder:
       "寫下片段、場景、感覺、地點、對話、顏色、聲音……不需要一開始就整理成完整順序。",
-    optionalTitle: "標題（選填）",
-    titlePlaceholder: "留空時會用第一段文字產生標題",
+    optionalTitle: "大綱主旨（選填）",
+    titlePlaceholder: "夢不一定需要主題；不清楚就留空",
     dreamDate: "夢境日期",
     originalLanguage: "原始語言",
     ageAtDream: "做夢時年齡",
     agePlaceholder: "選填",
     tagSectionTitle: "夢境標籤",
     customTags: "自訂標籤",
-    customTagPlaceholder: "新增缺少的標籤",
+    customTagPlaceholder: "在此類型新增缺少的標籤",
     addCustomTag: "新增標籤",
     duplicateTag: "已經有相同或相近的標籤。",
-    customTagHelp: "只有在現有標籤不符合夢境時，才新增自訂標籤。",
+    customTagHelp: "只有在此類型的現有選項不符合時才新增。",
     adultContent: "包含成人內容",
     recordIdentity: "公開記錄身分",
     recordAsAccount: "顯示帳戶",
@@ -133,6 +140,9 @@ const RECORD_COPY = {
     submitting: "正在發布記錄",
     textRequired: "發布前請至少寫下幾個字。",
     publishError: "記錄無法發布。請檢查連線後再試一次。",
+    publishPermissionDenied: "資料庫權限擋住發布。請貼上最新 Firestore 規則後再試一次。",
+    publishAuthMismatch: "你的帳戶狀態還在同步。請再按一次發布。",
+    publishUnavailable: "資料庫目前無法連線。請稍後再試。",
     accountEditable: "連到帳戶的記錄之後可以在帳戶中修改或刪除。",
     anonymousLocked: "匿名記錄發布後會成為公開檔案項目，之後不能修改或刪除。",
     authTitle: "選用帳戶連結",
@@ -154,7 +164,7 @@ const RECORD_COPY = {
     emailRequired: "請輸入電子郵件。",
     passwordRequired: "請輸入密碼。",
     authError: "無法確認帳戶存取；草稿仍然保留在這裡。",
-    rulesTitle: "記錄者隱私規則",
+    rulesTitle: "記錄標準",
     rules: [
       "夢境記錄必須有文字；圖片可以有，但不是必要。",
       "可以自然使用「我」、「我的」等第一人稱，不需要改寫掉自己的語氣。",
@@ -186,18 +196,18 @@ const RECORD_COPY = {
     dreamTextLabel: "Palabras del sueño",
     dreamTextPlaceholder:
       "Escribe fragmentos, escenas, sensaciones, lugares, diálogos, colores, sonidos... no hace falta ordenarlo todo al inicio.",
-    optionalTitle: "Título opcional",
-    titlePlaceholder: "Déjalo vacío para generar uno desde la primera línea",
+    optionalTitle: "Esquema / idea principal (opcional)",
+    titlePlaceholder: "El sueño no necesita tema; déjalo vacío si no está claro",
     dreamDate: "Fecha del sueño",
     originalLanguage: "Idioma original",
     ageAtDream: "Edad en el sueño",
     agePlaceholder: "Opcional",
     tagSectionTitle: "Etiquetas del sueño",
     customTags: "Etiquetas personalizadas",
-    customTagPlaceholder: "Añade una etiqueta faltante",
+    customTagPlaceholder: "Añade una etiqueta faltante a este tipo",
     addCustomTag: "Añadir etiqueta",
     duplicateTag: "Ya existe una etiqueta equivalente.",
-    customTagHelp: "Añade una etiqueta propia solo cuando las existentes no describen el sueño.",
+    customTagHelp: "Añade solo cuando las opciones de este tipo no encajan.",
     adultContent: "Incluye contenido adulto",
     recordIdentity: "Identidad pública",
     recordAsAccount: "Mostrar cuenta",
@@ -207,6 +217,12 @@ const RECORD_COPY = {
     submitting: "Publicando registro",
     textRequired: "Escribe al menos unas palabras antes de publicar.",
     publishError: "No se pudo publicar el registro. Revisa la conexión e inténtalo otra vez.",
+    publishPermissionDenied:
+      "El permiso del archivo bloqueó la publicación. Pega las reglas Firestore más recientes e inténtalo otra vez.",
+    publishAuthMismatch:
+      "La sesión de tu cuenta todavía se estaba sincronizando. Intenta publicar una vez más.",
+    publishUnavailable:
+      "El archivo no está disponible ahora. Inténtalo de nuevo en un momento.",
     accountEditable:
       "Los registros conectados a una cuenta se pueden editar o eliminar más tarde.",
     anonymousLocked:
@@ -230,7 +246,7 @@ const RECORD_COPY = {
     emailRequired: "Introduce un correo.",
     passwordRequired: "Introduce una contraseña.",
     authError: "No se pudo confirmar la cuenta. El borrador sigue aquí.",
-    rulesTitle: "Reglas de privacidad",
+    rulesTitle: "Reglas de registro",
     rules: [
       "Los registros necesitan texto escrito; las imágenes son opcionales.",
       "Puedes usar primera persona como yo, me y mi; no hace falta quitar tu propia voz.",
@@ -264,9 +280,9 @@ export default function RecordDreamPage({
   const [ageAtDream, setAgeAtDream] = useState("");
   const [adultContent, setAdultContent] = useState(false);
   const [selectedTagSlugs, setSelectedTagSlugs] = useState([]);
-  const [customTagText, setCustomTagText] = useState("");
-  const [customTagLabels, setCustomTagLabels] = useState([]);
-  const [tagNotice, setTagNotice] = useState("");
+  const [customTagDrafts, setCustomTagDrafts] = useState({});
+  const [customTagEntries, setCustomTagEntries] = useState([]);
+  const [tagNotices, setTagNotices] = useState({});
   const [recordIdentityMode, setRecordIdentityMode] = useState("anonymous");
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -301,23 +317,30 @@ export default function RecordDreamPage({
     );
   }
 
-  function addCustomTag() {
-    const label = normalizeCustomTagLabel(customTagText);
+  function updateCustomTagDraft(category, value) {
+    setCustomTagDrafts((current) => ({ ...current, [category]: value }));
+    setTagNotices((current) => ({ ...current, [category]: "" }));
+  }
+
+  function addCustomTag(category) {
+    const label = normalizeCustomTagLabel(customTagDrafts[category]);
 
     if (!label) return;
 
-    if (tagExists(label, customTagLabels)) {
-      setTagNotice(copy.duplicateTag);
+    if (tagExists(label, customTagEntries)) {
+      setTagNotices((current) => ({ ...current, [category]: copy.duplicateTag }));
       return;
     }
 
-    setCustomTagLabels((current) => [...current, label]);
-    setCustomTagText("");
-    setTagNotice("");
+    setCustomTagEntries((current) => [...current, { label, category }]);
+    setCustomTagDrafts((current) => ({ ...current, [category]: "" }));
+    setTagNotices((current) => ({ ...current, [category]: "" }));
   }
 
-  function removeCustomTag(label) {
-    setCustomTagLabels((current) => current.filter((item) => item !== label));
+  function removeCustomTag(category, label) {
+    setCustomTagEntries((current) =>
+      current.filter((item) => item.category !== category || item.label !== label)
+    );
   }
 
   function getAuthErrorMessage(error) {
@@ -394,16 +417,23 @@ export default function RecordDreamPage({
     setSubmitting(true);
 
     try {
-      let submissionUser = currentUser;
+      let submissionUser = auth?.currentUser || currentUser;
 
       if (!submissionUser?.uid) {
         const credential = await loginAnonymously();
         submissionUser = credential.user;
       }
 
-      const profile = submissionUser.isAnonymous
-        ? null
-        : await getOrCreateUserProfile(submissionUser);
+      let profile = null;
+
+      if (!submissionUser.isAnonymous) {
+        try {
+          profile = await getOrCreateUserProfile(submissionUser);
+        } catch {
+          profile = null;
+        }
+      }
+
       const record = await createDreamRecord(
         submissionUser,
         {
@@ -414,15 +444,15 @@ export default function RecordDreamPage({
           ageAtDream,
           adultContent,
           selectedTagSlugs,
-          customTagLabels,
+          customTagLabels: customTagEntries,
           recordIdentityMode,
         },
         profile
       );
 
       onSubmitted?.(record);
-    } catch {
-      setSubmitError(copy.publishError);
+    } catch (error) {
+      setSubmitError(getPublishErrorMessage(error, copy));
     } finally {
       setSubmitting(false);
     }
@@ -565,61 +595,29 @@ export default function RecordDreamPage({
                   {copy.tagSectionTitle}
                 </p>
 
-                {RECORDER_TAG_GROUPS.map((group) => (
-                  <TagGroup
-                    key={group.category}
-                    group={group}
-                    language={language}
-                    selectedTagSlugs={selectedTagSlugs}
-                    onToggleTag={toggleTag}
-                  />
-                ))}
-
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                    {copy.customTags}
-                  </p>
-                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                    <input
-                      value={customTagText}
-                      onChange={(event) => {
-                        setCustomTagText(event.target.value);
-                        setTagNotice("");
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          addCustomTag();
-                        }
-                      }}
-                      placeholder={copy.customTagPlaceholder}
-                      className="min-w-0 flex-1 rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                <div className="max-h-[28rem] space-y-3 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-3 pr-2 [scrollbar-color:rgba(34,211,238,.45)_rgba(255,255,255,.08)] [scrollbar-width:thin]">
+                  {RECORDER_TAG_GROUPS.map((group) => (
+                    <TagGroup
+                      key={group.category}
+                      group={group}
+                      language={language}
+                      selectedTagSlugs={selectedTagSlugs}
+                      onToggleTag={toggleTag}
+                      copy={copy}
+                      customTagValue={customTagDrafts[group.category] || ""}
+                      customTags={customTagEntries.filter(
+                        (entry) => entry.category === group.category
+                      )}
+                      tagNotice={tagNotices[group.category] || ""}
+                      onCustomTagChange={(value) =>
+                        updateCustomTagDraft(group.category, value)
+                      }
+                      onAddCustomTag={() => addCustomTag(group.category)}
+                      onRemoveCustomTag={(label) =>
+                        removeCustomTag(group.category, label)
+                      }
                     />
-                    <button
-                      type="button"
-                      onClick={addCustomTag}
-                      className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15"
-                    >
-                      {copy.addCustomTag}
-                    </button>
-                  </div>
-                  <p className="mt-2 text-xs leading-5 text-zinc-500">
-                    {tagNotice || copy.customTagHelp}
-                  </p>
-                  {customTagLabels.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {customTagLabels.map((label) => (
-                        <button
-                          key={label}
-                          type="button"
-                          onClick={() => removeCustomTag(label)}
-                          className="rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-red-300/40 hover:bg-red-400/10"
-                        >
-                          #{label} x
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
 
@@ -829,9 +827,21 @@ function SessionBadge({ copy, accountBacked }) {
   );
 }
 
-function TagGroup({ group, language, selectedTagSlugs, onToggleTag }) {
+function TagGroup({
+  group,
+  language,
+  selectedTagSlugs,
+  onToggleTag,
+  copy,
+  customTagValue,
+  customTags,
+  tagNotice,
+  onCustomTagChange,
+  onAddCustomTag,
+  onRemoveCustomTag,
+}) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+    <section className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
       <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-200/70">
         {getCategoryLabel(group.category, language)}
       </p>
@@ -847,7 +857,7 @@ function TagGroup({ group, language, selectedTagSlugs, onToggleTag }) {
               aria-pressed={active}
               onClick={() => onToggleTag(slug)}
               className={[
-                "rounded-full border px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.14em] transition",
+                "rounded-full border px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition",
                 active
                   ? "border-fuchsia-300/40 bg-fuchsia-300/15 text-fuchsia-100"
                   : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
@@ -858,8 +868,75 @@ function TagGroup({ group, language, selectedTagSlugs, onToggleTag }) {
           );
         })}
       </div>
+      <div className="mt-3 border-t border-white/10 pt-3">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            value={customTagValue}
+            onChange={(event) => onCustomTagChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onAddCustomTag();
+              }
+            }}
+            placeholder={copy.customTagPlaceholder}
+            className="min-w-0 flex-1 rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-2 font-mono text-xs text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+          />
+          <button
+            type="button"
+            onClick={onAddCustomTag}
+            className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15"
+          >
+            {copy.addCustomTag}
+          </button>
+        </div>
+        <p className="mt-2 text-xs leading-5 text-zinc-500">
+          {tagNotice || copy.customTagHelp}
+        </p>
+        {customTags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {customTags.map((entry) => (
+              <button
+                key={`${entry.category}-${entry.label}`}
+                type="button"
+                onClick={() => onRemoveCustomTag(entry.label)}
+                className="rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-fuchsia-100 transition hover:border-red-300/40 hover:bg-red-400/10"
+              >
+                #{entry.label} x
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
+}
+
+function getPublishErrorMessage(error, copy) {
+  const code = error?.code || "";
+
+  if (code === "permission-denied" || code === "firestore/permission-denied") {
+    return copy.publishPermissionDenied;
+  }
+
+  if (
+    code === "auth/user-token-expired" ||
+    code === "auth/user-disabled" ||
+    code === "unauthenticated"
+  ) {
+    return copy.publishAuthMismatch;
+  }
+
+  if (
+    code === "unavailable" ||
+    code === "deadline-exceeded" ||
+    code === "firestore/unavailable" ||
+    code === "auth/network-request-failed"
+  ) {
+    return copy.publishUnavailable;
+  }
+
+  return copy.publishError;
 }
 
 function LanguageToggle({ language, setLanguage, copy }) {

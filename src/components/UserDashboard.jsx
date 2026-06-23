@@ -870,6 +870,12 @@ function normalizeRecordItem(item, index) {
     weatherTags: Array.isArray(item.weatherTags) ? item.weatherTags : [],
     dreamTypeTags: Array.isArray(item.dreamTypeTags) ? item.dreamTypeTags : [],
     perspectiveTags: Array.isArray(item.perspectiveTags) ? item.perspectiveTags : [],
+    psychologicalObservableTags: Array.isArray(item.psychologicalObservableTags)
+      ? item.psychologicalObservableTags
+      : [],
+    dreamAnalysisTags: Array.isArray(item.dreamAnalysisTags)
+      ? item.dreamAnalysisTags
+      : [],
     customTags: Array.isArray(item.customTags) ? item.customTags : [],
     adultContent: Boolean(item.adultContent || item.adult_content || item.isAdult || item.is_adult),
     minimumViewerAge: item.minimumViewerAge || item.minimum_viewer_age || 0,
