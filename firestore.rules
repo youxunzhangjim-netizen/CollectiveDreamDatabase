@@ -14,13 +14,20 @@ service cloud.firestore {
       return data.visibility == "public" || data.isPublic == true;
     }
 
+    function validOriginalLanguage(data) {
+      return !data.keys().hasAny(["originalLanguage"])
+        || data.originalLanguage in ["en", "zh", "es"];
+    }
+
     match /Records/{recordId} {
       allow get, list: if isPublicRecord(resource.data) || isOwner(resource.data.ownerId);
 
-      allow create: if isOwner(request.resource.data.ownerId);
+      allow create: if isOwner(request.resource.data.ownerId)
+        && validOriginalLanguage(request.resource.data);
 
       allow update: if isOwner(resource.data.ownerId)
-        && request.resource.data.ownerId == resource.data.ownerId;
+        && request.resource.data.ownerId == resource.data.ownerId
+        && validOriginalLanguage(request.resource.data);
 
       allow delete: if isOwner(resource.data.ownerId);
     }
@@ -29,14 +36,20 @@ service cloud.firestore {
       allow read, create, update, delete: if isSignedIn() && request.auth.uid == userId;
 
       match /savedRecords/{recordId} {
-        allow read, create, update, delete: if isSignedIn() && request.auth.uid == userId;
+        allow read, delete: if isSignedIn() && request.auth.uid == userId;
+        allow create, update: if isSignedIn()
+          && request.auth.uid == userId
+          && validOriginalLanguage(request.resource.data);
       }
 
       match /collections/{collectionId} {
         allow read, create, update, delete: if isSignedIn() && request.auth.uid == userId;
 
         match /records/{recordId} {
-          allow read, create, update, delete: if isSignedIn() && request.auth.uid == userId;
+          allow read, delete: if isSignedIn() && request.auth.uid == userId;
+          allow create, update: if isSignedIn()
+            && request.auth.uid == userId
+            && validOriginalLanguage(request.resource.data);
         }
       }
     }

@@ -15,8 +15,41 @@ export const LANGUAGE_OPTIONS = [
   },
 ];
 
+const LANGUAGE_NAMES = {
+  en: {
+    en: "English",
+    zh: "英文",
+    es: "inglés",
+  },
+  zh: {
+    en: "Traditional Chinese",
+    zh: "繁體中文",
+    es: "chino tradicional",
+  },
+  es: {
+    en: "Spanish",
+    zh: "西班牙文",
+    es: "español",
+  },
+};
+
 export function isSupportedLanguage(language) {
   return SUPPORTED_LANGUAGES.includes(language);
+}
+
+export function normalizeLanguage(language) {
+  return isSupportedLanguage(language) ? language : "en";
+}
+
+export function getLanguageName(language, interfaceLanguage = "en") {
+  const normalizedLanguage = normalizeLanguage(language);
+  const normalizedInterfaceLanguage = normalizeLanguage(interfaceLanguage);
+
+  return (
+    LANGUAGE_NAMES[normalizedLanguage]?.[normalizedInterfaceLanguage] ||
+    LANGUAGE_NAMES[normalizedLanguage]?.en ||
+    normalizedLanguage.toUpperCase()
+  );
 }
 
 export function getHtmlLang(language) {

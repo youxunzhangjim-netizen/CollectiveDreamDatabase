@@ -5,7 +5,12 @@ import {
   FALLBACK_TAGS,
   TAG_TRANSLATIONS,
 } from "../data/fallbackDreams.js";
-import { getHtmlLang, LANGUAGE_OPTIONS } from "../lib/language.js";
+import {
+  getHtmlLang,
+  getLanguageName,
+  LANGUAGE_OPTIONS,
+  normalizeLanguage,
+} from "../lib/language.js";
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient.js";
 import { collectRecordForUser, saveRecordForUser } from "../lib/recordsService.js";
 
@@ -100,6 +105,7 @@ const UI_COPY = {
     generatedImageAlt: "Generated visual for dream titled",
     visualHash: "Visual hash",
     signalCoherence: "Signal coherence",
+    originalLanguageLabel: "Original language",
     collectDream: "Collect",
     collectedDream: "Collected",
     signInToCollect: "Sign in to collect",
@@ -157,6 +163,7 @@ const UI_COPY = {
     generatedImageAlt: "夢境生成視覺，標題為",
     visualHash: "視覺雜湊",
     signalCoherence: "訊號一致性",
+    originalLanguageLabel: "原始語言",
     collectDream: "收藏",
     collectedDream: "已收藏",
     signInToCollect: "登入後可收藏",
@@ -216,6 +223,7 @@ const UI_COPY = {
     generatedImageAlt: "Visual generado para el sueño titulado",
     visualHash: "Hash visual",
     signalCoherence: "Coherencia de señal",
+    originalLanguageLabel: "Idioma original",
     collectDream: "Coleccionar",
     collectedDream: "Coleccionado",
     signInToCollect: "Inicia sesión para coleccionar",
@@ -312,6 +320,9 @@ export default function CollectiveDreamDashboard({
 
         const searchableText = [
           dream.title,
+          dream.originalTitle,
+          dream.originalText,
+          getLanguageName(dream.originalLanguage, language),
           getDreamTitle(dream, language),
           dream.excerpt,
           getDreamExcerpt(dream, language),
@@ -419,12 +430,37 @@ export default function CollectiveDreamDashboard({
 
 function normalizeDreamCard(row) {
   const tags = Array.isArray(row.tags) ? row.tags : [];
+  const originalLanguage = normalizeLanguage(
+    row.originalLanguage || row.original_language || "en"
+  );
   const excerpt =
     row.excerpt ||
-    (row.dream_text ? `${row.dream_text.slice(0, 220)}${row.dream_text.length > 220 ? "…" : ""}` : "");
+    (row.dream_text ? createExcerpt(row.dream_text) : "");
+  const originalTitle =
+    row.originalTitle ||
+    row.original_title ||
+    getLanguageSpecificValue(row, "title", originalLanguage) ||
+    row.title ||
+    "";
+  const originalText =
+    row.originalText ||
+    row.original_text ||
+    getLanguageSpecificValue(row, "dream_text", originalLanguage) ||
+    row.dream_text ||
+    row.text ||
+    "";
 
   return {
     dream_id: row.dream_id || row.id,
+    originalLanguage,
+    originalTitle,
+    originalText,
+    originalExcerpt:
+      row.originalExcerpt ||
+      row.original_excerpt ||
+      getLanguageSpecificValue(row, "excerpt", originalLanguage) ||
+      createExcerpt(originalText),
+    translations: row.translations || {},
     title: row.title,
     title_zh: row.title_zh || row.titleZh,
     title_es: row.title_es || row.titleEs,
@@ -452,48 +488,115 @@ function getDreamTranslation(dream, language) {
   return {};
 }
 
+function getStoredTranslation(dream, language) {
+  const normalizedLanguage = normalizeLanguage(language);
+  const translations = dream.translations || {};
+
+  return translations[normalizedLanguage] || {};
+}
+
 function getDreamTitle(dream, language) {
-  if (language === "zh") {
-    return getDreamTranslation(dream, language).title || dream.title_zh || dream.title;
+  const normalizedLanguage = normalizeLanguage(language);
+
+  if (normalizeLanguage(dream.originalLanguage) === normalizedLanguage) {
+    return (
+      dream.originalTitle ||
+      getLanguageSpecificValue(dream, "title", normalizedLanguage) ||
+      dream.title
+    );
   }
 
-  if (language === "es") {
-    return getDreamTranslation(dream, language).title || dream.title_es || dream.title;
-  }
-
-  return dream.title;
+  return (
+    getStoredTranslation(dream, normalizedLanguage).title ||
+    getDreamTranslation(dream, normalizedLanguage).title ||
+    getLanguageSpecificValue(dream, "title", normalizedLanguage) ||
+    dream.originalTitle ||
+    dream.title
+  );
 }
 
 function getDreamExcerpt(dream, language) {
-  if (language === "zh") {
-    return getDreamTranslation(dream, language).excerpt || dream.excerpt_zh || dream.excerpt;
+  const normalizedLanguage = normalizeLanguage(language);
+
+  if (normalizeLanguage(dream.originalLanguage) === normalizedLanguage) {
+    return (
+      dream.originalExcerpt ||
+      createExcerpt(dream.originalText) ||
+      getLanguageSpecificValue(dream, "excerpt", normalizedLanguage) ||
+      dream.excerpt
+    );
   }
 
-  if (language === "es") {
-    return getDreamTranslation(dream, language).excerpt || dream.excerpt_es || dream.excerpt;
-  }
-
-  return dream.excerpt;
+  return (
+    getStoredTranslation(dream, normalizedLanguage).excerpt ||
+    getDreamTranslation(dream, normalizedLanguage).excerpt ||
+    getLanguageSpecificValue(dream, "excerpt", normalizedLanguage) ||
+    createExcerpt(getDreamText(dream, normalizedLanguage)) ||
+    dream.excerpt
+  );
 }
 
 function getDreamText(dream, language) {
-  if (language === "zh") {
+  const normalizedLanguage = normalizeLanguage(language);
+
+  if (normalizeLanguage(dream.originalLanguage) === normalizedLanguage) {
     return (
-      getDreamTranslation(dream, language).dream_text ||
-      dream.dream_text_zh ||
+      dream.originalText ||
+      getLanguageSpecificValue(dream, "dream_text", normalizedLanguage) ||
       dream.dream_text
     );
   }
 
-  if (language === "es") {
-    return (
-      getDreamTranslation(dream, language).dream_text ||
-      dream.dream_text_es ||
-      dream.dream_text
-    );
-  }
+  return (
+    getStoredTranslation(dream, normalizedLanguage).text ||
+    getStoredTranslation(dream, normalizedLanguage).dream_text ||
+    getDreamTranslation(dream, normalizedLanguage).dream_text ||
+    getLanguageSpecificValue(dream, "dream_text", normalizedLanguage) ||
+    dream.originalText ||
+    dream.dream_text
+  );
+}
 
-  return dream.dream_text;
+function getLanguageSpecificValue(record, field, language) {
+  const normalizedLanguage = normalizeLanguage(language);
+  const fieldMap = {
+    title: {
+      en: ["title", "title_en", "titleEn"],
+      zh: ["title_zh", "titleZh"],
+      es: ["title_es", "titleEs"],
+    },
+    excerpt: {
+      en: ["excerpt", "excerpt_en", "excerptEn"],
+      zh: ["excerpt_zh", "excerptZh"],
+      es: ["excerpt_es", "excerptEs"],
+    },
+    dream_text: {
+      en: ["dream_text", "dreamText", "text", "text_en", "textEn"],
+      zh: ["dream_text_zh", "dreamTextZh", "textZh", "text_zh"],
+      es: ["dream_text_es", "dreamTextEs", "textEs", "text_es"],
+    },
+  };
+
+  const keys = fieldMap[field]?.[normalizedLanguage] || [];
+  return keys.map((key) => record?.[key]).find(Boolean) || "";
+}
+
+function createExcerpt(value) {
+  if (!value) return "";
+  return value.length > 220 ? `${value.slice(0, 220)}...` : value;
+}
+
+function buildDreamTranslations(dream) {
+  return Object.fromEntries(
+    LANGUAGE_OPTIONS.map((option) => [
+      option.value,
+      {
+        title: getDreamTitle(dream, option.value),
+        excerpt: getDreamExcerpt(dream, option.value),
+        text: getDreamText(dream, option.value),
+      },
+    ])
+  );
 }
 
 function getTagName(tag, language) {
@@ -818,6 +921,10 @@ function ObservationCard({ dream, language, copy, currentUser, onOpenRecord }) {
     const recordReference = {
       ...dream,
       id: dream.dream_id,
+      originalLanguage: normalizeLanguage(dream.originalLanguage),
+      originalTitle: dream.originalTitle || getDreamTitle(dream, normalizeLanguage(dream.originalLanguage)),
+      originalText: dream.originalText || getDreamText(dream, normalizeLanguage(dream.originalLanguage)),
+      translations: buildDreamTranslations(dream),
       titleZh: getDreamTitle(dream, "zh"),
       titleEs: getDreamTitle(dream, "es"),
       textZh: getDreamText(dream, "zh"),
@@ -843,6 +950,10 @@ function ObservationCard({ dream, language, copy, currentUser, onOpenRecord }) {
         onOpenRecord?.({
           ...dream,
           id: dream.dream_id,
+          originalLanguage: normalizeLanguage(dream.originalLanguage),
+          originalTitle: dream.originalTitle || getDreamTitle(dream, normalizeLanguage(dream.originalLanguage)),
+          originalText: dream.originalText || getDreamText(dream, normalizeLanguage(dream.originalLanguage)),
+          translations: buildDreamTranslations(dream),
           titleZh: getDreamTitle(dream, "zh"),
           titleEs: getDreamTitle(dream, "es"),
           textZh: getDreamText(dream, "zh"),
@@ -868,6 +979,9 @@ function ObservationCard({ dream, language, copy, currentUser, onOpenRecord }) {
         <h2 className="text-xl font-semibold tracking-[-0.03em] text-zinc-50">
           {getDreamTitle(dream, language)}
         </h2>
+        <p className="mt-2 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
+          {copy.originalLanguageLabel}: {getLanguageName(dream.originalLanguage, language)}
+        </p>
 
         <p className="mt-3 text-sm leading-7 text-zinc-300">
           {getDreamExcerpt(dream, language)}

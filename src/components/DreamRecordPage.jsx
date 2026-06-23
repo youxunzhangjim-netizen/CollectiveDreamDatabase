@@ -4,7 +4,11 @@ import {
   saveRecordForUser,
   updateOwnedRecordMetadata,
 } from "../lib/recordsService.js";
-import { LANGUAGE_OPTIONS } from "../lib/language.js";
+import {
+  getLanguageName,
+  LANGUAGE_OPTIONS,
+  normalizeLanguage,
+} from "../lib/language.js";
 
 const DETAIL_COPY = {
   en: {
@@ -28,11 +32,17 @@ const DETAIL_COPY = {
     publicRecord: "Public",
     recordText: "Dream Record",
     emptyRecordBody: "No dream text has been archived for this record yet.",
+    originalLanguage: "Original Language",
+    originalSource: "Original Source Text",
+    translatedView: "Translated View",
     metadataSaved: "Dream metadata saved",
     signInToCollect: "Sign in to collect this dream",
     recorderRulesTitle: "Recorder Rules",
     recorderRules: [
       "Record only dreams you personally observed or have permission to archive.",
+      "Keep the original words exactly as recorded and label the original language.",
+      "Places can be included, but do not publish complete detailed addresses or private real names. Use relationships or descriptions such as my mom, my coworker, or a childhood friend when needed.",
+      "Names of works, celebrities, or public figures already visible on wiki pages or popular internet sources may be recorded.",
       "Creators may store the dream date and their age at the time of the dream.",
       "Account age display is optional and controlled by the account owner.",
       "Public records can be read by guests; private records stay owner-controlled.",
@@ -59,11 +69,17 @@ const DETAIL_COPY = {
     publicRecord: "公開",
     recordText: "夢境紀錄",
     emptyRecordBody: "此紀錄尚未歸檔夢境內文。",
+    originalLanguage: "原始語言",
+    originalSource: "原文紀錄",
+    translatedView: "翻譯版本",
     metadataSaved: "夢境資料已儲存",
     signInToCollect: "登入後可收藏此夢境",
     recorderRulesTitle: "記錄者規則",
     recorderRules: [
       "只記錄你親自經歷，或已獲得同意可歸檔的夢境。",
+      "保留夢境最初記錄語言的原文，並標示原始語言。",
+      "可以記錄地點，但不要公開完整詳細地址或私人真實姓名。必要時請用關係或描述替代，例如我媽媽、我的同事、童年朋友。",
+      "已在維基或熱門網路來源上公開可見的作品名稱、名人或公眾人物名稱可以記錄。",
       "創作者可以保存夢境日期與做夢當下的年齡。",
       "帳戶年齡是否公開顯示，由帳戶擁有者自行決定。",
       "公開紀錄可由訪客閱讀；私人紀錄仍由擁有者控制。",
@@ -90,11 +106,17 @@ const DETAIL_COPY = {
     publicRecord: "Público",
     recordText: "Registro del Sueño",
     emptyRecordBody: "Este registro aún no tiene texto de sueño archivado.",
+    originalLanguage: "Idioma Original",
+    originalSource: "Texto Original",
+    translatedView: "Vista Traducida",
     metadataSaved: "Metadatos guardados",
     signInToCollect: "Inicia sesión para coleccionar este sueño",
     recorderRulesTitle: "Reglas para Registrar",
     recorderRules: [
       "Registra solo sueños que observaste personalmente o que tienes permiso para archivar.",
+      "Conserva las palabras originales tal como fueron registradas y etiqueta el idioma original.",
+      "Puedes incluir lugares, pero no publiques direcciones completas ni nombres reales privados. Cuando sea necesario, usa relaciones o descripciones como mi mamá, mi colega o una amistad de la infancia.",
+      "Se pueden registrar nombres de obras, celebridades o figuras públicas que ya aparecen en wikis o fuentes populares de internet.",
       "Los creadores pueden guardar la fecha del sueño y su edad en ese momento.",
       "La edad de la cuenta es opcional y la controla la persona propietaria.",
       "Los registros públicos pueden leerse como invitado; los privados siguen bajo control del dueño.",
@@ -123,6 +145,8 @@ export default function DreamRecordPage({
   const [collecting, setCollecting] = useState(false);
   const title = getLocalizedRecordTitle(normalizedRecord, language);
   const body = getLocalizedRecordText(normalizedRecord, language);
+  const originalLanguage = normalizeLanguage(normalizedRecord.originalLanguage);
+  const isTranslatedView = normalizeLanguage(language) !== originalLanguage;
 
   useEffect(() => {
     document.title = title || "Dream Record";
@@ -211,9 +235,38 @@ export default function DreamRecordPage({
               <h1 className="text-4xl font-semibold text-zinc-50 sm:text-5xl">
                 {title}
               </h1>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
+                  {copy.originalLanguage}: {getLanguageName(originalLanguage, language)}
+                </span>
+                {isTranslatedView && (
+                  <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-fuchsia-100">
+                    {copy.translatedView}
+                  </span>
+                )}
+              </div>
               <p className="mt-5 max-w-3xl text-sm leading-7 text-zinc-300 sm:text-base">
                 {body || copy.emptyRecordBody}
               </p>
+
+              {isTranslatedView &&
+                (normalizedRecord.originalTitle || normalizedRecord.originalText) && (
+                  <section className="mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                    <p className="font-mono text-xs uppercase tracking-[0.24em] text-cyan-200/70">
+                      {copy.originalSource} / {getLanguageName(originalLanguage, language)}
+                    </p>
+                    {normalizedRecord.originalTitle && (
+                      <h2 className="mt-4 text-2xl font-semibold text-zinc-50">
+                        {normalizedRecord.originalTitle}
+                      </h2>
+                    )}
+                    {normalizedRecord.originalText && (
+                      <p className="mt-4 text-sm leading-7 text-zinc-300">
+                        {normalizedRecord.originalText}
+                      </p>
+                    )}
+                  </section>
+                )}
 
               {status && (
                 <p className="mt-6 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4 font-mono text-xs uppercase tracking-[0.16em] text-cyan-100">
@@ -236,6 +289,10 @@ export default function DreamRecordPage({
                       ? String(normalizedRecord.ageAtDream)
                       : "--"
                   }
+                />
+                <InfoRow
+                  label={copy.originalLanguage}
+                  value={getLanguageName(originalLanguage, language)}
                 />
                 <InfoRow
                   label={copy.visibility}
@@ -308,14 +365,34 @@ export default function DreamRecordPage({
 }
 
 function normalizeDreamRecord(record) {
+  const originalLanguage = normalizeLanguage(
+    record?.originalLanguage || record?.original_language || "en"
+  );
+  const title = record?.title || record?.title_en || record?.titleEn || "Untitled Record";
+  const titleZh = record?.titleZh || record?.title_zh || title || "未命名紀錄";
+  const titleEs = record?.titleEs || record?.title_es || title || "Registro sin título";
+  const text = record?.dream_text || record?.text || record?.excerpt || "";
+  const textZh = record?.dream_text_zh || record?.textZh || record?.excerpt_zh || record?.excerpt || "";
+  const textEs = record?.dream_text_es || record?.textEs || record?.excerpt_es || record?.excerpt || "";
+
   return {
     id: record?.id || record?.dream_id || record?.recordId || "",
-    title: record?.title || "Untitled Record",
-    titleZh: record?.titleZh || record?.title_zh || record?.title || "未命名紀錄",
-    titleEs: record?.titleEs || record?.title_es || record?.title || "Registro sin título",
-    text: record?.dream_text || record?.text || record?.excerpt || "",
-    textZh: record?.dream_text_zh || record?.textZh || record?.excerpt_zh || record?.excerpt || "",
-    textEs: record?.dream_text_es || record?.textEs || record?.excerpt_es || record?.excerpt || "",
+    originalLanguage,
+    originalTitle:
+      record?.originalTitle ||
+      record?.original_title ||
+      getLanguageSpecificRecordValue({ title, titleZh, titleEs }, "title", originalLanguage),
+    originalText:
+      record?.originalText ||
+      record?.original_text ||
+      getLanguageSpecificRecordValue({ text, textZh, textEs }, "text", originalLanguage),
+    translations: record?.translations || {},
+    title,
+    titleZh,
+    titleEs,
+    text,
+    textZh,
+    textEs,
     date: record?.dream_date || record?.date || "",
     dreamDate: record?.dreamDate || record?.dream_date || record?.date || "",
     ageAtDream: record?.ageAtDream || "",
@@ -326,17 +403,54 @@ function normalizeDreamRecord(record) {
 }
 
 function getLocalizedRecordTitle(record, language) {
-  if (language === "zh") return record.titleZh || record.title;
-  if (language === "es") return record.titleEs || record.title;
+  const normalizedLanguage = normalizeLanguage(language);
 
-  return record.title;
+  if (record.originalLanguage === normalizedLanguage) {
+    return record.originalTitle || getLanguageSpecificRecordValue(record, "title", normalizedLanguage);
+  }
+
+  return (
+    record.translations?.[normalizedLanguage]?.title ||
+    getLanguageSpecificRecordValue(record, "title", normalizedLanguage) ||
+    record.originalTitle ||
+    record.title
+  );
 }
 
 function getLocalizedRecordText(record, language) {
-  if (language === "zh") return record.textZh || record.text;
-  if (language === "es") return record.textEs || record.text;
+  const normalizedLanguage = normalizeLanguage(language);
 
-  return record.text;
+  if (record.originalLanguage === normalizedLanguage) {
+    return record.originalText || getLanguageSpecificRecordValue(record, "text", normalizedLanguage);
+  }
+
+  return (
+    record.translations?.[normalizedLanguage]?.text ||
+    record.translations?.[normalizedLanguage]?.dream_text ||
+    getLanguageSpecificRecordValue(record, "text", normalizedLanguage) ||
+    record.originalText ||
+    record.text
+  );
+}
+
+function getLanguageSpecificRecordValue(record, field, language) {
+  const normalizedLanguage = normalizeLanguage(language);
+
+  if (field === "title") {
+    if (normalizedLanguage === "zh") return record.titleZh || record.title_zh || "";
+    if (normalizedLanguage === "es") return record.titleEs || record.title_es || "";
+    return record.title || record.titleEn || record.title_en || "";
+  }
+
+  if (normalizedLanguage === "zh") {
+    return record.textZh || record.text_zh || record.dream_text_zh || "";
+  }
+
+  if (normalizedLanguage === "es") {
+    return record.textEs || record.text_es || record.dream_text_es || "";
+  }
+
+  return record.text || record.textEn || record.text_en || record.dream_text || "";
 }
 
 function LanguageToggle({ language, setLanguage, copy }) {

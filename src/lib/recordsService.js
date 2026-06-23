@@ -11,6 +11,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebaseClient.js";
+import { LANGUAGE_OPTIONS, normalizeLanguage } from "./language.js";
 
 function requireFirestore() {
   if (!isFirebaseConfigured || !db) {
@@ -90,6 +91,11 @@ function normalizeRecordReference(record) {
     throw new Error("recordId is required.");
   }
 
+  const originalLanguage = normalizeLanguage(
+    record?.originalLanguage || record?.original_language || "en"
+  );
+  const translations = normalizeRecordTranslations(record, originalLanguage);
+
   return {
     recordId,
     title: record?.title || "",
@@ -98,12 +104,85 @@ function normalizeRecordReference(record) {
     text: record?.dream_text || record?.text || record?.excerpt || "",
     textZh: record?.dream_text_zh || record?.textZh || record?.excerpt_zh || "",
     textEs: record?.dream_text_es || record?.textEs || record?.excerpt_es || "",
+    originalLanguage,
+    originalTitle:
+      record?.originalTitle ||
+      record?.original_title ||
+      getLanguageSpecificValue(record, "title", originalLanguage),
+    originalText:
+      record?.originalText ||
+      record?.original_text ||
+      getLanguageSpecificValue(record, "text", originalLanguage),
+    translations,
     date: record?.dream_date || record?.date || "",
     dreamDate: record?.dreamDate || record?.dream_date || record?.date || "",
     creatorId: record?.ownerId || record?.creatorId || "",
     pseudoId: record?.pseudo_id || record?.pseudoId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
   };
+}
+
+function normalizeRecordTranslations(record, originalLanguage) {
+  const existingTranslations =
+    record?.translations && typeof record.translations === "object"
+      ? record.translations
+      : {};
+
+  return Object.fromEntries(
+    LANGUAGE_OPTIONS.map((option) => {
+      const language = option.value;
+      const existingTranslation = existingTranslations[language] || {};
+
+      return [
+        language,
+        {
+          title:
+            existingTranslation.title ||
+            getLanguageSpecificValue(record, "title", language) ||
+            (language === originalLanguage
+              ? record?.originalTitle || record?.original_title || ""
+              : ""),
+          text:
+            existingTranslation.text ||
+            existingTranslation.dream_text ||
+            getLanguageSpecificValue(record, "text", language) ||
+            (language === originalLanguage
+              ? record?.originalText || record?.original_text || ""
+              : ""),
+          excerpt:
+            existingTranslation.excerpt ||
+            getLanguageSpecificValue(record, "excerpt", language),
+        },
+      ];
+    })
+  );
+}
+
+function getLanguageSpecificValue(record, field, language) {
+  const normalizedLanguage = normalizeLanguage(language);
+  const fields = {
+    title: {
+      en: ["title", "title_en", "titleEn"],
+      zh: ["titleZh", "title_zh"],
+      es: ["titleEs", "title_es"],
+    },
+    text: {
+      en: ["dream_text", "text", "text_en", "textEn"],
+      zh: ["dream_text_zh", "textZh", "text_zh"],
+      es: ["dream_text_es", "textEs", "text_es"],
+    },
+    excerpt: {
+      en: ["excerpt", "excerpt_en", "excerptEn"],
+      zh: ["excerpt_zh", "excerptZh"],
+      es: ["excerpt_es", "excerptEs"],
+    },
+  };
+
+  return (
+    fields[field]?.[normalizedLanguage]
+      ?.map((key) => record?.[key])
+      .find(Boolean) || ""
+  );
 }
 
 export async function saveRecordForUser(currentUser, record) {

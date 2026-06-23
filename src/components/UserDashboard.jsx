@@ -12,7 +12,11 @@ import {
   getOrCreateUserProfile,
   saveUserProfile,
 } from "../lib/profileService.js";
-import { LANGUAGE_OPTIONS } from "../lib/language.js";
+import {
+  getLanguageName,
+  LANGUAGE_OPTIONS,
+  normalizeLanguage,
+} from "../lib/language.js";
 
 const DASHBOARD_COPY = {
   en: {
@@ -49,6 +53,7 @@ const DASHBOARD_COPY = {
     profileSaved: "Profile saved",
     joinedDate: "Joined",
     hiddenAge: "Hidden",
+    originalLanguageLabel: "Original language",
   },
   zh: {
     documentTitle: "個人夢境終端",
@@ -83,6 +88,7 @@ const DASHBOARD_COPY = {
     profileSaved: "個人資料已儲存",
     joinedDate: "加入日期",
     hiddenAge: "已隱藏",
+    originalLanguageLabel: "原始語言",
   },
   es: {
     documentTitle: "Consola personal de sueños",
@@ -118,6 +124,7 @@ const DASHBOARD_COPY = {
     profileSaved: "Perfil guardado",
     joinedDate: "Fecha de ingreso",
     hiddenAge: "Oculta",
+    originalLanguageLabel: "Idioma original",
   },
 };
 
@@ -544,6 +551,7 @@ export default function UserDashboard({
                 key={item.id}
                 item={item}
                 language={language}
+                copy={copy}
                 actionLabel={
                   activeTab === "observations" ? copy.deleteButton : copy.removeButton
                 }
@@ -592,17 +600,36 @@ function normalizeDashboardUser(user, profile) {
 function normalizeRecordItem(item, index) {
   const accents = ["cyan", "fuchsia", "violet"];
   const id = item.id || item.recordId;
+  const originalLanguage = normalizeLanguage(
+    item.originalLanguage || item.original_language || "en"
+  );
+  const title = item.title || item.recordId || "Untitled Record";
+  const titleZh = item.titleZh || item.title_zh || title || item.recordId || "未命名紀錄";
+  const titleEs = item.titleEs || item.title_es || title || item.recordId || "Registro sin título";
+  const text = item.dream_text || item.text || item.excerpt || "";
+  const textZh = item.dream_text_zh || item.textZh || item.excerpt_zh || item.excerpt || "";
+  const textEs = item.dream_text_es || item.textEs || item.excerpt_es || item.excerpt || "";
 
   return {
     id,
     recordId: item.recordId || id,
     dream_id: item.dream_id || item.recordId || id,
-    title: item.title || item.recordId || "Untitled Record",
-    titleZh: item.titleZh || item.title_zh || item.title || item.recordId || "未命名紀錄",
-    titleEs: item.titleEs || item.title_es || item.title || item.recordId || "Registro sin título",
-    text: item.dream_text || item.text || item.excerpt || "",
-    textZh: item.dream_text_zh || item.textZh || item.excerpt_zh || item.excerpt || "",
-    textEs: item.dream_text_es || item.textEs || item.excerpt_es || item.excerpt || "",
+    originalLanguage,
+    originalTitle:
+      item.originalTitle ||
+      item.original_title ||
+      getLanguageSpecificRecordValue({ title, titleZh, titleEs }, "title", originalLanguage),
+    originalText:
+      item.originalText ||
+      item.original_text ||
+      getLanguageSpecificRecordValue({ text, textZh, textEs }, "text", originalLanguage),
+    translations: item.translations || {},
+    title,
+    titleZh,
+    titleEs,
+    text,
+    textZh,
+    textEs,
     dreamDate: item.dreamDate || item.dream_date || item.date || "",
     ageAtDream: item.ageAtDream || "",
     ownerId: item.ownerId || item.creatorId || "",
@@ -613,6 +640,20 @@ function normalizeRecordItem(item, index) {
     hash: item.hash || `VX-${String(id || "record").slice(0, 8).toUpperCase()}`,
     accent: item.accent || accents[index % accents.length],
   };
+}
+
+function getLanguageSpecificRecordValue(record, field, language) {
+  const normalizedLanguage = normalizeLanguage(language);
+
+  if (field === "title") {
+    if (normalizedLanguage === "zh") return record.titleZh || record.title_zh || "";
+    if (normalizedLanguage === "es") return record.titleEs || record.title_es || "";
+    return record.title || record.titleEn || record.title_en || "";
+  }
+
+  if (normalizedLanguage === "zh") return record.textZh || record.text_zh || "";
+  if (normalizedLanguage === "es") return record.textEs || record.text_es || "";
+  return record.text || record.textEn || record.text_en || "";
 }
 
 function formatRecordDate(value) {
@@ -714,10 +755,13 @@ function TabButton({ active, children, onClick }) {
   );
 }
 
-function RecordCard({ item, language, actionLabel, onOpen, onRemove }) {
+function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove }) {
   const style = ACCENT_STYLES[item.accent] || ACCENT_STYLES.cyan;
   const title =
-    language === "zh" ? item.titleZh : language === "es" ? item.titleEs : item.title;
+    normalizeLanguage(language) === item.originalLanguage
+      ? item.originalTitle || item.title
+      : item.translations?.[language]?.title ||
+        (language === "zh" ? item.titleZh : language === "es" ? item.titleEs : item.title);
 
   return (
     <article
@@ -743,6 +787,9 @@ function RecordCard({ item, language, actionLabel, onOpen, onRemove }) {
           </span>
         </div>
         <h2 className="min-h-14 text-xl font-semibold text-zinc-50">{title}</h2>
+        <p className="mt-3 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
+          {copy.originalLanguageLabel}: {getLanguageName(item.originalLanguage, language)}
+        </p>
 
         <button
           type="button"
