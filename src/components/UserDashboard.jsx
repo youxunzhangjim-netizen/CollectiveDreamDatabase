@@ -43,6 +43,8 @@ const DASHBOARD_COPY = {
     savedCount: "Saved",
     identityStatus: "Identity Mask",
     activeStatus: "Active",
+    accountEmailHidden: "Account email hidden",
+    privateAccountLabel: "Private account",
     lastSync: "Last Sync",
     recordsLoading: "Decrypting personal records",
     accountDetails: "Account Details",
@@ -106,6 +108,8 @@ const DASHBOARD_COPY = {
     savedCount: "已儲存",
     identityStatus: "身分遮罩",
     activeStatus: "啟用中",
+    accountEmailHidden: "帳戶電子郵件已隱藏",
+    privateAccountLabel: "私人帳戶",
     lastSync: "最後同步",
     accountDetails: "帳戶資料",
     displayNameLabel: "公開名稱",
@@ -167,6 +171,8 @@ const DASHBOARD_COPY = {
     savedCount: "Guardados",
     identityStatus: "Máscara de identidad",
     activeStatus: "Activa",
+    accountEmailHidden: "Correo de cuenta oculto",
+    privateAccountLabel: "Cuenta privada",
     lastSync: "Última sincronización",
     recordsLoading: "Descifrando registros personales",
     accountDetails: "Datos de la cuenta",
@@ -396,8 +402,8 @@ export default function UserDashboard({
       return displayUser.pseudoId.replace("DREAMER-", "").slice(0, 2);
     }
 
-    return displayUser.email.slice(0, 2).toUpperCase();
-  }, [displayUser.displayName, displayUser.email, displayUser.pseudoId]);
+    return "CD";
+  }, [displayUser.displayName, displayUser.pseudoId]);
 
   async function handleSaveProfile() {
     if (!profileDraft) return;
@@ -504,10 +510,10 @@ export default function UserDashboard({
                   {copy.consoleLabel}
                 </p>
                 <h1 className="mt-2 truncate text-2xl font-semibold text-zinc-50 sm:text-3xl">
-                  {displayUser.displayName || displayUser.email}
+                  {displayUser.displayName || displayUser.pseudoId || copy.privateAccountLabel}
                 </h1>
                 <p className="mt-2 truncate font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
-                  {displayUser.email}
+                  {copy.accountEmailHidden}
                 </p>
                 <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
                   {displayUser.pseudoId} / {copy.memberSince} {displayUser.memberSince}

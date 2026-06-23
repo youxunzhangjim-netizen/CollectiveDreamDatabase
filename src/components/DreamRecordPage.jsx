@@ -55,6 +55,9 @@ const DETAIL_COPY = {
     recorderRules: [
       "Record only dreams you personally observed or have permission to archive.",
       "First-person wording such as I, me, and my is allowed and does not count as exposing a private real name.",
+      "Record the actual feelings, views, sensory details, and uncertainty you remember.",
+      "Do not invent, imagine, or reshape the dream to satisfy morals, expectations, beauty, fluency, or literary style.",
+      "You may choose more precise words or add annotations for the dream itself, but keep the record honest, true, and free to your own nature.",
       "Keep the original words exactly as recorded and label the original language.",
       "Dream records need written words; images are optional and never required.",
       "Places can be included, but do not publish complete detailed addresses or private real names. Use relationships or descriptions such as my mom, my coworker, or a childhood friend when needed.",
@@ -105,6 +108,9 @@ const DETAIL_COPY = {
     recorderRules: [
       "只記錄你親自經歷，或已獲得同意可歸檔的夢境。",
       "可以使用「我」、「我的」等第一人稱，這不算暴露私人真實姓名。",
+      "請記錄你實際記得的感受、視角、感官細節與不確定之處。",
+      "不要為了道德、期待、美感、流暢或文學效果而創造、想像或改寫夢境。",
+      "你可以為夢本身選用更準確的詞語或加註，但記錄應保持誠實、真實，並讓自己的自然狀態自由存在。",
       "保留夢境最初記錄語言的原文，並標示原始語言。",
       "夢境紀錄必須有文字內容；圖片可以有，但不是必要。",
       "可以記錄地點，但不要公開完整詳細地址或私人真實姓名。必要時請用關係或描述替代，例如我媽媽、我的同事、童年朋友。",
@@ -157,6 +163,9 @@ const DETAIL_COPY = {
     recorderRules: [
       "Registra solo sueños que observaste personalmente o que tienes permiso para archivar.",
       "La primera persona como yo, me y mi está permitida y no cuenta como exponer un nombre real privado.",
+      "Registra los sentimientos, vistas, detalles sensoriales e incertidumbres que realmente recuerdas.",
+      "No inventes, imagines ni rehagas el sueño para ajustarlo a la moral, expectativas, belleza, fluidez o estilo literario.",
+      "Puedes usar palabras más precisas o añadir anotaciones sobre el sueño mismo, pero mantén el registro honesto, verdadero y libre para tu propia naturaleza.",
       "Conserva las palabras originales tal como fueron registradas y etiqueta el idioma original.",
       "Los registros necesitan texto escrito; las imágenes son opcionales y nunca obligatorias.",
       "Puedes incluir lugares, pero no publiques direcciones completas ni nombres reales privados. Cuando sea necesario, usa relaciones o descripciones como mi mamá, mi colega o una amistad de la infancia.",

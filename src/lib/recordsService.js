@@ -130,7 +130,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
       : "anonymous";
   const creatorDisplayName =
     recordIdentityMode === "account"
-      ? profile?.displayName || currentUser.displayName || currentUser.email || ""
+      ? profile?.displayName || currentUser.displayName || ""
       : "";
   const creatorAvatarUrl =
     recordIdentityMode === "account"

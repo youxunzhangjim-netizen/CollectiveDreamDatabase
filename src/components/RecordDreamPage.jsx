@@ -73,6 +73,9 @@ const RECORD_COPY = {
     rules: [
       "Dream records need written words; images are optional.",
       "First-person wording such as I, me, and my is welcome; dreamers do not need to rewrite their own voice.",
+      "Record the actual feelings, views, sensory details, and uncertainty you remember.",
+      "Do not invent, imagine, or reshape the dream to satisfy morals, expectations, beauty, fluency, or literary style.",
+      "You may choose more precise words or add annotations for the dream itself, but keep the record honest, true, and free to your own nature.",
       "Keep private real names out of the public record. Use relations or descriptions like my mom, a coworker, or an old friend.",
       "Places are allowed, but do not publish a complete detailed address.",
       "Names of public works, celebrities, or public figures already visible on wiki pages or popular internet sources may be recorded.",
@@ -147,6 +150,9 @@ const RECORD_COPY = {
     rules: [
       "夢境記錄必須有文字；圖片可以有，但不是必要。",
       "可以自然使用「我」、「我的」等第一人稱，不需要改寫掉自己的語氣。",
+      "請記錄你實際記得的感受、視角、感官細節與不確定之處。",
+      "不要為了道德、期待、美感、流暢或文學效果而創造、想像或改寫夢境。",
+      "你可以為夢本身選用更準確的詞語或加註，但記錄應保持誠實、真實，並讓自己的自然狀態自由存在。",
       "公開記錄中不要寫私人真實姓名。必要時用關係或描述替代，例如我媽媽、同事、老朋友。",
       "可以寫地點，但不要公開完整詳細地址。",
       "已在維基或熱門網路來源公開可見的作品、名人或公眾人物名稱可以記錄。",
@@ -223,6 +229,9 @@ const RECORD_COPY = {
     rules: [
       "Los registros necesitan texto escrito; las imágenes son opcionales.",
       "Puedes usar primera persona como yo, me y mi; no hace falta quitar tu propia voz.",
+      "Registra los sentimientos, vistas, detalles sensoriales e incertidumbres que realmente recuerdas.",
+      "No inventes, imagines ni rehagas el sueño para ajustarlo a la moral, expectativas, belleza, fluidez o estilo literario.",
+      "Puedes usar palabras más precisas o añadir anotaciones sobre el sueño mismo, pero mantén el registro honesto, verdadero y libre para tu propia naturaleza.",
       "No publiques nombres reales privados. Usa relaciones o descripciones como mi mamá, un colega o una vieja amistad.",
       "Puedes incluir lugares, pero no una dirección completa y detallada.",
       "Se pueden registrar obras, celebridades o figuras públicas ya visibles en wikis o fuentes populares de internet.",
