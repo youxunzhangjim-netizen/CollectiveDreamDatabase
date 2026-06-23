@@ -64,6 +64,8 @@ const RECORD_COPY = {
       "Your account session was still syncing. Try publishing once more.",
     publishUnavailable:
       "The archive is not reachable right now. Try again in a moment.",
+    publishInvalidData:
+      "One record field was rejected before publishing. Diagnostic code:",
     accountEditable:
       "Account-backed records can be edited or deleted later from your account.",
     anonymousLocked:
@@ -143,6 +145,7 @@ const RECORD_COPY = {
     publishPermissionDenied: "資料庫權限擋住發布。請貼上最新 Firestore 規則後再試一次。",
     publishAuthMismatch: "你的帳戶狀態還在同步。請再按一次發布。",
     publishUnavailable: "資料庫目前無法連線。請稍後再試。",
+    publishInvalidData: "有一個紀錄欄位在發布前被拒絕。診斷代碼：",
     accountEditable: "連到帳戶的記錄之後可以在帳戶中修改或刪除。",
     anonymousLocked: "匿名記錄發布後會成為公開檔案項目，之後不能修改或刪除。",
     authTitle: "選用帳戶連結",
@@ -223,6 +226,8 @@ const RECORD_COPY = {
       "La sesión de tu cuenta todavía se estaba sincronizando. Intenta publicar una vez más.",
     publishUnavailable:
       "El archivo no está disponible ahora. Inténtalo de nuevo en un momento.",
+    publishInvalidData:
+      "Un campo del registro fue rechazado antes de publicar. Código:",
     accountEditable:
       "Los registros conectados a una cuenta se pueden editar o eliminar más tarde.",
     anonymousLocked:
@@ -422,6 +427,10 @@ export default function RecordDreamPage({
       if (!submissionUser?.uid) {
         const credential = await loginAnonymously();
         submissionUser = credential.user;
+      }
+
+      if (!submissionUser.isAnonymous) {
+        await submissionUser.getIdToken(true).catch(() => {});
       }
 
       let profile = null;
@@ -934,6 +943,14 @@ function getPublishErrorMessage(error, copy) {
     code === "auth/network-request-failed"
   ) {
     return copy.publishUnavailable;
+  }
+
+  if (code === "invalid-argument" || code === "failed-precondition") {
+    return `${copy.publishInvalidData} ${code}`;
+  }
+
+  if (code) {
+    return `${copy.publishError} (${code})`;
   }
 
   return copy.publishError;
