@@ -10,6 +10,11 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == ownerId;
     }
 
+    function isAnonymousAuth() {
+      return isSignedIn()
+        && request.auth.token.firebase.sign_in_provider == "anonymous";
+    }
+
     function isPublicRecord(data) {
       return data.visibility == "public" || data.isPublic == true;
     }
@@ -39,6 +44,35 @@ service cloud.firestore {
         || data.recordIdentityMode in ["account", "anonymous"];
     }
 
+    function validAnonymousLock(data) {
+      return !data.keys().hasAny(["anonymousLocked"])
+        || data.anonymousLocked is bool;
+    }
+
+    function validRecordCreateMode(data) {
+      return (isAnonymousAuth()
+          && data.keys().hasAny(["anonymousLocked"])
+          && data.anonymousLocked == true
+          && (!data.keys().hasAny(["recordIdentityMode"])
+            || data.recordIdentityMode == "anonymous"))
+        || (!isAnonymousAuth()
+          && (!data.keys().hasAny(["anonymousLocked"])
+            || data.anonymousLocked == false));
+    }
+
+    function isNotAnonymousLocked(data) {
+      return !data.keys().hasAny(["anonymousLocked"])
+        || data.anonymousLocked != true;
+    }
+
+    function anonymousLockUnchanged() {
+      return (!resource.data.keys().hasAny(["anonymousLocked"])
+          && !request.resource.data.keys().hasAny(["anonymousLocked"]))
+        || (resource.data.keys().hasAny(["anonymousLocked"])
+          && request.resource.data.keys().hasAny(["anonymousLocked"])
+          && request.resource.data.anonymousLocked == resource.data.anonymousLocked);
+    }
+
     function validAdultMetadata(data) {
       return (!data.keys().hasAny(["adultContent"]) || data.adultContent is bool)
         && (!data.keys().hasAny(["minimumViewerAge"])
@@ -53,7 +87,13 @@ service cloud.firestore {
     function validRecordMetadata(data) {
       return validOriginalLanguage(data)
         && validRecordIdentity(data)
+        && validAnonymousLock(data)
         && validAdultMetadata(data);
+    }
+
+    function validRecordCreateMetadata(data) {
+      return validRecordMetadata(data)
+        && validRecordCreateMode(data);
     }
 
     function validProfileMetadata(data) {
@@ -73,13 +113,16 @@ service cloud.firestore {
         || isOwner(resource.data.ownerId);
 
       allow create: if isOwner(request.resource.data.ownerId)
-        && validRecordMetadata(request.resource.data);
+        && validRecordCreateMetadata(request.resource.data);
 
       allow update: if isOwner(resource.data.ownerId)
+        && isNotAnonymousLocked(resource.data)
         && request.resource.data.ownerId == resource.data.ownerId
+        && anonymousLockUnchanged()
         && validRecordMetadata(request.resource.data);
 
-      allow delete: if isOwner(resource.data.ownerId);
+      allow delete: if isOwner(resource.data.ownerId)
+        && isNotAnonymousLocked(resource.data);
     }
 
     match /users/{userId} {

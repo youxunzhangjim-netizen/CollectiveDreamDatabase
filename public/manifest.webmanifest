@@ -1,0 +1,20 @@
+{
+  "name": "Collective Dream Database",
+  "short_name": "CDDB",
+  "description": "A fast dream recording and collective research archive.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#030407",
+  "theme_color": "#22d3ee",
+  "orientation": "portrait",
+  "categories": ["productivity", "health", "education"],
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

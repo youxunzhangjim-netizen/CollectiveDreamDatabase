@@ -54,6 +54,7 @@ const DETAIL_COPY = {
     recorderRulesTitle: "Recorder Rules",
     recorderRules: [
       "Record only dreams you personally observed or have permission to archive.",
+      "First-person wording such as I, me, and my is allowed and does not count as exposing a private real name.",
       "Keep the original words exactly as recorded and label the original language.",
       "Dream records need written words; images are optional and never required.",
       "Places can be included, but do not publish complete detailed addresses or private real names. Use relationships or descriptions such as my mom, my coworker, or a childhood friend when needed.",
@@ -103,6 +104,7 @@ const DETAIL_COPY = {
     recorderRulesTitle: "記錄者規則",
     recorderRules: [
       "只記錄你親自經歷，或已獲得同意可歸檔的夢境。",
+      "可以使用「我」、「我的」等第一人稱，這不算暴露私人真實姓名。",
       "保留夢境最初記錄語言的原文，並標示原始語言。",
       "夢境紀錄必須有文字內容；圖片可以有，但不是必要。",
       "可以記錄地點，但不要公開完整詳細地址或私人真實姓名。必要時請用關係或描述替代，例如我媽媽、我的同事、童年朋友。",
@@ -154,6 +156,7 @@ const DETAIL_COPY = {
     recorderRulesTitle: "Reglas para Registrar",
     recorderRules: [
       "Registra solo sueños que observaste personalmente o que tienes permiso para archivar.",
+      "La primera persona como yo, me y mi está permitida y no cuenta como exponer un nombre real privado.",
       "Conserva las palabras originales tal como fueron registradas y etiqueta el idioma original.",
       "Los registros necesitan texto escrito; las imágenes son opcionales y nunca obligatorias.",
       "Puedes incluir lugares, pero no publiques direcciones completas ni nombres reales privados. Cuando sea necesario, usa relaciones o descripciones como mi mamá, mi colega o una amistad de la infancia.",
@@ -178,7 +181,8 @@ export default function DreamRecordPage({
   const isOwner = Boolean(
     currentUser?.uid &&
       normalizedRecord.ownerId &&
-      currentUser.uid === normalizedRecord.ownerId
+      currentUser.uid === normalizedRecord.ownerId &&
+      !normalizedRecord.anonymousLocked
   );
   const [dreamDate, setDreamDate] = useState(normalizedRecord.dreamDate || "");
   const [ageAtDream, setAgeAtDream] = useState(normalizedRecord.ageAtDream || "");
@@ -537,6 +541,7 @@ function normalizeDreamRecord(record) {
     dreamDate: record?.dreamDate || record?.dream_date || record?.date || "",
     ageAtDream: record?.ageAtDream || "",
     ownerId: record?.ownerId || record?.creatorId || "",
+    anonymousLocked: Boolean(record?.anonymousLocked),
     recordIdentityMode:
       record?.recordIdentityMode === "account" || record?.attributionMode === "account"
         ? "account"

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AuthPanel from "./components/AuthPanel.jsx";
 import CollectiveDreamDashboard from "./components/CollectiveDreamDashboard.jsx";
 import DreamRecordPage from "./components/DreamRecordPage.jsx";
+import RecordDreamPage from "./components/RecordDreamPage.jsx";
 import UserDashboard from "./components/UserDashboard.jsx";
 import { useAuth } from "./hooks/useAuth.js";
 import { logout } from "./lib/authService.js";
@@ -124,7 +125,21 @@ export default function App() {
         setLanguage={handleLanguageChange}
         currentUser={currentUser}
         onOpenAuth={() => setActiveView(currentUser ? "dashboard" : "auth")}
+        onOpenRecorder={() => setActiveView("record")}
         onOpenRecord={(record) => openDreamRecord(record, "database")}
+      />
+    );
+  }
+
+  if (activeView === "record") {
+    return (
+      <RecordDreamPage
+        language={language}
+        setLanguage={handleLanguageChange}
+        currentUser={currentUser}
+        onOpenDatabase={() => setActiveView("database")}
+        onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
+        onSubmitted={(record) => openDreamRecord(record, "record")}
       />
     );
   }
@@ -150,6 +165,7 @@ export default function App() {
         user={currentUser}
         onSignOut={handleSignOut}
         onOpenDatabase={() => setActiveView("database")}
+        onOpenRecorder={() => setActiveView("record")}
         onOpenRecord={(record) => openDreamRecord(record, "dashboard")}
       />
     );
@@ -161,6 +177,7 @@ export default function App() {
       setLanguage={handleLanguageChange}
       onAuthenticated={handleAuthenticated}
       onOpenDatabase={() => setActiveView("database")}
+      onOpenRecorder={() => setActiveView("record")}
     />
   );
 }

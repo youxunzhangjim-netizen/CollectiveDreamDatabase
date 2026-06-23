@@ -15,6 +15,7 @@ const AUTH_COPY = {
     chineseLabel: "Traditional Chinese interface",
     spanishLabel: "Spanish interface",
     databaseButton: "Public Database",
+    recordButton: "Record Dream",
     eyebrow: "Secure Identity Gateway",
     title: "Access the Collective Dream Database",
     subtitle:
@@ -59,6 +60,7 @@ const AUTH_COPY = {
     chineseLabel: "繁體中文介面",
     spanishLabel: "西班牙文介面",
     databaseButton: "公開資料庫",
+    recordButton: "記錄夢境",
     eyebrow: "安全身分閘道",
     title: "進入集體夢境資料庫",
     subtitle:
@@ -103,6 +105,7 @@ const AUTH_COPY = {
     chineseLabel: "Interfaz en chino tradicional",
     spanishLabel: "Interfaz en español",
     databaseButton: "Base pública",
+    recordButton: "Registrar sueño",
     eyebrow: "Puerta segura de identidad",
     title: "Accede a la Base de Sueños Colectivos",
     subtitle:
@@ -147,6 +150,7 @@ export default function AuthPanel({
   setLanguage = () => {},
   onAuthenticated,
   onOpenDatabase,
+  onOpenRecorder,
 }) {
   const copy = AUTH_COPY[language] || AUTH_COPY.zh;
   const [mode, setMode] = useState("login");
@@ -266,7 +270,16 @@ export default function AuthPanel({
             </span>
           </button>
 
-          <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onOpenRecorder}
+              className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15"
+            >
+              {copy.recordButton}
+            </button>
+            <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
+          </div>
         </header>
 
         <section className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[1.05fr_.95fr]">

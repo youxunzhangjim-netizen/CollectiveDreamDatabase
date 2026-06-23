@@ -28,6 +28,65 @@ function mapRecordSnapshot(snapshot) {
   }));
 }
 
+const RECORD_TAGS = {
+  awe: {
+    id: "emotion-awe",
+    category: "Emotions",
+    name: "Awe",
+    name_zh: "敬畏",
+    name_es: "Asombro",
+    slug: "awe",
+  },
+  fear: {
+    id: "emotion-fear",
+    category: "Emotions",
+    name: "Fear",
+    name_zh: "恐懼",
+    name_es: "Miedo",
+    slug: "fear",
+  },
+  calm: {
+    id: "emotion-calm",
+    category: "Emotions",
+    name: "Calm",
+    name_zh: "平靜",
+    name_es: "Calma",
+    slug: "calm",
+  },
+  grief: {
+    id: "emotion-grief",
+    category: "Emotions",
+    name: "Grief",
+    name_zh: "悲傷",
+    name_es: "Duelo",
+    slug: "grief",
+  },
+  desire: {
+    id: "emotion-desire",
+    category: "Emotions",
+    name: "Desire",
+    name_zh: "渴望",
+    name_es: "Deseo",
+    slug: "desire",
+  },
+  confusion: {
+    id: "emotion-confusion",
+    category: "Emotions",
+    name: "Confusion",
+    name_zh: "困惑",
+    name_es: "Confusion",
+    slug: "confusion",
+  },
+  "adult-content": {
+    id: "content-adult",
+    category: "Content",
+    name: "Adult content",
+    name_zh: "成人內容",
+    name_es: "Contenido adulto",
+    slug: "adult-content",
+  },
+};
+
 export async function fetchOwnedRecords(currentUser) {
   if (!currentUser?.uid) return [];
 
@@ -38,6 +97,111 @@ export async function fetchOwnedRecords(currentUser) {
 
   const snapshot = await getDocs(recordsQuery);
   return mapRecordSnapshot(snapshot);
+}
+
+export async function createDreamRecord(currentUser, draft, profile = null) {
+  if (!currentUser?.uid) {
+    throw new Error("A signed-in or guest session is required to publish a record.");
+  }
+
+  const dreamText = String(draft?.dreamText || draft?.originalText || "").trim();
+
+  if (!dreamText) {
+    throw new Error("Dream text is required.");
+  }
+
+  const firestore = requireFirestore();
+  const recordRef = doc(collection(firestore, "Records"));
+  const originalLanguage = normalizeLanguage(draft?.originalLanguage || "zh");
+  const title =
+    String(draft?.title || "").trim() ||
+    createTitleFromDreamText(dreamText, originalLanguage);
+  const excerpt = createExcerpt(dreamText);
+  const dreamDate = draft?.dreamDate || new Date().toISOString().slice(0, 10);
+  const ageAtDream =
+    draft?.ageAtDream === "" || draft?.ageAtDream == null
+      ? ""
+      : Math.max(0, Number(draft.ageAtDream));
+  const adultContent = Boolean(draft?.adultContent);
+  const accountBacked = !currentUser.isAnonymous;
+  const recordIdentityMode =
+    accountBacked && draft?.recordIdentityMode === "account"
+      ? "account"
+      : "anonymous";
+  const creatorDisplayName =
+    recordIdentityMode === "account"
+      ? profile?.displayName || currentUser.displayName || currentUser.email || ""
+      : "";
+  const creatorAvatarUrl =
+    recordIdentityMode === "account"
+      ? profile?.avatarUrl || currentUser.photoURL || ""
+      : "";
+  const emotionTags = Array.isArray(draft?.emotionTags)
+    ? draft.emotionTags.filter((tag) => RECORD_TAGS[tag])
+    : [];
+  const tagSlugs = adultContent
+    ? [...new Set([...emotionTags, "adult-content"])]
+    : [...new Set(emotionTags)];
+  const tags = tagSlugs.map((slug) => RECORD_TAGS[slug]).filter(Boolean);
+  const languageFields = buildOriginalLanguageFields(
+    originalLanguage,
+    title,
+    dreamText,
+    excerpt
+  );
+  const translations = Object.fromEntries(
+    LANGUAGE_OPTIONS.map((option) => [
+      option.value,
+      option.value === originalLanguage
+        ? { title, excerpt, text: dreamText }
+        : { title: "", excerpt: "", text: "" },
+    ])
+  );
+
+  const record = {
+    id: recordRef.id,
+    dream_id: recordRef.id,
+    ownerId: currentUser.uid,
+    creatorId: currentUser.uid,
+    anonymousLocked: Boolean(currentUser.isAnonymous),
+    visibility: "public",
+    isPublic: true,
+    originalLanguage,
+    originalTitle: title,
+    originalText: dreamText,
+    originalExcerpt: excerpt,
+    title,
+    dream_text: dreamText,
+    excerpt,
+    ...languageFields,
+    translations,
+    dreamDate,
+    dream_date: dreamDate,
+    ageAtDream: Number.isFinite(ageAtDream) ? ageAtDream : "",
+    recordIdentityMode,
+    attributionMode: recordIdentityMode,
+    creatorDisplayName,
+    creatorAvatarUrl,
+    pseudoId: buildPseudoId(recordRef.id),
+    adultContent,
+    minimumViewerAge: adultContent ? 18 : 0,
+    emotionTags,
+    tags,
+    anomaly_tag_slugs: tags
+      .filter((tag) => tag.category === "Anomalies")
+      .map((tag) => tag.slug),
+    signal_coherence: 50,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  await setDoc(recordRef, record);
+
+  return {
+    ...record,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 export async function fetchSavedRecords(currentUser) {
@@ -139,6 +303,7 @@ function normalizeRecordReference(record) {
     pseudoId: record?.pseudo_id || record?.pseudoId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
     adultContent,
+    anonymousLocked: Boolean(record?.anonymousLocked),
     minimumViewerAge:
       record?.minimumViewerAge ||
       record?.minimum_viewer_age ||
@@ -207,6 +372,56 @@ function getLanguageSpecificValue(record, field, language) {
       ?.map((key) => record?.[key])
       .find(Boolean) || ""
   );
+}
+
+function buildOriginalLanguageFields(language, title, text, excerpt) {
+  if (language === "zh") {
+    return {
+      titleZh: title,
+      title_zh: title,
+      textZh: text,
+      dream_text_zh: text,
+      excerptZh: excerpt,
+      excerpt_zh: excerpt,
+    };
+  }
+
+  if (language === "es") {
+    return {
+      titleEs: title,
+      title_es: title,
+      textEs: text,
+      dream_text_es: text,
+      excerptEs: excerpt,
+      excerpt_es: excerpt,
+    };
+  }
+
+  return {
+    titleEn: title,
+    title_en: title,
+    textEn: text,
+    text_en: text,
+    excerptEn: excerpt,
+    excerpt_en: excerpt,
+  };
+}
+
+function createTitleFromDreamText(text, language) {
+  const trimmedText = String(text || "").replace(/\s+/g, " ").trim();
+
+  if (!trimmedText) {
+    if (language === "zh") return "未命名夢境";
+    if (language === "es") return "Sueño sin título";
+    return "Untitled Dream";
+  }
+
+  return trimmedText.length > 42 ? `${trimmedText.slice(0, 42)}...` : trimmedText;
+}
+
+function createExcerpt(text) {
+  const trimmedText = String(text || "").trim();
+  return trimmedText.length > 220 ? `${trimmedText.slice(0, 220)}...` : trimmedText;
 }
 
 export async function saveRecordForUser(currentUser, record) {

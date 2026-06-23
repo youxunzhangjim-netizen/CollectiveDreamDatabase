@@ -26,6 +26,7 @@ const DASHBOARD_COPY = {
     chineseLabel: "Traditional Chinese interface",
     spanishLabel: "Spanish interface",
     databaseButton: "Public Database",
+    recordButton: "Record Dream",
     consoleLabel: "Authenticated User Console",
     memberSince: "Member since",
     signOut: "Sign Out",
@@ -37,6 +38,7 @@ const DASHBOARD_COPY = {
     collectionsEmpty: "No collected dreams found in your liked collection.",
     deleteButton: "Delete",
     removeButton: "Remove",
+    lockedButton: "Locked",
     observationCount: "Observations",
     savedCount: "Saved",
     identityStatus: "Identity Mask",
@@ -68,6 +70,17 @@ const DASHBOARD_COPY = {
     joinedDate: "Joined",
     hiddenAge: "Hidden",
     originalLanguageLabel: "Original language",
+    analysisTitle: "Personal Upload Analysis",
+    analysisText:
+      "A private summary of the dreams uploaded from this account for self-study and pattern tracking.",
+    analysisTotal: "Uploaded",
+    analysisAdult: "Mature tagged",
+    analysisShownIdentity: "Shown identity",
+    analysisHiddenIdentity: "Hidden identity",
+    analysisLanguageLead: "Leading language",
+    analysisEmotionLead: "Leading emotion",
+    analysisAverageAge: "Avg dream age",
+    analysisNoData: "No data yet",
   },
   zh: {
     documentTitle: "個人夢境終端",
@@ -76,6 +89,7 @@ const DASHBOARD_COPY = {
     chineseLabel: "繁體中文介面",
     spanishLabel: "西班牙文介面",
     databaseButton: "公開資料庫",
+    recordButton: "記錄夢境",
     consoleLabel: "已驗證使用者終端",
     memberSince: "會員起始日",
     signOut: "登出",
@@ -87,6 +101,7 @@ const DASHBOARD_COPY = {
     collectionsEmpty: "你的收藏集中尚無夢境紀錄。",
     deleteButton: "刪除",
     removeButton: "移除",
+    lockedButton: "已鎖定",
     observationCount: "觀測",
     savedCount: "已儲存",
     identityStatus: "身分遮罩",
@@ -117,6 +132,16 @@ const DASHBOARD_COPY = {
     joinedDate: "加入日期",
     hiddenAge: "已隱藏",
     originalLanguageLabel: "原始語言",
+    analysisTitle: "個人上傳分析",
+    analysisText: "只根據此帳戶上傳的夢境建立的私人摘要，可用於自我研究與模式追蹤。",
+    analysisTotal: "已上傳",
+    analysisAdult: "成人標記",
+    analysisShownIdentity: "顯示身分",
+    analysisHiddenIdentity: "隱藏身分",
+    analysisLanguageLead: "主要語言",
+    analysisEmotionLead: "主要情緒",
+    analysisAverageAge: "平均夢中年齡",
+    analysisNoData: "尚無資料",
   },
   es: {
     documentTitle: "Consola personal de sueños",
@@ -125,6 +150,7 @@ const DASHBOARD_COPY = {
     chineseLabel: "Interfaz en chino tradicional",
     spanishLabel: "Interfaz en español",
     databaseButton: "Base pública",
+    recordButton: "Registrar sueño",
     consoleLabel: "Consola de usuario autenticado",
     memberSince: "Miembro desde",
     signOut: "Cerrar sesión",
@@ -136,6 +162,7 @@ const DASHBOARD_COPY = {
     collectionsEmpty: "Aún no hay sueños en tu colección.",
     deleteButton: "Eliminar",
     removeButton: "Quitar",
+    lockedButton: "Bloqueado",
     observationCount: "Observaciones",
     savedCount: "Guardados",
     identityStatus: "Máscara de identidad",
@@ -167,6 +194,17 @@ const DASHBOARD_COPY = {
     joinedDate: "Fecha de ingreso",
     hiddenAge: "Oculta",
     originalLanguageLabel: "Idioma original",
+    analysisTitle: "Análisis personal",
+    analysisText:
+      "Resumen privado de los sueños subidos desde esta cuenta para estudio propio y seguimiento de patrones.",
+    analysisTotal: "Subidos",
+    analysisAdult: "Madurez marcada",
+    analysisShownIdentity: "Identidad visible",
+    analysisHiddenIdentity: "Identidad oculta",
+    analysisLanguageLead: "Idioma principal",
+    analysisEmotionLead: "Emoción principal",
+    analysisAverageAge: "Edad media",
+    analysisNoData: "Sin datos",
   },
 };
 
@@ -254,6 +292,7 @@ export default function UserDashboard({
   user,
   onSignOut,
   onOpenDatabase,
+  onOpenRecorder,
   onOpenRecord,
 }) {
   const copy = DASHBOARD_COPY[language] || DASHBOARD_COPY.zh;
@@ -284,6 +323,10 @@ export default function UserDashboard({
         ? copy.savedEmpty
         : copy.collectionsEmpty;
   const displayUser = normalizeDashboardUser(user, profile);
+  const personalAnalysis = useMemo(
+    () => buildPersonalDreamAnalysis(observations, language, copy),
+    [copy, language, observations]
+  );
 
   useEffect(() => {
     document.title = copy.documentTitle;
@@ -375,6 +418,10 @@ export default function UserDashboard({
 
   async function handleRemove(id) {
     if (activeTab === "observations") {
+      const record = observations.find((item) => item.id === id);
+
+      if (record?.anonymousLocked) return;
+
       await deleteOwnedRecord(user, id);
       setObservations((current) => current.filter((item) => item.id !== id));
       return;
@@ -416,6 +463,13 @@ export default function UserDashboard({
           </button>
 
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={onOpenRecorder}
+              className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15"
+            >
+              {copy.recordButton}
+            </button>
             <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
             <button
               type="button"
@@ -649,6 +703,8 @@ export default function UserDashboard({
           </section>
         )}
 
+        <PersonalAnalysisPanel stats={personalAnalysis} copy={copy} />
+
         <section className="mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="grid grid-cols-3 rounded-2xl border border-white/10 bg-black/40 p-1 sm:w-[36rem]">
             <TabButton
@@ -695,10 +751,15 @@ export default function UserDashboard({
                 language={language}
                 copy={copy}
                 actionLabel={
-                  activeTab === "observations" ? copy.deleteButton : copy.removeButton
+                  activeTab === "observations"
+                    ? item.anonymousLocked
+                      ? copy.lockedButton
+                      : copy.deleteButton
+                    : copy.removeButton
                 }
                 onOpen={() => onOpenRecord?.(item)}
                 onRemove={() => handleRemove(item.id)}
+                locked={activeTab === "observations" && item.anonymousLocked}
               />
             ))}
           </section>
@@ -786,6 +847,7 @@ function normalizeRecordItem(item, index) {
     ageAtDream: item.ageAtDream || "",
     ownerId: item.ownerId || item.creatorId || "",
     creatorId: item.creatorId || item.ownerId || "",
+    anonymousLocked: Boolean(item.anonymousLocked),
     recordIdentityMode:
       item.recordIdentityMode === "account" || item.attributionMode === "account"
         ? "account"
@@ -794,6 +856,8 @@ function normalizeRecordItem(item, index) {
     creatorAvatarUrl: item.creatorAvatarUrl || "",
     pseudoId: item.pseudoId || item.pseudo_id || "",
     visibility: item.visibility || (item.isPublic === false ? "private" : "public"),
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    emotionTags: Array.isArray(item.emotionTags) ? item.emotionTags : [],
     adultContent: Boolean(item.adultContent || item.adult_content || item.isAdult || item.is_adult),
     minimumViewerAge: item.minimumViewerAge || item.minimum_viewer_age || 0,
     date: formatRecordDate(item.dream_date || item.date || item.createdAt || item.savedAt),
@@ -823,6 +887,118 @@ function formatRecordDate(value) {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
 
   return "2026-06-23";
+}
+
+function buildPersonalDreamAnalysis(items, language, copy) {
+  const languageCounts = new Map();
+  const emotionCounts = new Map();
+  let adultCount = 0;
+  let shownIdentityCount = 0;
+  let hiddenIdentityCount = 0;
+  let ageTotal = 0;
+  let ageCount = 0;
+
+  items.forEach((item) => {
+    const originalLanguage = normalizeLanguage(item.originalLanguage);
+    languageCounts.set(originalLanguage, (languageCounts.get(originalLanguage) || 0) + 1);
+
+    if (item.recordIdentityMode === "account") {
+      shownIdentityCount += 1;
+    } else {
+      hiddenIdentityCount += 1;
+    }
+
+    if (item.adultContent || Number(item.minimumViewerAge || 0) >= 18) {
+      adultCount += 1;
+    }
+
+    const ageAtDream = Number(item.ageAtDream);
+    if (Number.isFinite(ageAtDream) && ageAtDream > 0) {
+      ageTotal += ageAtDream;
+      ageCount += 1;
+    }
+
+    getEmotionLabels(item, language).forEach((emotion) => {
+      emotionCounts.set(emotion, (emotionCounts.get(emotion) || 0) + 1);
+    });
+  });
+
+  const leadingLanguage = getTopMapEntry(languageCounts);
+  const leadingEmotion = getTopMapEntry(emotionCounts);
+
+  return {
+    total: items.length,
+    adultCount,
+    shownIdentityCount,
+    hiddenIdentityCount,
+    leadingLanguage: leadingLanguage
+      ? getLanguageName(leadingLanguage, language)
+      : copy.analysisNoData,
+    leadingEmotion: leadingEmotion || copy.analysisNoData,
+    averageAge: ageCount > 0 ? Math.round(ageTotal / ageCount) : copy.analysisNoData,
+  };
+}
+
+function getEmotionLabels(item, language) {
+  const labels = [];
+  const seen = new Set();
+
+  function addLabel(key, label) {
+    if (!label || seen.has(key)) return;
+    seen.add(key);
+    labels.push(label);
+  }
+
+  item.tags
+    ?.filter((tag) => tag.category === "Emotions")
+    .forEach((tag) => {
+      const key = tag.slug || tag.name;
+
+      if (language === "zh") {
+        addLabel(key, tag.name_zh || tag.nameZh || tag.name);
+        return;
+      }
+
+      if (language === "es") {
+        addLabel(key, tag.name_es || tag.nameEs || tag.name);
+        return;
+      }
+
+      addLabel(key, tag.name);
+    });
+
+  item.emotionTags?.forEach((emotion) => {
+    addLabel(emotion, getEmotionFallbackLabel(emotion, language));
+  });
+
+  return labels;
+}
+
+function getEmotionFallbackLabel(emotion, language) {
+  const labels = {
+    awe: { en: "Awe", zh: "敬畏", es: "Asombro" },
+    fear: { en: "Fear", zh: "恐懼", es: "Miedo" },
+    calm: { en: "Calm", zh: "平靜", es: "Calma" },
+    grief: { en: "Grief", zh: "悲傷", es: "Duelo" },
+    desire: { en: "Desire", zh: "渴望", es: "Deseo" },
+    confusion: { en: "Confusion", zh: "困惑", es: "Confusión" },
+  };
+
+  return labels[emotion]?.[language] || labels[emotion]?.en || emotion;
+}
+
+function getTopMapEntry(map) {
+  let topKey = "";
+  let topValue = 0;
+
+  map.forEach((value, key) => {
+    if (value > topValue) {
+      topKey = key;
+      topValue = value;
+    }
+  });
+
+  return topKey;
 }
 
 function DashboardBackground() {
@@ -875,6 +1051,39 @@ function LanguageToggle({ language, setLanguage, copy }) {
   );
 }
 
+function PersonalAnalysisPanel({ stats, copy }) {
+  return (
+    <section className="mb-6 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-4 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
+            {copy.analysisTitle}
+          </p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
+            {copy.analysisText}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
+        <StatusBlock label={copy.analysisTotal} value={String(stats.total)} />
+        <StatusBlock label={copy.analysisAdult} value={String(stats.adultCount)} />
+        <StatusBlock
+          label={copy.analysisShownIdentity}
+          value={String(stats.shownIdentityCount)}
+        />
+        <StatusBlock
+          label={copy.analysisHiddenIdentity}
+          value={String(stats.hiddenIdentityCount)}
+        />
+        <StatusBlock label={copy.analysisLanguageLead} value={stats.leadingLanguage} />
+        <StatusBlock label={copy.analysisEmotionLead} value={stats.leadingEmotion} />
+        <StatusBlock label={copy.analysisAverageAge} value={String(stats.averageAge)} />
+      </div>
+    </section>
+  );
+}
+
 function ProfilePill({ label, value }) {
   return (
     <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-300">
@@ -915,7 +1124,7 @@ function TabButton({ active, children, onClick }) {
   );
 }
 
-function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove }) {
+function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locked = false }) {
   const style = ACCENT_STYLES[item.accent] || ACCENT_STYLES.cyan;
   const title =
     normalizeLanguage(language) === item.originalLanguage
@@ -953,11 +1162,18 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove }) {
 
         <button
           type="button"
+          disabled={locked}
           onClick={(event) => {
             event.stopPropagation();
+            if (locked) return;
             onRemove();
           }}
-          className="mt-5 w-full rounded-xl border border-red-300/20 bg-red-400/5 px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-red-100 transition hover:border-red-300/45 hover:bg-red-400/10"
+          className={[
+            "mt-5 w-full rounded-xl border px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.2em] transition",
+            locked
+              ? "cursor-not-allowed border-white/10 bg-white/[0.03] text-zinc-500"
+              : "border-red-300/20 bg-red-400/5 text-red-100 hover:border-red-300/45 hover:bg-red-400/10",
+          ].join(" ")}
         >
           {actionLabel}
         </button>

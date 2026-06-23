@@ -316,6 +316,7 @@ export default function CollectiveDreamDashboard({
   setLanguage: setSelectedLanguage,
   currentUser,
   onOpenAuth,
+  onOpenRecorder,
   onOpenRecord,
 }) {
   const [localLanguage, setLocalLanguage] = useState("zh");
@@ -529,6 +530,7 @@ export default function CollectiveDreamDashboard({
         setLanguage={setLanguage}
         copy={copy}
         onOpenAuth={onOpenAuth}
+        onOpenRecorder={onOpenRecorder}
       />
 
       <section className="relative mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
@@ -842,7 +844,15 @@ function BackgroundField() {
   );
 }
 
-function TopNav({ query, setQuery, language, setLanguage, copy, onOpenAuth }) {
+function TopNav({
+  query,
+  setQuery,
+  language,
+  setLanguage,
+  copy,
+  onOpenAuth,
+  onOpenRecorder,
+}) {
   return (
     <nav className="sticky top-0 z-40 border-b border-cyan-300/10 bg-black/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
@@ -865,13 +875,17 @@ function TopNav({ query, setQuery, language, setLanguage, copy, onOpenAuth }) {
 
           <div className="flex gap-2 lg:hidden">
             <NavButton active>{copy.mobileDatabase}</NavButton>
-            <NavButton onClick={onOpenAuth}>{copy.mobileSubmit}</NavButton>
+            <NavButton onClick={onOpenRecorder || onOpenAuth}>
+              {copy.mobileSubmit}
+            </NavButton>
           </div>
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
           <NavButton active>{copy.globalDatabase}</NavButton>
-          <NavButton onClick={onOpenAuth}>{copy.submitObservation}</NavButton>
+          <NavButton onClick={onOpenRecorder || onOpenAuth}>
+            {copy.submitObservation}
+          </NavButton>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:w-[34rem]">
