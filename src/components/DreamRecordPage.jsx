@@ -42,6 +42,11 @@ const DETAIL_COPY = {
     collected: "Collected",
     saveMetadata: "Save Dream Metadata",
     creatorPanel: "Creator Metadata",
+    topicLabel: "Outline / main idea",
+    topicPlaceholder: "Leave blank if the dream has no clear topic",
+    dreamTextLabel: "Dream words",
+    dreamTextPlaceholder: "Edit the dream record words",
+    contentRequired: "Dream records need at least a few words.",
     dreamDate: "Dream Date",
     ageAtDream: "Age at Dream",
     agePlaceholder: "Optional",
@@ -104,6 +109,11 @@ const DETAIL_COPY = {
     collected: "已收藏",
     saveMetadata: "儲存夢境資料",
     creatorPanel: "創作者資料",
+    topicLabel: "大綱主旨",
+    topicPlaceholder: "如果夢沒有清楚主題，請留空",
+    dreamTextLabel: "夢境文字",
+    dreamTextPlaceholder: "修改夢境記錄文字",
+    contentRequired: "夢境記錄至少需要幾個字。",
     dreamDate: "夢境日期",
     ageAtDream: "做夢時年齡",
     agePlaceholder: "選填",
@@ -164,6 +174,11 @@ const DETAIL_COPY = {
     collected: "Coleccionado",
     saveMetadata: "Guardar Metadatos",
     creatorPanel: "Metadatos del Creador",
+    topicLabel: "Esquema / idea principal",
+    topicPlaceholder: "Déjalo vacío si el sueño no tiene tema claro",
+    dreamTextLabel: "Palabras del sueño",
+    dreamTextPlaceholder: "Edita las palabras del registro",
+    contentRequired: "Los registros necesitan al menos unas palabras.",
     dreamDate: "Fecha del Sueño",
     ageAtDream: "Edad en el Sueño",
     agePlaceholder: "Opcional",
@@ -227,12 +242,17 @@ export default function DreamRecordPage({
   onOpenDashboard,
 }) {
   const copy = DETAIL_COPY[language] || DETAIL_COPY.zh;
-  const normalizedRecord = useMemo(() => normalizeDreamRecord(record), [record]);
+  const [localRecord, setLocalRecord] = useState(record);
+  const normalizedRecord = useMemo(() => normalizeDreamRecord(localRecord), [localRecord]);
   const isOwner = Boolean(
     currentUser?.uid &&
       normalizedRecord.ownerId &&
       currentUser.uid === normalizedRecord.ownerId &&
       !normalizedRecord.anonymousLocked
+  );
+  const [titleDraft, setTitleDraft] = useState(normalizedRecord.originalTitle || "");
+  const [dreamTextDraft, setDreamTextDraft] = useState(
+    normalizedRecord.originalText || ""
   );
   const [dreamDate, setDreamDate] = useState(normalizedRecord.dreamDate || "");
   const [ageAtDream, setAgeAtDream] = useState(normalizedRecord.ageAtDream || "");
@@ -266,10 +286,16 @@ export default function DreamRecordPage({
   const pageTitle = adultAllowed ? title : copy.adultRestrictedTitle;
 
   useEffect(() => {
+    setLocalRecord(record);
+  }, [record]);
+
+  useEffect(() => {
     document.title = pageTitle || "Dream Record";
   }, [pageTitle]);
 
   useEffect(() => {
+    setTitleDraft(normalizedRecord.originalTitle || "");
+    setDreamTextDraft(normalizedRecord.originalText || "");
     setDreamDate(normalizedRecord.dreamDate || "");
     setAgeAtDream(normalizedRecord.ageAtDream || "");
     setAdultContent(isAdultRecord(normalizedRecord));
@@ -370,8 +396,19 @@ export default function DreamRecordPage({
   async function handleSaveMetadata() {
     setStatus("");
 
+    const nextTitle = titleDraft.trim();
+    const nextDreamText = dreamTextDraft.trim();
+
+    if (!nextDreamText) {
+      setStatus(copy.contentRequired);
+      return;
+    }
+
     try {
       await updateOwnedRecordMetadata(currentUser, normalizedRecord.id, {
+        title: nextTitle,
+        dreamText: nextDreamText,
+        originalLanguage,
         dreamDate,
         ageAtDream,
         adultContent,
@@ -382,6 +419,20 @@ export default function DreamRecordPage({
         selectedTagSlugs,
         customTagLabels: customTagEntries,
       });
+      setLocalRecord((current) =>
+        mergeRecordEdits(current, {
+          title: nextTitle,
+          dreamText: nextDreamText,
+          originalLanguage,
+          dreamDate,
+          ageAtDream,
+          adultContent,
+          minimumViewerAge: adultContent ? 18 : 0,
+          recordIdentityMode,
+          creatorDisplayName: profile?.displayName || currentUser?.displayName || "",
+          creatorAvatarUrl: profile?.avatarUrl || currentUser?.photoURL || "",
+        })
+      );
       setStatus(copy.metadataSaved);
     } catch (error) {
       setStatus(error.message);
@@ -568,6 +619,28 @@ export default function DreamRecordPage({
                   </p>
                   <label className="mb-3 block">
                     <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      {copy.topicLabel}
+                    </span>
+                    <input
+                      value={titleDraft}
+                      onChange={(event) => setTitleDraft(event.target.value)}
+                      placeholder={copy.topicPlaceholder}
+                      className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                    />
+                  </label>
+                  <label className="mb-3 block">
+                    <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      {copy.dreamTextLabel}
+                    </span>
+                    <textarea
+                      value={dreamTextDraft}
+                      onChange={(event) => setDreamTextDraft(event.target.value)}
+                      placeholder={copy.dreamTextPlaceholder}
+                      className="min-h-48 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-7 text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                    />
+                  </label>
+                  <label className="mb-3 block">
+                    <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                       {copy.dreamDate}
                     </span>
                     <input
@@ -670,9 +743,9 @@ function normalizeDreamRecord(record) {
   const originalLanguage = normalizeLanguage(
     record?.originalLanguage || record?.original_language || "en"
   );
-  const title = record?.title || record?.title_en || record?.titleEn || "Untitled Record";
-  const titleZh = record?.titleZh || record?.title_zh || title || "未命名紀錄";
-  const titleEs = record?.titleEs || record?.title_es || title || "Registro sin título";
+  const title = record?.title || record?.title_en || record?.titleEn || "";
+  const titleZh = record?.titleZh || record?.title_zh || "";
+  const titleEs = record?.titleEs || record?.title_es || "";
   const text = record?.dream_text || record?.text || record?.excerpt || "";
   const textZh = record?.dream_text_zh || record?.textZh || record?.excerpt_zh || record?.excerpt || "";
   const textEs = record?.dream_text_es || record?.textEs || record?.excerpt_es || record?.excerpt || "";
@@ -830,6 +903,88 @@ function getCustomTagEntries(record) {
       category: tag.category,
       label: tag.name || tag.name_zh || tag.name_es || tag.slug,
     }));
+}
+
+function mergeRecordEdits(record, updates) {
+  const excerpt = createLocalExcerpt(updates.dreamText);
+  const languageFields = buildLocalLanguageFields(
+    updates.originalLanguage,
+    updates.title,
+    updates.dreamText,
+    excerpt
+  );
+
+  return {
+    ...record,
+    ...languageFields,
+    originalLanguage: updates.originalLanguage,
+    originalTitle: updates.title,
+    originalText: updates.dreamText,
+    originalExcerpt: excerpt,
+    title: updates.title,
+    dream_text: updates.dreamText,
+    excerpt,
+    translations: {
+      ...(record?.translations || {}),
+      [updates.originalLanguage]: {
+        title: updates.title,
+        text: updates.dreamText,
+        excerpt,
+      },
+    },
+    dreamDate: updates.dreamDate || "",
+    dream_date: updates.dreamDate || "",
+    ageAtDream:
+      updates.ageAtDream === "" || updates.ageAtDream == null
+        ? ""
+        : Math.max(0, Number(updates.ageAtDream)),
+    adultContent: Boolean(updates.adultContent),
+    minimumViewerAge: updates.minimumViewerAge || 0,
+    recordIdentityMode: updates.recordIdentityMode,
+    attributionMode: updates.recordIdentityMode,
+    creatorDisplayName:
+      updates.recordIdentityMode === "account" ? updates.creatorDisplayName || "" : "",
+    creatorAvatarUrl:
+      updates.recordIdentityMode === "account" ? updates.creatorAvatarUrl || "" : "",
+  };
+}
+
+function buildLocalLanguageFields(language, title, text, excerpt) {
+  if (language === "zh") {
+    return {
+      titleZh: title,
+      title_zh: title,
+      textZh: text,
+      dream_text_zh: text,
+      excerptZh: excerpt,
+      excerpt_zh: excerpt,
+    };
+  }
+
+  if (language === "es") {
+    return {
+      titleEs: title,
+      title_es: title,
+      textEs: text,
+      dream_text_es: text,
+      excerptEs: excerpt,
+      excerpt_es: excerpt,
+    };
+  }
+
+  return {
+    titleEn: title,
+    title_en: title,
+    textEn: text,
+    text_en: text,
+    excerptEn: excerpt,
+    excerpt_en: excerpt,
+  };
+}
+
+function createLocalExcerpt(text) {
+  const trimmedText = String(text || "").trim();
+  return trimmedText.length > 220 ? `${trimmedText.slice(0, 220)}...` : trimmedText;
 }
 
 function EditableTagGroup({

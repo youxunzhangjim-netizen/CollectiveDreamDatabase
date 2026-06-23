@@ -60,9 +60,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   const firestore = requireFirestore();
   const recordRef = doc(collection(firestore, "Records"));
   const originalLanguage = normalizeLanguage(draft?.originalLanguage || "zh");
-  const title =
-    String(draft?.title || "").trim() ||
-    createTitleFromDreamText(dreamText, originalLanguage);
+  const title = String(draft?.title || "").trim();
   const excerpt = createExcerpt(dreamText);
   const dreamDate = draft?.dreamDate || new Date().toISOString().slice(0, 10);
   const ageAtDream =
@@ -443,18 +441,6 @@ function buildOriginalLanguageFields(language, title, text, excerpt) {
   };
 }
 
-function createTitleFromDreamText(text, language) {
-  const trimmedText = String(text || "").replace(/\s+/g, " ").trim();
-
-  if (!trimmedText) {
-    if (language === "zh") return "未命名夢境";
-    if (language === "es") return "Sueño sin título";
-    return "Untitled Dream";
-  }
-
-  return trimmedText.length > 42 ? `${trimmedText.slice(0, 42)}...` : trimmedText;
-}
-
 function createExcerpt(text) {
   const trimmedText = String(text || "").trim();
   return trimmedText.length > 220 ? `${trimmedText.slice(0, 220)}...` : trimmedText;
@@ -579,6 +565,39 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
   const metadata = {
     updatedAt: serverTimestamp(),
   };
+
+  if ("title" in updates || "dreamText" in updates) {
+    const originalLanguage = normalizeLanguage(updates.originalLanguage || "zh");
+    const title = String(updates.title || "").trim();
+    const dreamText = String(updates.dreamText || "").trim();
+
+    if (!dreamText) {
+      throw new Error("Dream text is required.");
+    }
+
+    const excerpt = createExcerpt(dreamText);
+
+    Object.assign(
+      metadata,
+      {
+        originalLanguage,
+        originalTitle: title,
+        originalText: dreamText,
+        originalExcerpt: excerpt,
+        title,
+        dream_text: dreamText,
+        excerpt,
+        translations: {
+          [originalLanguage]: {
+            title,
+            excerpt,
+            text: dreamText,
+          },
+        },
+      },
+      buildOriginalLanguageFields(originalLanguage, title, dreamText, excerpt)
+    );
+  }
 
   if ("dreamDate" in updates) {
     metadata.dreamDate = updates.dreamDate || "";

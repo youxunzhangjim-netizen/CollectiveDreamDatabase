@@ -934,9 +934,9 @@ function normalizeRecordItem(item, index) {
   const originalLanguage = normalizeLanguage(
     item.originalLanguage || item.original_language || "en"
   );
-  const title = item.title || item.recordId || "Untitled Record";
-  const titleZh = item.titleZh || item.title_zh || title || item.recordId || "未命名紀錄";
-  const titleEs = item.titleEs || item.title_es || title || item.recordId || "Registro sin título";
+  const title = item.title || "";
+  const titleZh = item.titleZh || item.title_zh || "";
+  const titleEs = item.titleEs || item.title_es || "";
   const text = item.dream_text || item.text || item.excerpt || "";
   const textZh = item.dream_text_zh || item.textZh || item.excerpt_zh || item.excerpt || "";
   const textEs = item.dream_text_es || item.textEs || item.excerpt_es || item.excerpt || "";

@@ -618,7 +618,7 @@ function normalizeDreamCard(row) {
       getLanguageSpecificValue(row, "excerpt", originalLanguage) ||
       createExcerpt(originalText),
     translations: row.translations || {},
-    title: row.title,
+    title: row.title || "",
     title_zh: row.title_zh || row.titleZh,
     title_es: row.title_es || row.titleEs,
     excerpt,
@@ -682,7 +682,8 @@ function getDreamTitle(dream, language) {
     return (
       dream.originalTitle ||
       getLanguageSpecificValue(dream, "title", normalizedLanguage) ||
-      dream.title
+      dream.title ||
+      ""
     );
   }
 
@@ -691,7 +692,8 @@ function getDreamTitle(dream, language) {
     getDreamTranslation(dream, normalizedLanguage).title ||
     getLanguageSpecificValue(dream, "title", normalizedLanguage) ||
     dream.originalTitle ||
-    dream.title
+    dream.title ||
+    ""
   );
 }
 
