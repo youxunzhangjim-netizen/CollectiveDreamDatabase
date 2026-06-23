@@ -19,6 +19,30 @@ export const TAG_TRANSLATIONS = {
     zh: "時間停止",
     es: "Tiempo detenido",
   },
+  "adult-content": {
+    zh: "成人內容",
+    es: "Contenido adulto",
+  },
+  awe: {
+    zh: "敬畏",
+    es: "Asombro",
+  },
+  fear: {
+    zh: "恐懼",
+    es: "Miedo",
+  },
+  longing: {
+    zh: "渴望",
+    es: "Anhelo",
+  },
+  confusion: {
+    zh: "困惑",
+    es: "Confusión",
+  },
+  calm: {
+    zh: "平靜",
+    es: "Calma",
+  },
 };
 
 export const DREAM_TRANSLATIONS = {
@@ -125,6 +149,42 @@ export const FALLBACK_TAGS = [
     name: "Time Stop",
     slug: "time-stop",
   },
+  {
+    id: "10000000-0000-4000-8000-000000000006",
+    category: "Content",
+    name: "Adult Content",
+    slug: "adult-content",
+  },
+  {
+    id: "10000000-0000-4000-8000-000000000007",
+    category: "Emotions",
+    name: "Awe",
+    slug: "awe",
+  },
+  {
+    id: "10000000-0000-4000-8000-000000000008",
+    category: "Emotions",
+    name: "Fear",
+    slug: "fear",
+  },
+  {
+    id: "10000000-0000-4000-8000-000000000009",
+    category: "Emotions",
+    name: "Longing",
+    slug: "longing",
+  },
+  {
+    id: "10000000-0000-4000-8000-000000000010",
+    category: "Emotions",
+    name: "Confusion",
+    slug: "confusion",
+  },
+  {
+    id: "10000000-0000-4000-8000-000000000011",
+    category: "Emotions",
+    name: "Calm",
+    slug: "calm",
+  },
 ];
 
 const tagsBySlug = Object.fromEntries(FALLBACK_TAGS.map((tag) => [tag.slug, tag]));
@@ -141,7 +201,7 @@ export const FALLBACK_DREAMS = [
     generated_image_url: null,
     pseudo_id: "DREAMER-7F3A9C",
     signal_coherence: 91,
-    tags: [tagsBySlug["cyberpunk-city"], tagsBySlug["gravity-reversal"], tagsBySlug["non-human"]],
+    tags: [tagsBySlug["cyberpunk-city"], tagsBySlug["gravity-reversal"], tagsBySlug["non-human"], tagsBySlug["awe"], tagsBySlug["confusion"]],
     anomaly_tag_slugs: ["gravity-reversal"],
   },
   {
@@ -155,7 +215,7 @@ export const FALLBACK_DREAMS = [
     generated_image_url: null,
     pseudo_id: "DREAMER-C0BALT",
     signal_coherence: 76,
-    tags: [tagsBySlug["endless-water"], tagsBySlug["time-stop"]],
+    tags: [tagsBySlug["endless-water"], tagsBySlug["time-stop"], tagsBySlug["calm"], tagsBySlug["longing"]],
     anomaly_tag_slugs: ["time-stop"],
   },
   {
@@ -169,7 +229,7 @@ export const FALLBACK_DREAMS = [
     generated_image_url: null,
     pseudo_id: "DREAMER-0B11QUE",
     signal_coherence: 84,
-    tags: [tagsBySlug["time-stop"], tagsBySlug["non-human"]],
+    tags: [tagsBySlug["time-stop"], tagsBySlug["non-human"], tagsBySlug["fear"], tagsBySlug["confusion"]],
     anomaly_tag_slugs: ["time-stop"],
   },
   {
@@ -183,7 +243,7 @@ export const FALLBACK_DREAMS = [
     generated_image_url: null,
     pseudo_id: "DREAMER-NULL9",
     signal_coherence: 88,
-    tags: [tagsBySlug["cyberpunk-city"], tagsBySlug["endless-water"], tagsBySlug["gravity-reversal"]],
+    tags: [tagsBySlug["cyberpunk-city"], tagsBySlug["endless-water"], tagsBySlug["gravity-reversal"], tagsBySlug["awe"]],
     anomaly_tag_slugs: ["gravity-reversal"],
   },
   {
@@ -197,7 +257,7 @@ export const FALLBACK_DREAMS = [
     generated_image_url: null,
     pseudo_id: "DREAMER-MNEME4",
     signal_coherence: 69,
-    tags: [tagsBySlug["non-human"], tagsBySlug["endless-water"]],
+    tags: [tagsBySlug["non-human"], tagsBySlug["endless-water"], tagsBySlug["fear"]],
     anomaly_tag_slugs: [],
   },
 ];

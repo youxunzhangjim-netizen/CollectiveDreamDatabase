@@ -26,6 +26,7 @@ const DETAIL_COPY = {
     dreamDate: "Dream Date",
     ageAtDream: "Age at Dream",
     agePlaceholder: "Optional",
+    markAdultContent: "Mark as adult content",
     recordIdentity: "Record Identity",
     recordAsAccount: "Use account",
     recordAsAnonymous: "Stay anonymous",
@@ -40,12 +41,21 @@ const DETAIL_COPY = {
     originalLanguage: "Original Language",
     originalSource: "Original Source Text",
     translatedView: "Translated View",
+    adultContentLabel: "Adult content",
+    adultRestrictedTitle: "Age-restricted dream",
+    adultGuestPrompt:
+      "This record may include adult content. Confirm you are 18 or older to read this record.",
+    adultAccountPrompt:
+      "Only accounts with a saved age of 18 or older can open this record.",
+    confirmAdult: "I am 18+",
+    denyAdult: "Not now",
     metadataSaved: "Dream metadata saved",
     signInToCollect: "Sign in to collect this dream",
     recorderRulesTitle: "Recorder Rules",
     recorderRules: [
       "Record only dreams you personally observed or have permission to archive.",
       "Keep the original words exactly as recorded and label the original language.",
+      "Dream records need written words; images are optional and never required.",
       "Places can be included, but do not publish complete detailed addresses or private real names. Use relationships or descriptions such as my mom, my coworker, or a childhood friend when needed.",
       "Names of works, celebrities, or public figures already visible on wiki pages or popular internet sources may be recorded.",
       "Creators may store the dream date and their age at the time of the dream.",
@@ -67,6 +77,7 @@ const DETAIL_COPY = {
     dreamDate: "夢境日期",
     ageAtDream: "做夢時年齡",
     agePlaceholder: "選填",
+    markAdultContent: "標記為成人內容",
     recordIdentity: "紀錄身分",
     recordAsAccount: "使用帳戶",
     recordAsAnonymous: "保持匿名",
@@ -81,12 +92,19 @@ const DETAIL_COPY = {
     originalLanguage: "原始語言",
     originalSource: "原文紀錄",
     translatedView: "翻譯版本",
+    adultContentLabel: "成人內容",
+    adultRestrictedTitle: "年齡限制夢境",
+    adultGuestPrompt: "此紀錄可能包含成人內容。請確認你已滿 18 歲，才能閱讀此紀錄。",
+    adultAccountPrompt: "只有已儲存年齡且年滿 18 歲的帳戶可以開啟此紀錄。",
+    confirmAdult: "我已滿 18 歲",
+    denyAdult: "暫不閱讀",
     metadataSaved: "夢境資料已儲存",
     signInToCollect: "登入後可收藏此夢境",
     recorderRulesTitle: "記錄者規則",
     recorderRules: [
       "只記錄你親自經歷，或已獲得同意可歸檔的夢境。",
       "保留夢境最初記錄語言的原文，並標示原始語言。",
+      "夢境紀錄必須有文字內容；圖片可以有，但不是必要。",
       "可以記錄地點，但不要公開完整詳細地址或私人真實姓名。必要時請用關係或描述替代，例如我媽媽、我的同事、童年朋友。",
       "已在維基或熱門網路來源上公開可見的作品名稱、名人或公眾人物名稱可以記錄。",
       "創作者可以保存夢境日期與做夢當下的年齡。",
@@ -108,6 +126,7 @@ const DETAIL_COPY = {
     dreamDate: "Fecha del Sueño",
     ageAtDream: "Edad en el Sueño",
     agePlaceholder: "Opcional",
+    markAdultContent: "Marcar como contenido adulto",
     recordIdentity: "Identidad del Registro",
     recordAsAccount: "Usar cuenta",
     recordAsAnonymous: "Seguir anónimo",
@@ -122,12 +141,21 @@ const DETAIL_COPY = {
     originalLanguage: "Idioma Original",
     originalSource: "Texto Original",
     translatedView: "Vista Traducida",
+    adultContentLabel: "Contenido adulto",
+    adultRestrictedTitle: "Sueño con restricción de edad",
+    adultGuestPrompt:
+      "Este registro puede incluir contenido adulto. Confirma que tienes 18 años o más para leerlo.",
+    adultAccountPrompt:
+      "Solo las cuentas con una edad guardada de 18 años o más pueden abrir este registro.",
+    confirmAdult: "Tengo 18+",
+    denyAdult: "Ahora no",
     metadataSaved: "Metadatos guardados",
     signInToCollect: "Inicia sesión para coleccionar este sueño",
     recorderRulesTitle: "Reglas para Registrar",
     recorderRules: [
       "Registra solo sueños que observaste personalmente o que tienes permiso para archivar.",
       "Conserva las palabras originales tal como fueron registradas y etiqueta el idioma original.",
+      "Los registros necesitan texto escrito; las imágenes son opcionales y nunca obligatorias.",
       "Puedes incluir lugares, pero no publiques direcciones completas ni nombres reales privados. Cuando sea necesario, usa relaciones o descripciones como mi mamá, mi colega o una amistad de la infancia.",
       "Se pueden registrar nombres de obras, celebridades o figuras públicas que ya aparecen en wikis o fuentes populares de internet.",
       "Los creadores pueden guardar la fecha del sueño y su edad en ese momento.",
@@ -154,25 +182,35 @@ export default function DreamRecordPage({
   );
   const [dreamDate, setDreamDate] = useState(normalizedRecord.dreamDate || "");
   const [ageAtDream, setAgeAtDream] = useState(normalizedRecord.ageAtDream || "");
+  const [adultContent, setAdultContent] = useState(
+    isAdultRecord(normalizedRecord)
+  );
   const [recordIdentityMode, setRecordIdentityMode] = useState(
     normalizedRecord.recordIdentityMode
   );
   const [profile, setProfile] = useState(null);
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [status, setStatus] = useState("");
   const [collecting, setCollecting] = useState(false);
   const title = getLocalizedRecordTitle(normalizedRecord, language);
   const body = getLocalizedRecordText(normalizedRecord, language);
   const originalLanguage = normalizeLanguage(normalizedRecord.originalLanguage);
   const isTranslatedView = normalizeLanguage(language) !== originalLanguage;
+  const adultRecord = isAdultRecord(normalizedRecord);
+  const ageVerifiedAdult = Number(profile?.age || 0) >= 18;
+  const adultAllowed = !adultRecord || ageVerifiedAdult || adultConfirmed;
+  const pageTitle = adultAllowed ? title : copy.adultRestrictedTitle;
 
   useEffect(() => {
-    document.title = title || "Dream Record";
-  }, [title]);
+    document.title = pageTitle || "Dream Record";
+  }, [pageTitle]);
 
   useEffect(() => {
     setDreamDate(normalizedRecord.dreamDate || "");
     setAgeAtDream(normalizedRecord.ageAtDream || "");
+    setAdultContent(isAdultRecord(normalizedRecord));
     setRecordIdentityMode(normalizedRecord.recordIdentityMode);
+    setAdultConfirmed(false);
   }, [normalizedRecord]);
 
   useEffect(() => {
@@ -202,6 +240,15 @@ export default function DreamRecordPage({
       return;
     }
 
+    if (!adultAllowed) {
+      setStatus(
+        currentUser?.uid && !currentUser.isAnonymous
+          ? copy.adultAccountPrompt
+          : copy.adultGuestPrompt
+      );
+      return;
+    }
+
     setCollecting(true);
     setStatus("");
 
@@ -225,6 +272,8 @@ export default function DreamRecordPage({
       await updateOwnedRecordMetadata(currentUser, normalizedRecord.id, {
         dreamDate,
         ageAtDream,
+        adultContent,
+        minimumViewerAge: adultContent ? 18 : 0,
         recordIdentityMode,
         creatorDisplayName: profile?.displayName || currentUser?.displayName || "",
         creatorAvatarUrl: profile?.avatarUrl || currentUser?.photoURL || "",
@@ -280,7 +329,7 @@ export default function DreamRecordPage({
                 {copy.recordText}
               </p>
               <h1 className="text-4xl font-semibold text-zinc-50 sm:text-5xl">
-                {title}
+                {pageTitle}
               </h1>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
@@ -291,12 +340,26 @@ export default function DreamRecordPage({
                     {copy.translatedView}
                   </span>
                 )}
+                {adultRecord && (
+                  <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100">
+                    {copy.adultContentLabel} 18+
+                  </span>
+                )}
               </div>
-              <p className="mt-5 max-w-3xl text-sm leading-7 text-zinc-300 sm:text-base">
-                {body || copy.emptyRecordBody}
-              </p>
+              {!adultAllowed ? (
+                <AdultGatePanel
+                  copy={copy}
+                  currentUser={currentUser}
+                  onConfirm={() => setAdultConfirmed(true)}
+                />
+              ) : (
+                <p className="mt-5 max-w-3xl text-sm leading-7 text-zinc-300 sm:text-base">
+                  {body || copy.emptyRecordBody}
+                </p>
+              )}
 
-              {isTranslatedView &&
+              {adultAllowed &&
+                isTranslatedView &&
                 (normalizedRecord.originalTitle || normalizedRecord.originalText) && (
                   <section className="mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                     <p className="font-mono text-xs uppercase tracking-[0.24em] text-cyan-200/70">
@@ -394,6 +457,17 @@ export default function DreamRecordPage({
                       className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                     />
                   </label>
+                  <label className="mt-4 flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={adultContent}
+                      onChange={(event) => setAdultContent(event.target.checked)}
+                      className="h-4 w-4 accent-amber-300"
+                    />
+                    <span className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-300">
+                      {copy.markAdultContent}
+                    </span>
+                  </label>
                   <div className="mt-4">
                     <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                       {copy.recordIdentity}
@@ -471,7 +545,18 @@ function normalizeDreamRecord(record) {
     creatorAvatarUrl: record?.creatorAvatarUrl || "",
     pseudoId: record?.pseudo_id || record?.pseudoId || record?.creatorId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
+    adultContent: Boolean(
+      record?.adultContent ||
+        record?.adult_content ||
+        record?.isAdult ||
+        record?.is_adult
+    ),
+    minimumViewerAge: record?.minimumViewerAge || record?.minimum_viewer_age || 0,
   };
+}
+
+function isAdultRecord(record) {
+  return Boolean(record.adultContent) || Number(record.minimumViewerAge || 0) >= 18;
 }
 
 function getLocalizedRecordTitle(record, language) {
@@ -591,6 +676,38 @@ function CreatorIdentity({ copy, record }) {
         <p className="break-words font-mono text-sm text-cyan-100">{displayName}</p>
       </div>
     </div>
+  );
+}
+
+function AdultGatePanel({ copy, currentUser, onConfirm }) {
+  const accountNeedsSavedAge = Boolean(currentUser?.uid && !currentUser.isAnonymous);
+
+  return (
+    <section className="mt-7 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-5">
+      <p className="font-mono text-xs uppercase tracking-[0.24em] text-amber-100">
+        {copy.adultRestrictedTitle}
+      </p>
+      <p className="mt-3 text-sm leading-6 text-zinc-300">
+        {accountNeedsSavedAge ? copy.adultAccountPrompt : copy.adultGuestPrompt}
+      </p>
+      {!accountNeedsSavedAge && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-xl border border-amber-300/35 bg-amber-300 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-amber-200"
+          >
+            {copy.confirmAdult}
+          </button>
+          <button
+            type="button"
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300"
+          >
+            {copy.denyAdult}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -99,6 +99,12 @@ function normalizeRecordReference(record) {
     record?.recordIdentityMode === "account" || record?.attributionMode === "account"
       ? "account"
       : "anonymous";
+  const adultContent = Boolean(
+    record?.adultContent ||
+      record?.adult_content ||
+      record?.isAdult ||
+      record?.is_adult
+  );
 
   return {
     recordId,
@@ -132,6 +138,11 @@ function normalizeRecordReference(record) {
         : "",
     pseudoId: record?.pseudo_id || record?.pseudoId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
+    adultContent,
+    minimumViewerAge:
+      record?.minimumViewerAge ||
+      record?.minimum_viewer_age ||
+      (adultContent ? 18 : 0),
   };
 }
 
@@ -318,6 +329,13 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
       updates.ageAtDream === "" || updates.ageAtDream == null
         ? ""
         : Math.max(0, Number(updates.ageAtDream));
+  }
+
+  if ("adultContent" in updates) {
+    metadata.adultContent = Boolean(updates.adultContent);
+    metadata.minimumViewerAge = updates.adultContent
+      ? Math.max(18, Number(updates.minimumViewerAge || 18))
+      : 0;
   }
 
   if ("recordIdentityMode" in updates) {

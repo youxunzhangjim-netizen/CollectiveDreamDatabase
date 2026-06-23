@@ -13,6 +13,7 @@ import {
 } from "../lib/language.js";
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient.js";
 import { collectRecordForUser, saveRecordForUser } from "../lib/recordsService.js";
+import { getOrCreateUserProfile } from "../lib/profileService.js";
 
 const CATEGORY_STYLES = {
   Environment:
@@ -21,12 +22,18 @@ const CATEGORY_STYLES = {
     "border-violet-300/20 bg-violet-300/10 text-violet-100 shadow-[0_0_18px_rgba(167,139,250,.08)]",
   Anomalies:
     "border-fuchsia-300/25 bg-fuchsia-300/10 text-fuchsia-100 shadow-[0_0_18px_rgba(217,70,239,.10)]",
+  Emotions:
+    "border-emerald-300/20 bg-emerald-300/10 text-emerald-100 shadow-[0_0_18px_rgba(110,231,183,.08)]",
+  Content:
+    "border-amber-300/25 bg-amber-300/10 text-amber-100 shadow-[0_0_18px_rgba(251,191,36,.10)]",
 };
 
 const CATEGORY_DOT_STYLES = {
   Environment: "bg-cyan-300",
   Entities: "bg-violet-300",
   Anomalies: "bg-fuchsia-300",
+  Emotions: "bg-emerald-300",
+  Content: "bg-amber-300",
 };
 
 const CATEGORY_LABELS = {
@@ -35,20 +42,35 @@ const CATEGORY_LABELS = {
     Environment: "Environment",
     Entities: "Entities",
     Anomalies: "Anomalies",
+    Emotions: "Emotions",
+    Content: "Content safety",
   },
   zh: {
     All: "全部類別",
     Environment: "環境",
     Entities: "實體",
     Anomalies: "異常",
+    Emotions: "情緒",
+    Content: "內容安全",
   },
   es: {
     All: "Todas las categorías",
     Environment: "Entorno",
     Entities: "Entidades",
     Anomalies: "Anomalías",
+    Emotions: "Emociones",
+    Content: "Seguridad",
   },
 };
+
+const CATEGORY_FILTERS = [
+  "All",
+  "Environment",
+  "Entities",
+  "Anomalies",
+  "Emotions",
+  "Content",
+];
 
 const UI_COPY = {
   en: {
@@ -60,7 +82,7 @@ const UI_COPY = {
     globalDatabase: "Global Database",
     submitObservation: "Submit Observation",
     searchLabel: "Search dream observations",
-    searchPlaceholder: "Search dreams, pseudo-IDs, anomalies...",
+    searchPlaceholder: "Search dreams, pseudo-IDs, emotions, anomalies...",
     languageLabel: "Switch interface language",
     englishLabel: "English interface",
     chineseLabel: "Traditional Chinese interface",
@@ -106,6 +128,26 @@ const UI_COPY = {
     visualHash: "Visual hash",
     signalCoherence: "Signal coherence",
     originalLanguageLabel: "Original language",
+    adultContentLabel: "Adult content",
+    adultRestrictedTitle: "Age-restricted dream",
+    adultGuestPrompt:
+      "This record may include adult content. Confirm you are 18 or older to read this record.",
+    adultAccountPrompt:
+      "Only accounts with a saved age of 18 or older can open this record.",
+    confirmAdult: "I am 18+",
+    denyAdult: "Not now",
+    imageHiddenForGuest: "Images are hidden for guests",
+    wordsOnlyForGuest: "Words-only guest view",
+    researchTitle: "Collective Research Signals",
+    researchText:
+      "A live snapshot for collective analysis: emotion labels, language origin, maturity gates, and coherence patterns.",
+    researchTotal: "Total records",
+    researchVisible: "Visible now",
+    researchAdultRestricted: "Mature gated",
+    researchAverageCoherence: "Avg coherence",
+    researchEmotionLead: "Leading emotion",
+    researchLanguageLead: "Leading original language",
+    noResearchData: "Not enough signal yet",
     collectDream: "Collect",
     collectedDream: "Collected",
     signInToCollect: "Sign in to collect",
@@ -119,7 +161,7 @@ const UI_COPY = {
     globalDatabase: "全球資料庫",
     submitObservation: "提交觀測",
     searchLabel: "搜尋夢境觀測",
-    searchPlaceholder: "搜尋夢境、匿名 ID、異常現象...",
+    searchPlaceholder: "搜尋夢境、匿名 ID、情緒、異常現象...",
     languageLabel: "切換介面語言",
     englishLabel: "英文介面",
     chineseLabel: "繁體中文介面",
@@ -164,6 +206,23 @@ const UI_COPY = {
     visualHash: "視覺雜湊",
     signalCoherence: "訊號一致性",
     originalLanguageLabel: "原始語言",
+    adultContentLabel: "成人內容",
+    adultRestrictedTitle: "年齡限制夢境",
+    adultGuestPrompt: "此紀錄可能包含成人內容。請確認你已滿 18 歲，才能閱讀此紀錄。",
+    adultAccountPrompt: "只有已儲存年齡且年滿 18 歲的帳戶可以開啟此紀錄。",
+    confirmAdult: "我已滿 18 歲",
+    denyAdult: "暫不閱讀",
+    imageHiddenForGuest: "訪客不顯示圖片",
+    wordsOnlyForGuest: "訪客文字模式",
+    researchTitle: "集體研究訊號",
+    researchText: "供集體分析使用的即時概覽：情緒標籤、原始語言、成人內容門檻與一致性模式。",
+    researchTotal: "總紀錄",
+    researchVisible: "目前可見",
+    researchAdultRestricted: "成人門檻",
+    researchAverageCoherence: "平均一致性",
+    researchEmotionLead: "主要情緒",
+    researchLanguageLead: "主要原始語言",
+    noResearchData: "訊號尚不足",
     collectDream: "收藏",
     collectedDream: "已收藏",
     signInToCollect: "登入後可收藏",
@@ -177,7 +236,7 @@ const UI_COPY = {
     globalDatabase: "Base global",
     submitObservation: "Enviar observación",
     searchLabel: "Buscar observaciones de sueños",
-    searchPlaceholder: "Buscar sueños, pseudo-ID, anomalías...",
+    searchPlaceholder: "Buscar sueños, pseudo-ID, emociones, anomalías...",
     languageLabel: "Cambiar idioma de la interfaz",
     englishLabel: "Interfaz en inglés",
     chineseLabel: "Interfaz en chino tradicional",
@@ -224,6 +283,26 @@ const UI_COPY = {
     visualHash: "Hash visual",
     signalCoherence: "Coherencia de señal",
     originalLanguageLabel: "Idioma original",
+    adultContentLabel: "Contenido adulto",
+    adultRestrictedTitle: "Sueño con restricción de edad",
+    adultGuestPrompt:
+      "Este registro puede incluir contenido adulto. Confirma que tienes 18 años o más para leerlo.",
+    adultAccountPrompt:
+      "Solo las cuentas con una edad guardada de 18 años o más pueden abrir este registro.",
+    confirmAdult: "Tengo 18+",
+    denyAdult: "Ahora no",
+    imageHiddenForGuest: "Las imágenes están ocultas para invitados",
+    wordsOnlyForGuest: "Vista de invitado solo texto",
+    researchTitle: "Señales de Investigación Colectiva",
+    researchText:
+      "Una vista para análisis colectivo: emociones, idioma original, límites de madurez y patrones de coherencia.",
+    researchTotal: "Registros",
+    researchVisible: "Visibles ahora",
+    researchAdultRestricted: "Madurez filtrada",
+    researchAverageCoherence: "Coherencia media",
+    researchEmotionLead: "Emoción principal",
+    researchLanguageLead: "Idioma original principal",
+    noResearchData: "Señal insuficiente",
     collectDream: "Coleccionar",
     collectedDream: "Coleccionado",
     signInToCollect: "Inicia sesión para coleccionar",
@@ -251,6 +330,8 @@ export default function CollectiveDreamDashboard({
   const [sortMode, setSortMode] = useState("coherence");
   const [loadState, setLoadState] = useState(INITIAL_LOAD_STATE);
   const [loadError, setLoadError] = useState(null);
+  const [viewerProfile, setViewerProfile] = useState(null);
+  const [adultConfirmations, setAdultConfirmations] = useState({});
   const copy = UI_COPY[language] || UI_COPY.zh;
 
   useEffect(() => {
@@ -300,16 +381,50 @@ export default function CollectiveDreamDashboard({
     };
   }, []);
 
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setViewerProfile(null);
+      return undefined;
+    }
+
+    let ignore = false;
+
+    async function loadViewerProfile() {
+      try {
+        const profile = await getOrCreateUserProfile(currentUser);
+        if (!ignore) setViewerProfile(profile);
+      } catch {
+        if (!ignore) setViewerProfile(null);
+      }
+    }
+
+    loadViewerProfile();
+
+    return () => {
+      ignore = true;
+    };
+  }, [currentUser]);
+
   const visibleTags = useMemo(() => {
     if (categoryFilter === "All") return tags;
     return tags.filter((tag) => tag.category === categoryFilter);
   }, [tags, categoryFilter]);
+  const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
+  const isAgeVerifiedAdult = Number(viewerProfile?.age || 0) >= 18;
+
+  function canAccessAdultDream(dream) {
+    if (!isAdultDream(dream)) return true;
+    if (isAgeVerifiedAdult) return true;
+
+    return Boolean(adultConfirmations[dream.dream_id]);
+  }
 
   const filteredDreams = useMemo(() => {
     const needle = query.trim().toLowerCase();
 
     return dreams
       .filter((dream) => {
+        const adultRestricted = isAdultDream(dream) && !canAccessAdultDream(dream);
         const dreamTagSlugs = dream.tags.map((tag) => tag.slug);
         const dreamTagNames = dream.tags
           .map((tag) => `${tag.name} ${getTagName(tag, language)}`)
@@ -318,21 +433,30 @@ export default function CollectiveDreamDashboard({
           .map((tag) => `${tag.category} ${getCategoryLabel(tag.category, language)}`)
           .join(" ");
 
-        const searchableText = [
-          dream.title,
-          dream.originalTitle,
-          dream.originalText,
-          getLanguageName(dream.originalLanguage, language),
-          getDreamTitle(dream, language),
-          dream.excerpt,
-          getDreamExcerpt(dream, language),
-          dream.dream_text,
-          getDreamText(dream, language),
-          dream.pseudo_id,
-          dreamTagNames,
-          dreamTagSlugs.join(" "),
-          dreamCategories,
-        ]
+        const searchableText = (adultRestricted
+          ? [
+              dream.pseudo_id,
+              copy.adultRestrictedTitle,
+              copy.adultContentLabel,
+              dreamTagNames,
+              dreamTagSlugs.join(" "),
+              dreamCategories,
+            ]
+          : [
+              dream.title,
+              dream.originalTitle,
+              dream.originalText,
+              getLanguageName(dream.originalLanguage, language),
+              getDreamTitle(dream, language),
+              dream.excerpt,
+              getDreamExcerpt(dream, language),
+              dream.dream_text,
+              getDreamText(dream, language),
+              dream.pseudo_id,
+              dreamTagNames,
+              dreamTagSlugs.join(" "),
+              dreamCategories,
+            ])
           .join(" ")
           .toLowerCase();
 
@@ -363,12 +487,28 @@ export default function CollectiveDreamDashboard({
 
         return b.signal_coherence - a.signal_coherence;
       });
-  }, [dreams, query, selectedTagSlugs, matchMode, categoryFilter, sortMode, language]);
+  }, [
+    adultConfirmations,
+    copy.adultContentLabel,
+    copy.adultRestrictedTitle,
+    dreams,
+    query,
+    selectedTagSlugs,
+    matchMode,
+    categoryFilter,
+    sortMode,
+    language,
+    isAgeVerifiedAdult,
+  ]);
 
   const activeAnomalyCount = selectedTagSlugs.filter((slug) => {
     const tag = tags.find((item) => item.slug === slug);
     return tag?.category === "Anomalies";
   }).length;
+  const researchStats = useMemo(
+    () => buildResearchStats(dreams, filteredDreams, language),
+    [dreams, filteredDreams, language]
+  );
 
   function toggleTag(slug) {
     setSelectedTagSlugs((current) =>
@@ -401,6 +541,8 @@ export default function CollectiveDreamDashboard({
           copy={copy}
         />
 
+        <ResearchPanel stats={researchStats} copy={copy} />
+
         <FilterPanel
           tags={visibleTags}
           selectedTagSlugs={selectedTagSlugs}
@@ -421,6 +563,12 @@ export default function CollectiveDreamDashboard({
           language={language}
           copy={copy}
           currentUser={currentUser}
+          canSeeImages={canSeeImages}
+          isAgeVerifiedAdult={isAgeVerifiedAdult}
+          canAccessAdultDream={canAccessAdultDream}
+          onConfirmAdultDream={(dreamId) =>
+            setAdultConfirmations((current) => ({ ...current, [dreamId]: true }))
+          }
           onOpenRecord={onOpenRecord}
         />
       </section>
@@ -429,7 +577,11 @@ export default function CollectiveDreamDashboard({
 }
 
 function normalizeDreamCard(row) {
-  const tags = Array.isArray(row.tags) ? row.tags : [];
+  const rowTags = Array.isArray(row.tags) ? row.tags : [];
+  const adultContent =
+    Boolean(row.adultContent || row.adult_content || row.isAdult || row.is_adult) ||
+    rowTags.some((tag) => tag.slug === "adult-content" || tag.slug === "adult_content");
+  const tags = adultContent ? ensureAdultTag(rowTags) : rowTags;
   const originalLanguage = normalizeLanguage(
     row.originalLanguage || row.original_language || "en"
   );
@@ -471,12 +623,29 @@ function normalizeDreamCard(row) {
     dream_text_zh: row.dream_text_zh || row.dreamTextZh,
     dream_text_es: row.dream_text_es || row.dreamTextEs,
     dream_date: row.dream_date,
+    adultContent,
+    minimumViewerAge: row.minimumViewerAge || row.minimum_viewer_age || (adultContent ? 18 : 0),
     generated_image_url: row.generated_image_url,
     pseudo_id: row.pseudo_id,
     signal_coherence: row.signal_coherence || 50,
     tags,
     anomaly_tag_slugs: row.anomaly_tag_slugs || tags.filter((tag) => tag.category === "Anomalies").map((tag) => tag.slug),
   };
+}
+
+function ensureAdultTag(tags) {
+  if (tags.some((tag) => tag.slug === "adult-content")) return tags;
+
+  const adultTag = FALLBACK_TAGS.find((tag) => tag.slug === "adult-content");
+  return adultTag ? [...tags, adultTag] : tags;
+}
+
+function isAdultDream(dream) {
+  return (
+    Boolean(dream.adultContent || dream.adult_content || dream.isAdult || dream.is_adult) ||
+    Number(dream.minimumViewerAge || dream.minimum_viewer_age || 0) >= 18 ||
+    dream.tags?.some((tag) => tag.slug === "adult-content" || tag.slug === "adult_content")
+  );
 }
 
 function getDreamTranslation(dream, language) {
@@ -613,6 +782,53 @@ function getTagName(tag, language) {
 
 function getCategoryLabel(category, language) {
   return CATEGORY_LABELS[language]?.[category] || category;
+}
+
+function buildResearchStats(dreams, visibleDreams, language) {
+  const emotionCounts = new Map();
+  const languageCounts = new Map();
+  let coherenceTotal = 0;
+
+  dreams.forEach((dream) => {
+    coherenceTotal += Number(dream.signal_coherence || 0);
+    const originalLanguage = normalizeLanguage(dream.originalLanguage);
+    languageCounts.set(originalLanguage, (languageCounts.get(originalLanguage) || 0) + 1);
+
+    dream.tags
+      ?.filter((tag) => tag.category === "Emotions")
+      .forEach((tag) => {
+        const tagName = getTagName(tag, language);
+        emotionCounts.set(tagName, (emotionCounts.get(tagName) || 0) + 1);
+      });
+  });
+
+  const leadingLanguage = getTopMapEntry(languageCounts);
+
+  return {
+    total: dreams.length,
+    visible: visibleDreams.length,
+    adultRestricted: dreams.filter(isAdultDream).length,
+    averageCoherence:
+      dreams.length === 0 ? 0 : Math.round(coherenceTotal / dreams.length),
+    leadingEmotion: getTopMapEntry(emotionCounts),
+    leadingLanguage: leadingLanguage
+      ? getLanguageName(leadingLanguage, language)
+      : "",
+  };
+}
+
+function getTopMapEntry(map) {
+  let topKey = "";
+  let topValue = 0;
+
+  map.forEach((value, key) => {
+    if (value > topValue) {
+      topKey = key;
+      topValue = value;
+    }
+  });
+
+  return topKey;
 }
 
 function BackgroundField() {
@@ -779,6 +995,57 @@ function HeroPanel({ total, visible, loadState, loadError, activeAnomalyCount, c
   );
 }
 
+function ResearchPanel({ stats, copy }) {
+  return (
+    <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
+            {copy.researchTitle}
+          </p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
+            {copy.researchText}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <ResearchMetric label={copy.researchTotal} value={String(stats.total)} />
+        <ResearchMetric label={copy.researchVisible} value={String(stats.visible)} />
+        <ResearchMetric
+          label={copy.researchAdultRestricted}
+          value={String(stats.adultRestricted)}
+        />
+        <ResearchMetric
+          label={copy.researchAverageCoherence}
+          value={`${stats.averageCoherence}%`}
+        />
+        <ResearchMetric
+          label={copy.researchEmotionLead}
+          value={stats.leadingEmotion || copy.noResearchData}
+        />
+        <ResearchMetric
+          label={copy.researchLanguageLead}
+          value={stats.leadingLanguage || copy.noResearchData}
+        />
+      </div>
+    </section>
+  );
+}
+
+function ResearchMetric({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+        {label}
+      </p>
+      <p className="mt-2 truncate font-mono text-sm font-semibold text-cyan-100">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function FilterPanel({
   tags,
   selectedTagSlugs,
@@ -819,10 +1086,11 @@ function FilterPanel({
             className="rounded-full border border-white/10 bg-black/40 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-200 outline-none transition focus:border-cyan-300/40 focus:ring-2 focus:ring-cyan-300/20"
             aria-label={copy.categorySelectLabel}
           >
-            <option value="All">{getCategoryLabel("All", language)}</option>
-            <option value="Environment">{getCategoryLabel("Environment", language)}</option>
-            <option value="Entities">{getCategoryLabel("Entities", language)}</option>
-            <option value="Anomalies">{getCategoryLabel("Anomalies", language)}</option>
+            {CATEGORY_FILTERS.map((category) => (
+              <option key={category} value={category}>
+                {getCategoryLabel(category, language)}
+              </option>
+            ))}
           </select>
 
           <select
@@ -877,7 +1145,17 @@ function FilterPanel({
   );
 }
 
-function ObservationGrid({ dreams, language, copy, currentUser, onOpenRecord }) {
+function ObservationGrid({
+  dreams,
+  language,
+  copy,
+  currentUser,
+  canSeeImages,
+  isAgeVerifiedAdult,
+  canAccessAdultDream,
+  onConfirmAdultDream,
+  onOpenRecord,
+}) {
   if (dreams.length === 0) {
     return (
       <section className="rounded-3xl border border-dashed border-cyan-300/20 bg-cyan-300/5 p-10 text-center">
@@ -900,6 +1178,10 @@ function ObservationGrid({ dreams, language, copy, currentUser, onOpenRecord }) 
           language={language}
           copy={copy}
           currentUser={currentUser}
+          canSeeImages={canSeeImages}
+          isAgeVerifiedAdult={isAgeVerifiedAdult}
+          canAccessAdultDream={canAccessAdultDream}
+          onConfirmAdultDream={onConfirmAdultDream}
           onOpenRecord={onOpenRecord}
         />
       ))}
@@ -907,11 +1189,33 @@ function ObservationGrid({ dreams, language, copy, currentUser, onOpenRecord }) 
   );
 }
 
-function ObservationCard({ dream, language, copy, currentUser, onOpenRecord }) {
+function ObservationCard({
+  dream,
+  language,
+  copy,
+  currentUser,
+  canSeeImages,
+  isAgeVerifiedAdult,
+  canAccessAdultDream,
+  onConfirmAdultDream,
+  onOpenRecord,
+}) {
   const [collectStatus, setCollectStatus] = useState("");
+  const adultDream = isAdultDream(dream);
+  const adultAccessible = canAccessAdultDream(dream);
+  const guestAdultGate = adultDream && !adultAccessible && !isAgeVerifiedAdult;
 
   async function handleCollect(event) {
     event.stopPropagation();
+
+    if (adultDream && !adultAccessible) {
+      setCollectStatus(
+        currentUser?.uid && !currentUser.isAnonymous
+          ? copy.adultAccountPrompt
+          : copy.adultGuestPrompt
+      );
+      return;
+    }
 
     if (!currentUser?.uid) {
       setCollectStatus(copy.signInToCollect);
@@ -926,6 +1230,8 @@ function ObservationCard({ dream, language, copy, currentUser, onOpenRecord }) {
       originalText: dream.originalText || getDreamText(dream, normalizeLanguage(dream.originalLanguage)),
       translations: buildDreamTranslations(dream),
       recordIdentityMode: dream.recordIdentityMode || "anonymous",
+      adultContent: adultDream,
+      minimumViewerAge: adultDream ? 18 : 0,
       titleZh: getDreamTitle(dream, "zh"),
       titleEs: getDreamTitle(dream, "es"),
       textZh: getDreamText(dream, "zh"),
@@ -947,7 +1253,9 @@ function ObservationCard({ dream, language, copy, currentUser, onOpenRecord }) {
 
   return (
     <article
-      onClick={() =>
+      onClick={() => {
+        if (guestAdultGate) return;
+
         onOpenRecord?.({
           ...dream,
           id: dream.dream_id,
@@ -956,17 +1264,32 @@ function ObservationCard({ dream, language, copy, currentUser, onOpenRecord }) {
           originalText: dream.originalText || getDreamText(dream, normalizeLanguage(dream.originalLanguage)),
           translations: buildDreamTranslations(dream),
           recordIdentityMode: dream.recordIdentityMode || "anonymous",
+          adultContent: adultDream,
+          minimumViewerAge: adultDream ? 18 : 0,
           titleZh: getDreamTitle(dream, "zh"),
           titleEs: getDreamTitle(dream, "es"),
           textZh: getDreamText(dream, "zh"),
           textEs: getDreamText(dream, "es"),
           date: dream.dream_date,
           pseudoId: dream.pseudo_id,
-        })
-      }
+        });
+      }}
       className="group mb-5 inline-block w-full cursor-pointer break-inside-avoid overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(34,211,238,.04),0_18px_60px_rgba(0,0,0,.35)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_0_46px_rgba(34,211,238,.12)]"
     >
-      <ObservationThumbnail dream={dream} language={language} copy={copy} />
+      {guestAdultGate ? (
+        <AdultGatePanel
+          copy={copy}
+          currentUser={currentUser}
+          onConfirm={() => onConfirmAdultDream(dream.dream_id)}
+        />
+      ) : (
+        <ObservationThumbnail
+          dream={dream}
+          language={language}
+          copy={copy}
+          canSeeImages={canSeeImages}
+        />
+      )}
 
       <div className="p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
@@ -979,14 +1302,19 @@ function ObservationCard({ dream, language, copy, currentUser, onOpenRecord }) {
         </div>
 
         <h2 className="text-xl font-semibold tracking-[-0.03em] text-zinc-50">
-          {getDreamTitle(dream, language)}
+          {guestAdultGate ? copy.adultRestrictedTitle : getDreamTitle(dream, language)}
         </h2>
         <p className="mt-2 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
           {copy.originalLanguageLabel}: {getLanguageName(dream.originalLanguage, language)}
         </p>
+        {adultDream && (
+          <p className="ml-0 mt-2 inline-flex rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100 sm:ml-2">
+            {copy.adultContentLabel} 18+
+          </p>
+        )}
 
         <p className="mt-3 text-sm leading-7 text-zinc-300">
-          {getDreamExcerpt(dream, language)}
+          {guestAdultGate ? copy.adultGuestPrompt : getDreamExcerpt(dream, language)}
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -1020,7 +1348,46 @@ function ObservationCard({ dream, language, copy, currentUser, onOpenRecord }) {
   );
 }
 
-function ObservationThumbnail({ dream, language, copy }) {
+function AdultGatePanel({ copy, currentUser, onConfirm }) {
+  const accountNeedsSavedAge = Boolean(currentUser?.uid && !currentUser.isAnonymous);
+
+  return (
+    <div className="relative flex min-h-48 flex-col justify-center border-b border-amber-300/20 bg-amber-300/5 p-5">
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(251,191,36,.08)_1px,transparent_1px),linear-gradient(rgba(251,191,36,.07)_1px,transparent_1px)] bg-[size:28px_28px] opacity-20" />
+      <div className="relative">
+        <p className="font-mono text-xs uppercase tracking-[0.28em] text-amber-100">
+          {copy.adultRestrictedTitle}
+        </p>
+        <p className="mt-3 text-sm leading-6 text-zinc-300">
+          {accountNeedsSavedAge ? copy.adultAccountPrompt : copy.adultGuestPrompt}
+        </p>
+        {!accountNeedsSavedAge && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onConfirm();
+              }}
+              className="rounded-xl border border-amber-300/35 bg-amber-300 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-amber-200"
+            >
+              {copy.confirmAdult}
+            </button>
+            <button
+              type="button"
+              onClick={(event) => event.stopPropagation()}
+              className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-300"
+            >
+              {copy.denyAdult}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ObservationThumbnail({ dream, language, copy, canSeeImages }) {
   const anomalyIntensity = Math.max(0.12, Math.min(0.52, dream.signal_coherence / 210));
   const background = {
     background: `
@@ -1032,7 +1399,7 @@ function ObservationThumbnail({ dream, language, copy }) {
 
   return (
     <div className="relative h-48 overflow-hidden border-b border-white/10 bg-black">
-      {dream.generated_image_url ? (
+      {canSeeImages && dream.generated_image_url ? (
         <img
           src={dream.generated_image_url}
           alt={`${copy.generatedImageAlt} ${getDreamTitle(dream, language)}`}
@@ -1050,8 +1417,14 @@ function ObservationThumbnail({ dream, language, copy }) {
       <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-zinc-950 via-zinc-950/70 to-transparent" />
 
       <div className="absolute left-4 top-4 rounded-full border border-cyan-300/20 bg-black/50 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-100 backdrop-blur">
-        {copy.generatedImage}
+        {canSeeImages ? copy.generatedImage : copy.wordsOnlyForGuest}
       </div>
+
+      {!canSeeImages && (
+        <div className="absolute right-4 top-4 max-w-[11rem] rounded-xl border border-amber-300/20 bg-black/50 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-amber-100 backdrop-blur">
+          {copy.imageHiddenForGuest}
+        </div>
+      )}
 
       <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
         <div>

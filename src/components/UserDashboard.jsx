@@ -53,6 +53,16 @@ const DASHBOARD_COPY = {
     ageLabel: "Age",
     agePlaceholder: "Optional",
     showAgeLabel: "Show age publicly",
+    biologicalSexLabel: "Biological Sex",
+    biologicalSexPlaceholder: "Prefer not to say",
+    showBiologicalSexLabel: "Show biological sex publicly",
+    biologicalSexOptions: {
+      female: "Female",
+      male: "Male",
+      intersex: "Intersex",
+      notListed: "Not listed",
+      preferNotToSay: "Prefer not to say",
+    },
     saveProfile: "Save Profile",
     profileSaved: "Profile saved",
     joinedDate: "Joined",
@@ -92,6 +102,16 @@ const DASHBOARD_COPY = {
     ageLabel: "年齡",
     agePlaceholder: "選填",
     showAgeLabel: "公開顯示年齡",
+    biologicalSexLabel: "生理性別",
+    biologicalSexPlaceholder: "不透露",
+    showBiologicalSexLabel: "公開顯示生理性別",
+    biologicalSexOptions: {
+      female: "女性",
+      male: "男性",
+      intersex: "雙性",
+      notListed: "未列出",
+      preferNotToSay: "不透露",
+    },
     saveProfile: "儲存個人資料",
     profileSaved: "個人資料已儲存",
     joinedDate: "加入日期",
@@ -132,6 +152,16 @@ const DASHBOARD_COPY = {
     ageLabel: "Edad",
     agePlaceholder: "Opcional",
     showAgeLabel: "Mostrar edad públicamente",
+    biologicalSexLabel: "Sexo biológico",
+    biologicalSexPlaceholder: "Prefiero no decirlo",
+    showBiologicalSexLabel: "Mostrar sexo biológico públicamente",
+    biologicalSexOptions: {
+      female: "Femenino",
+      male: "Masculino",
+      intersex: "Intersexual",
+      notListed: "No listado",
+      preferNotToSay: "Prefiero no decirlo",
+    },
     saveProfile: "Guardar perfil",
     profileSaved: "Perfil guardado",
     joinedDate: "Fecha de ingreso",
@@ -139,6 +169,14 @@ const DASHBOARD_COPY = {
     originalLanguageLabel: "Idioma original",
   },
 };
+
+const BIOLOGICAL_SEX_OPTIONS = [
+  "preferNotToSay",
+  "female",
+  "male",
+  "intersex",
+  "notListed",
+];
 
 const MOCK_OBSERVATIONS = [
   {
@@ -430,6 +468,14 @@ export default function UserDashboard({
                         : copy.hiddenAge
                     }
                   />
+                  <ProfilePill
+                    label={copy.biologicalSexLabel}
+                    value={
+                      displayUser.showBiologicalSex && displayUser.biologicalSex
+                        ? getBiologicalSexLabel(displayUser.biologicalSex, copy)
+                        : copy.hiddenAge
+                    }
+                  />
                 </div>
               </div>
             </div>
@@ -525,25 +571,65 @@ export default function UserDashboard({
                   className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                 />
               </label>
-            </div>
 
-            <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={Boolean(profileDraft.showAge)}
+              <label className="block">
+                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                  {copy.biologicalSexLabel}
+                </span>
+                <select
+                  value={profileDraft.biologicalSex || "preferNotToSay"}
                   onChange={(event) =>
                     setProfileDraft((current) => ({
                       ...current,
-                      showAge: event.target.checked,
+                      biologicalSex: event.target.value,
                     }))
                   }
-                  className="h-4 w-4 accent-cyan-300"
-                />
-                <span className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-300">
-                  {copy.showAgeLabel}
-                </span>
+                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                >
+                  {BIOLOGICAL_SEX_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {copy.biologicalSexOptions[option] || copy.biologicalSexPlaceholder}
+                    </option>
+                  ))}
+                </select>
               </label>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(profileDraft.showAge)}
+                    onChange={(event) =>
+                      setProfileDraft((current) => ({
+                        ...current,
+                        showAge: event.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4 accent-cyan-300"
+                  />
+                  <span className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-300">
+                    {copy.showAgeLabel}
+                  </span>
+                </label>
+                <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(profileDraft.showBiologicalSex)}
+                    onChange={(event) =>
+                      setProfileDraft((current) => ({
+                        ...current,
+                        showBiologicalSex: event.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4 accent-cyan-300"
+                  />
+                  <span className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-300">
+                    {copy.showBiologicalSexLabel}
+                  </span>
+                </label>
+              </div>
 
               <button
                 type="button"
@@ -635,6 +721,8 @@ function normalizeDashboardUser(user, profile) {
       country: "",
       age: "",
       showAge: false,
+      biologicalSex: "",
+      showBiologicalSex: false,
     };
   }
 
@@ -652,7 +740,13 @@ function normalizeDashboardUser(user, profile) {
     country: profile?.country || "",
     age: profile?.age || "",
     showAge: Boolean(profile?.showAge),
+    biologicalSex: profile?.biologicalSex || "",
+    showBiologicalSex: Boolean(profile?.showBiologicalSex),
   };
+}
+
+function getBiologicalSexLabel(value, copy) {
+  return copy.biologicalSexOptions?.[value] || copy.biologicalSexPlaceholder || "--";
 }
 
 function normalizeRecordItem(item, index) {
@@ -700,6 +794,8 @@ function normalizeRecordItem(item, index) {
     creatorAvatarUrl: item.creatorAvatarUrl || "",
     pseudoId: item.pseudoId || item.pseudo_id || "",
     visibility: item.visibility || (item.isPublic === false ? "private" : "public"),
+    adultContent: Boolean(item.adultContent || item.adult_content || item.isAdult || item.is_adult),
+    minimumViewerAge: item.minimumViewerAge || item.minimum_viewer_age || 0,
     date: formatRecordDate(item.dream_date || item.date || item.createdAt || item.savedAt),
     hash: item.hash || `VX-${String(id || "record").slice(0, 8).toUpperCase()}`,
     accent: item.accent || accents[index % accents.length],

@@ -14,6 +14,21 @@ service cloud.firestore {
       return data.visibility == "public" || data.isPublic == true;
     }
 
+    function recordRequiresAdult(data) {
+      return (data.keys().hasAny(["adultContent"]) && data.adultContent == true)
+        || (data.keys().hasAny(["minimumViewerAge"]) && data.minimumViewerAge >= 18);
+    }
+
+    function isAgeVerifiedAdult() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.age >= 18;
+    }
+
+    function canReadPublicRecord(data) {
+      return isPublicRecord(data)
+        && (!recordRequiresAdult(data) || isAgeVerifiedAdult());
+    }
+
     function validOriginalLanguage(data) {
       return !data.keys().hasAny(["originalLanguage"])
         || data.originalLanguage in ["en", "zh", "es"];
@@ -24,12 +39,38 @@ service cloud.firestore {
         || data.recordIdentityMode in ["account", "anonymous"];
     }
 
+    function validAdultMetadata(data) {
+      return (!data.keys().hasAny(["adultContent"]) || data.adultContent is bool)
+        && (!data.keys().hasAny(["minimumViewerAge"])
+          || (data.minimumViewerAge is int
+            && data.minimumViewerAge >= 0
+            && data.minimumViewerAge <= 120))
+        && (!data.keys().hasAll(["adultContent", "minimumViewerAge"])
+          || data.adultContent == false
+          || data.minimumViewerAge >= 18);
+    }
+
     function validRecordMetadata(data) {
-      return validOriginalLanguage(data) && validRecordIdentity(data);
+      return validOriginalLanguage(data)
+        && validRecordIdentity(data)
+        && validAdultMetadata(data);
+    }
+
+    function validProfileMetadata(data) {
+      return !data.keys().hasAny(["biologicalSex"])
+        || data.biologicalSex in [
+          "",
+          "preferNotToSay",
+          "female",
+          "male",
+          "intersex",
+          "notListed"
+        ];
     }
 
     match /Records/{recordId} {
-      allow get, list: if isPublicRecord(resource.data) || isOwner(resource.data.ownerId);
+      allow get, list: if canReadPublicRecord(resource.data)
+        || isOwner(resource.data.ownerId);
 
       allow create: if isOwner(request.resource.data.ownerId)
         && validRecordMetadata(request.resource.data);
@@ -42,7 +83,10 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, create, update, delete: if isSignedIn() && request.auth.uid == userId;
+      allow read, delete: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if isSignedIn()
+        && request.auth.uid == userId
+        && validProfileMetadata(request.resource.data);
 
       match /savedRecords/{recordId} {
         allow read, delete: if isSignedIn() && request.auth.uid == userId;

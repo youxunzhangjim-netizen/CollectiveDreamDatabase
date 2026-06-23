@@ -26,6 +26,8 @@ export function createDefaultProfile(currentUser) {
     country: "",
     age: "",
     showAge: false,
+    biologicalSex: "",
+    showBiologicalSex: false,
     preferredLanguage: "zh",
   };
 }
@@ -79,6 +81,8 @@ export async function saveUserProfile(currentUser, updates) {
       country: updates.country || "",
       age: Number.isFinite(normalizedAge) ? normalizedAge : "",
       showAge: Boolean(updates.showAge),
+      biologicalSex: updates.biologicalSex || "",
+      showBiologicalSex: Boolean(updates.showBiologicalSex),
       preferredLanguage: isSupportedLanguage(updates.preferredLanguage)
         ? updates.preferredLanguage
         : "zh",
