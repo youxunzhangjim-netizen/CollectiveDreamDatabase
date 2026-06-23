@@ -11,6 +11,10 @@ import {
   LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
+import {
+  getPrimaryDreamImageUrl,
+  normalizeDreamImages,
+} from "../lib/dreamImageService.js";
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient.js";
 import { collectRecordForUser, saveRecordForUser } from "../lib/recordsService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
@@ -599,6 +603,9 @@ function normalizeDreamCard(row) {
     row.dream_text ||
     row.text ||
     "";
+  const images = normalizeDreamImages(row);
+  const imageUrls = images.map((image) => image.url).filter(Boolean);
+  const thumbnailUrl = getPrimaryDreamImageUrl(row);
 
   return {
     dream_id: row.dream_id || row.id,
@@ -623,7 +630,13 @@ function normalizeDreamCard(row) {
     dream_date: row.dream_date,
     adultContent,
     minimumViewerAge: row.minimumViewerAge || row.minimum_viewer_age || (adultContent ? 18 : 0),
-    generated_image_url: row.generated_image_url,
+    images,
+    dreamImages: images,
+    imageUrls,
+    pictureUrls: imageUrls,
+    thumbnailUrl,
+    thumbnail_url: thumbnailUrl,
+    generated_image_url: thumbnailUrl,
     pseudo_id: row.pseudo_id,
     signal_coherence: row.signal_coherence || 50,
     tags,

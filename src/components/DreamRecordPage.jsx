@@ -9,6 +9,10 @@ import {
   LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
+import {
+  getPrimaryDreamImageUrl,
+  normalizeDreamImages,
+} from "../lib/dreamImageService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import {
   getCategoryLabel,
@@ -57,6 +61,8 @@ const DETAIL_COPY = {
     privateRecord: "Private",
     publicRecord: "Public",
     recordText: "Dream Record",
+    pictureGallery: "Dream Pictures",
+    imageHiddenForGuest: "Pictures are hidden for guests. Sign in to view dream images.",
     emptyRecordBody: "No dream text has been archived for this record yet.",
     originalLanguage: "Original Language",
     originalSource: "Original Source Text",
@@ -117,6 +123,8 @@ const DETAIL_COPY = {
     privateRecord: "私人",
     publicRecord: "公開",
     recordText: "夢境紀錄",
+    pictureGallery: "夢境圖片",
+    imageHiddenForGuest: "訪客不顯示圖片。登入後可查看夢境影像。",
     emptyRecordBody: "此紀錄尚未歸檔夢境內文。",
     originalLanguage: "原始語言",
     originalSource: "原文紀錄",
@@ -175,6 +183,9 @@ const DETAIL_COPY = {
     privateRecord: "Privado",
     publicRecord: "Público",
     recordText: "Registro del Sueño",
+    pictureGallery: "Imágenes del sueño",
+    imageHiddenForGuest:
+      "Las imágenes están ocultas para invitados. Inicia sesión para verlas.",
     emptyRecordBody: "Este registro aún no tiene texto de sueño archivado.",
     originalLanguage: "Idioma Original",
     originalSource: "Texto Original",
@@ -250,6 +261,8 @@ export default function DreamRecordPage({
   const adultRecord = isAdultRecord(normalizedRecord);
   const ageVerifiedAdult = Number(profile?.age || 0) >= 18;
   const adultAllowed = !adultRecord || ageVerifiedAdult || adultConfirmed;
+  const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
+  const dreamImages = normalizedRecord.images || [];
   const pageTitle = adultAllowed ? title : copy.adultRestrictedTitle;
 
   useEffect(() => {
@@ -444,9 +457,38 @@ export default function DreamRecordPage({
                   onConfirm={() => setAdultConfirmed(true)}
                 />
               ) : (
-                <p className="mt-5 max-w-3xl text-sm leading-7 text-zinc-300 sm:text-base">
-                  {body || copy.emptyRecordBody}
-                </p>
+                <>
+                  {dreamImages.length > 0 && (
+                    <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <p className="mb-4 font-mono text-xs uppercase tracking-[0.24em] text-cyan-200/70">
+                        {copy.pictureGallery}
+                      </p>
+                      {canSeeImages ? (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {dreamImages.map((image, index) => (
+                            <img
+                              key={image.path || image.url || index}
+                              src={image.url}
+                              alt={`${copy.pictureGallery} ${index + 1}`}
+                              className="aspect-[4/3] w-full rounded-xl border border-cyan-300/15 object-cover"
+                              onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 font-mono text-xs uppercase tracking-[0.14em] text-amber-100">
+                          {copy.imageHiddenForGuest}
+                        </p>
+                      )}
+                    </section>
+                  )}
+
+                  <p className="mt-5 max-w-3xl text-sm leading-7 text-zinc-300 sm:text-base">
+                    {body || copy.emptyRecordBody}
+                  </p>
+                </>
               )}
 
               {adultAllowed &&
@@ -634,6 +676,9 @@ function normalizeDreamRecord(record) {
   const text = record?.dream_text || record?.text || record?.excerpt || "";
   const textZh = record?.dream_text_zh || record?.textZh || record?.excerpt_zh || record?.excerpt || "";
   const textEs = record?.dream_text_es || record?.textEs || record?.excerpt_es || record?.excerpt || "";
+  const images = normalizeDreamImages(record);
+  const imageUrls = images.map((image) => image.url).filter(Boolean);
+  const thumbnailUrl = getPrimaryDreamImageUrl(record);
 
   return {
     id: record?.id || record?.dream_id || record?.recordId || "",
@@ -653,6 +698,13 @@ function normalizeDreamRecord(record) {
     text,
     textZh,
     textEs,
+    images,
+    dreamImages: images,
+    imageUrls,
+    pictureUrls: imageUrls,
+    thumbnailUrl,
+    thumbnail_url: thumbnailUrl,
+    generated_image_url: thumbnailUrl,
     date: record?.dream_date || record?.date || "",
     dreamDate: record?.dreamDate || record?.dream_date || record?.date || "",
     ageAtDream: record?.ageAtDream || "",

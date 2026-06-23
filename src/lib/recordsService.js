@@ -11,6 +11,11 @@ import {
   where,
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebaseClient.js";
+import {
+  getPrimaryDreamImageUrl,
+  normalizeDreamImages,
+  uploadDreamImages,
+} from "./dreamImageService.js";
 import { LANGUAGE_OPTIONS, normalizeLanguage } from "./language.js";
 import { buildRecordTags, getTagSlugsByCategory } from "./tagTaxonomy.js";
 
@@ -109,6 +114,12 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
         : { title: "", excerpt: "", text: "" },
     ])
   );
+  const images = await uploadDreamImages(draft?.imageFiles || [], {
+    ownerId: currentUser.uid,
+    recordId: recordRef.id,
+  });
+  const imageUrls = images.map((image) => image.url).filter(Boolean);
+  const thumbnailUrl = imageUrls[0] || "";
 
   const record = {
     id: recordRef.id,
@@ -122,6 +133,13 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     originalTitle: title,
     originalText: dreamText,
     originalExcerpt: excerpt,
+    images,
+    dreamImages: images,
+    imageUrls,
+    pictureUrls: imageUrls,
+    thumbnailUrl,
+    thumbnail_url: thumbnailUrl,
+    generated_image_url: thumbnailUrl,
     title,
     dream_text: dreamText,
     excerpt,
@@ -229,6 +247,9 @@ function normalizeRecordReference(record) {
       record?.isAdult ||
       record?.is_adult
   );
+  const images = normalizeDreamImages(record);
+  const imageUrls = images.map((image) => image.url).filter(Boolean);
+  const thumbnailUrl = getPrimaryDreamImageUrl(record);
 
   return {
     recordId,
@@ -247,6 +268,13 @@ function normalizeRecordReference(record) {
       record?.originalText ||
       record?.original_text ||
       getLanguageSpecificValue(record, "text", originalLanguage),
+    images,
+    dreamImages: images,
+    imageUrls,
+    pictureUrls: imageUrls,
+    thumbnailUrl,
+    thumbnail_url: thumbnailUrl,
+    generated_image_url: thumbnailUrl,
     translations,
     date: record?.dream_date || record?.date || "",
     dreamDate: record?.dreamDate || record?.dream_date || record?.date || "",
@@ -398,6 +426,16 @@ function createTitleFromDreamText(text, language) {
 function createExcerpt(text) {
   const trimmedText = String(text || "").trim();
   return trimmedText.length > 220 ? `${trimmedText.slice(0, 220)}...` : trimmedText;
+}
+
+function buildPseudoId(recordId) {
+  const seed = String(recordId || "dream")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 8)
+    .toUpperCase()
+    .padEnd(8, "0");
+
+  return `DREAM-${seed}`;
 }
 
 export async function saveRecordForUser(currentUser, record) {

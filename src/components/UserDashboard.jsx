@@ -17,6 +17,10 @@ import {
   LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
+import {
+  getPrimaryDreamImageUrl,
+  normalizeDreamImages,
+} from "../lib/dreamImageService.js";
 import { getTagLabel, RECORD_TAGS } from "../lib/tagTaxonomy.js";
 
 const DASHBOARD_COPY = {
@@ -829,6 +833,9 @@ function normalizeRecordItem(item, index) {
   const text = item.dream_text || item.text || item.excerpt || "";
   const textZh = item.dream_text_zh || item.textZh || item.excerpt_zh || item.excerpt || "";
   const textEs = item.dream_text_es || item.textEs || item.excerpt_es || item.excerpt || "";
+  const images = normalizeDreamImages(item);
+  const imageUrls = images.map((image) => image.url).filter(Boolean);
+  const thumbnailUrl = getPrimaryDreamImageUrl(item);
 
   return {
     id,
@@ -850,6 +857,13 @@ function normalizeRecordItem(item, index) {
     text,
     textZh,
     textEs,
+    images,
+    dreamImages: images,
+    imageUrls,
+    pictureUrls: imageUrls,
+    thumbnailUrl,
+    thumbnail_url: thumbnailUrl,
+    generated_image_url: thumbnailUrl,
     dreamDate: item.dreamDate || item.dream_date || item.date || "",
     ageAtDream: item.ageAtDream || "",
     ownerId: item.ownerId || item.creatorId || "",
@@ -1165,7 +1179,18 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
       ].join(" ")}
     >
       <div className="relative h-44 border-b border-white/10" style={{ background: style.gradient }}>
+        {item.thumbnailUrl && (
+          <img
+            src={item.thumbnailUrl}
+            alt={title}
+            className="absolute inset-0 h-full w-full object-cover opacity-90"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        )}
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px)] bg-[size:28px_28px] opacity-20" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-zinc-950/90 to-transparent" />
         <div className="absolute bottom-4 left-4 rounded-xl border border-white/10 bg-black/45 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-cyan-100 backdrop-blur">
           {item.hash}
         </div>

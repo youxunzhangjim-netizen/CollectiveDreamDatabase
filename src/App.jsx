@@ -26,7 +26,7 @@ import { fetchRecordById } from "./lib/recordsService.js";
 export default function App() {
   const [language, setLanguageState] = useState(getLanguageFromStorage);
   const [appearance, setAppearance] = useState(getAppearanceFromStorage);
-  const [activeView, setActiveView] = useState("auth");
+  const [activeView, setActiveView] = useState("database");
   const [lastListView, setLastListView] = useState("database");
   const [selectedRecord, setSelectedRecord] = useState(null);
   const { currentUser, loading: authLoading } = useAuth();

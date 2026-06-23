@@ -9,6 +9,12 @@ import {
   getKnownAuthErrorMessage,
   reportAuthError,
 } from "../lib/authErrorMessages.js";
+import {
+  DREAM_IMAGE_ACCEPT,
+  MAX_DREAM_IMAGES,
+  MAX_DREAM_IMAGE_BYTES,
+  validateDreamImageFile,
+} from "../lib/dreamImageService.js";
 import { auth } from "../lib/firebaseClient.js";
 import { LANGUAGE_OPTIONS } from "../lib/language.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
@@ -47,6 +53,19 @@ const RECORD_COPY = {
     originalLanguage: "Original language",
     ageAtDream: "Age at dream",
     agePlaceholder: "Optional",
+    picturesLabel: "Dream pictures (optional)",
+    picturesHelp:
+      "Attach up to 4 images. Logged-in accounts can see pictures; guests read words only.",
+    choosePictures: "Choose pictures",
+    selectedPictures: "Selected pictures",
+    removePicture: "Remove",
+    tooManyPictures: "Use up to 4 pictures for one dream record.",
+    invalidPictureType: "Only JPG, PNG, WebP, or GIF pictures can be attached.",
+    pictureTooLarge: "Each picture must be 8 MB or smaller.",
+    pictureStorageUnavailable:
+      "Picture storage is not ready yet. Remove pictures or configure picture storage before publishing.",
+    pictureUploadFailed:
+      "The pictures could not be uploaded. Remove them or try again.",
     tagSectionTitle: "Dream tags",
     customTags: "Custom tags",
     customTagPlaceholder: "Add a missing tag to this type",
@@ -131,6 +150,17 @@ const RECORD_COPY = {
     originalLanguage: "原始語言",
     ageAtDream: "做夢時年齡",
     agePlaceholder: "選填",
+    picturesLabel: "夢境圖片（選填）",
+    picturesHelp: "最多可附加 4 張圖片。登入帳戶可看圖片；訪客只閱讀文字。",
+    choosePictures: "選擇圖片",
+    selectedPictures: "已選圖片",
+    removePicture: "移除",
+    tooManyPictures: "一筆夢境記錄最多可使用 4 張圖片。",
+    invalidPictureType: "只能附加 JPG、PNG、WebP 或 GIF 圖片。",
+    pictureTooLarge: "每張圖片必須小於 8 MB。",
+    pictureStorageUnavailable:
+      "圖片儲存尚未準備好。請先移除圖片，或設定圖片儲存後再發布。",
+    pictureUploadFailed: "圖片無法上傳。請移除圖片或稍後再試。",
     tagSectionTitle: "夢境標籤",
     customTags: "自訂標籤",
     customTagPlaceholder: "在此類型新增缺少的標籤",
@@ -209,6 +239,19 @@ const RECORD_COPY = {
     originalLanguage: "Idioma original",
     ageAtDream: "Edad en el sueño",
     agePlaceholder: "Opcional",
+    picturesLabel: "Imágenes del sueño (opcional)",
+    picturesHelp:
+      "Adjunta hasta 4 imágenes. Las cuentas registradas pueden verlas; los invitados solo leen texto.",
+    choosePictures: "Elegir imágenes",
+    selectedPictures: "Imágenes seleccionadas",
+    removePicture: "Quitar",
+    tooManyPictures: "Usa hasta 4 imágenes para un registro.",
+    invalidPictureType: "Solo se pueden adjuntar imágenes JPG, PNG, WebP o GIF.",
+    pictureTooLarge: "Cada imagen debe tener 8 MB o menos.",
+    pictureStorageUnavailable:
+      "El almacenamiento de imágenes aún no está listo. Quita las imágenes o configura el almacenamiento antes de publicar.",
+    pictureUploadFailed:
+      "No se pudieron subir las imágenes. Quítalas o inténtalo otra vez.",
     tagSectionTitle: "Etiquetas del sueño",
     customTags: "Etiquetas personalizadas",
     customTagPlaceholder: "Añade una etiqueta faltante a este tipo",
@@ -288,6 +331,8 @@ export default function RecordDreamPage({
   const [originalLanguage, setOriginalLanguage] = useState(language || "zh");
   const [ageAtDream, setAgeAtDream] = useState("");
   const [adultContent, setAdultContent] = useState(false);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imageNotice, setImageNotice] = useState("");
   const [selectedTagSlugs, setSelectedTagSlugs] = useState([]);
   const [customTagDrafts, setCustomTagDrafts] = useState({});
   const [customTagEntries, setCustomTagEntries] = useState([]);
@@ -303,10 +348,25 @@ export default function RecordDreamPage({
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
   const accountBacked = Boolean(currentUser?.uid && !currentUser.isAnonymous);
+  const imagePreviews = useMemo(
+    () =>
+      imageFiles.map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+      })),
+    [imageFiles]
+  );
 
   useEffect(() => {
     document.title = copy.documentTitle;
   }, [copy.documentTitle]);
+
+  useEffect(
+    () => () => {
+      imagePreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    },
+    [imagePreviews]
+  );
 
   useEffect(() => {
     textAreaRef.current?.focus();
@@ -350,6 +410,45 @@ export default function RecordDreamPage({
     setCustomTagEntries((current) =>
       current.filter((item) => item.category !== category || item.label !== label)
     );
+  }
+
+  function handleImageSelection(event) {
+    const selectedFiles = Array.from(event.target.files || []);
+
+    if (selectedFiles.length === 0) return;
+
+    setImageNotice("");
+
+    const nextFiles = [...imageFiles];
+
+    for (const file of selectedFiles) {
+      if (nextFiles.length >= MAX_DREAM_IMAGES) {
+        setImageNotice(copy.tooManyPictures);
+        break;
+      }
+
+      const validationCode = validateDreamImageFile(file);
+
+      if (validationCode === "invalid-type") {
+        setImageNotice(copy.invalidPictureType);
+        continue;
+      }
+
+      if (validationCode === "too-large") {
+        setImageNotice(copy.pictureTooLarge);
+        continue;
+      }
+
+      nextFiles.push(file);
+    }
+
+    setImageFiles(nextFiles);
+    event.target.value = "";
+  }
+
+  function removeImageFile(index) {
+    setImageNotice("");
+    setImageFiles((current) => current.filter((_, fileIndex) => fileIndex !== index));
   }
 
   function getAuthErrorMessage(error) {
@@ -466,6 +565,7 @@ export default function RecordDreamPage({
           originalLanguage,
           ageAtDream,
           adultContent,
+          imageFiles,
           selectedTagSlugs,
           customTagLabels: customTagEntries,
           recordIdentityMode,
@@ -475,6 +575,7 @@ export default function RecordDreamPage({
 
       onSubmitted?.(record);
     } catch (error) {
+      reportPublishError(error);
       setSubmitError(getPublishErrorMessage(error, copy));
     } finally {
       setSubmitting(false);
@@ -612,6 +713,75 @@ export default function RecordDreamPage({
                   />
                 </label>
               </div>
+
+              <section className="rounded-2xl border border-cyan-300/15 bg-black/25 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      {copy.picturesLabel}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-zinc-400">
+                      {copy.picturesHelp}
+                    </p>
+                  </div>
+
+                  <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15">
+                    {copy.choosePictures}
+                    <input
+                      type="file"
+                      accept={DREAM_IMAGE_ACCEPT}
+                      multiple
+                      onChange={handleImageSelection}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
+
+                {imageNotice && (
+                  <p className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 font-mono text-xs leading-5 text-amber-100">
+                    {imageNotice}
+                  </p>
+                )}
+
+                {imagePreviews.length > 0 && (
+                  <div className="mt-4">
+                    <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      {copy.selectedPictures}
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      {imagePreviews.map((preview, index) => (
+                        <div
+                          key={`${preview.file.name}-${preview.file.size}-${index}`}
+                          className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
+                        >
+                          <div className="aspect-[4/3] bg-black">
+                            <img
+                              src={preview.url}
+                              alt={preview.file.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div className="space-y-2 p-3">
+                            <p className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-cyan-100">
+                              {preview.file.name}
+                            </p>
+                            <p className="font-mono text-[10px] text-zinc-500">
+                              {formatBytes(preview.file.size)} / {formatBytes(MAX_DREAM_IMAGE_BYTES)}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => removeImageFile(index)}
+                              className="w-full rounded-xl border border-red-300/20 bg-red-400/5 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-red-100 transition hover:border-red-300/45 hover:bg-red-400/10"
+                            >
+                              {copy.removePicture}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
 
               <div className="space-y-4">
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
@@ -959,6 +1129,18 @@ function getPublishErrorMessage(error, copy) {
     return copy.publishUnavailable;
   }
 
+  if (code === "storage/not-configured") {
+    return copy.pictureStorageUnavailable;
+  }
+
+  if (
+    code === "storage/upload-failed" ||
+    code === "storage/invalid-type" ||
+    code === "storage/too-large"
+  ) {
+    return copy.pictureUploadFailed;
+  }
+
   if (code === "invalid-argument" || code === "failed-precondition") {
     return `${copy.publishInvalidData} ${code}`;
   }
@@ -968,6 +1150,23 @@ function getPublishErrorMessage(error, copy) {
   }
 
   return copy.publishError;
+}
+
+function reportPublishError(error) {
+  if (typeof console === "undefined") return;
+
+  console.error("[CollectiveDreamDatabase publish]", {
+    code: error?.code,
+    message: error?.message,
+  });
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+
+  if (!Number.isFinite(value) || value <= 0) return "0 MB";
+
+  return `${(value / 1024 / 1024).toFixed(value >= 1024 * 1024 ? 1 : 2)} MB`;
 }
 
 function LanguageToggle({ language, setLanguage, copy }) {
