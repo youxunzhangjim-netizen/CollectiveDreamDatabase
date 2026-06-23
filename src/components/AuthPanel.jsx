@@ -18,7 +18,7 @@ const AUTH_COPY = {
     eyebrow: "Secure Identity Gateway",
     title: "Access the Collective Dream Database",
     subtitle:
-      "Authenticate into your private observation console. Email/password and Google sign-in now route through Firebase Auth.",
+      "Authenticate into your private observation console with email, password, Google, or guest access.",
     loginTab: "Login",
     signupTab: "Sign up",
     emailLabel: "Email",
@@ -30,7 +30,7 @@ const AUTH_COPY = {
     loginButton: "Access Database",
     signupButton: "Initialize Profile",
     googleButton: "Continue with Google",
-    loadingLogin: "Verifying credentials",
+    loadingLogin: "Checking access",
     loadingSignup: "Initializing profile",
     loadingGoogle: "Opening Google gateway",
     loadingGuest: "Opening guest access",
@@ -41,6 +41,13 @@ const AUTH_COPY = {
     guestButton: "Continue as Guest",
     emailRequired: "Enter an email address before continuing.",
     passwordRequired: "Enter a password before continuing.",
+    authUnavailable: "This access method is not available yet. Try another option.",
+    invalidLogin: "The email or password does not match an active profile.",
+    emailInUse: "This email already has a profile. Return to login instead.",
+    weakPassword: "Use a stronger password with at least 6 characters.",
+    popupClosed: "The sign-in window was closed before access was confirmed.",
+    networkError: "The secure access channel is offline. Try again soon.",
+    genericAuthError: "Access could not be confirmed. Try again or use guest access.",
     signalA: "Encrypted channel",
     signalB: "Session firewall",
     signalC: "Identity mask",
@@ -55,7 +62,7 @@ const AUTH_COPY = {
     eyebrow: "安全身分閘道",
     title: "進入集體夢境資料庫",
     subtitle:
-      "登入你的私人觀測終端。電子郵件、密碼與 Google 登入皆透過 Firebase Auth 處理。",
+      "登入你的私人觀測終端，可使用電子郵件、密碼、Google 或訪客通道。",
     loginTab: "登入",
     signupTab: "註冊",
     emailLabel: "電子郵件",
@@ -67,7 +74,7 @@ const AUTH_COPY = {
     loginButton: "存取資料庫",
     signupButton: "初始化個人檔案",
     googleButton: "使用 Google 繼續",
-    loadingLogin: "正在驗證憑證",
+    loadingLogin: "正在確認存取權限",
     loadingSignup: "正在初始化檔案",
     loadingGoogle: "正在開啟 Google 閘道",
     loadingGuest: "正在開啟訪客通道",
@@ -78,6 +85,13 @@ const AUTH_COPY = {
     guestButton: "以訪客身分繼續",
     emailRequired: "請先輸入電子郵件地址。",
     passwordRequired: "請先輸入密碼。",
+    authUnavailable: "此存取方式尚未啟用，請改用其他選項。",
+    invalidLogin: "電子郵件或密碼與現有檔案不相符。",
+    emailInUse: "此電子郵件已建立檔案，請返回登入。",
+    weakPassword: "請使用至少 6 個字元的更安全密碼。",
+    popupClosed: "登入視窗在確認前已關閉。",
+    networkError: "安全存取通道暫時離線，請稍後再試。",
+    genericAuthError: "無法確認存取權限，請重試或改用訪客通道。",
     signalA: "加密通道",
     signalB: "工作階段防火牆",
     signalC: "身分遮罩",
@@ -92,7 +106,7 @@ const AUTH_COPY = {
     eyebrow: "Puerta segura de identidad",
     title: "Accede a la Base de Sueños Colectivos",
     subtitle:
-      "Entra en tu consola privada de observación. El correo, la contraseña y Google ya se gestionan con Firebase Auth.",
+      "Entra en tu consola privada con correo, contraseña, Google o acceso invitado.",
     loginTab: "Iniciar sesión",
     signupTab: "Crear cuenta",
     emailLabel: "Correo",
@@ -104,7 +118,7 @@ const AUTH_COPY = {
     loginButton: "Acceder",
     signupButton: "Inicializar perfil",
     googleButton: "Continuar con Google",
-    loadingLogin: "Verificando credenciales",
+    loadingLogin: "Confirmando acceso",
     loadingSignup: "Inicializando perfil",
     loadingGoogle: "Abriendo Google",
     loadingGuest: "Abriendo acceso invitado",
@@ -115,6 +129,13 @@ const AUTH_COPY = {
     guestButton: "Continuar como invitado",
     emailRequired: "Introduce un correo antes de continuar.",
     passwordRequired: "Introduce una contraseña antes de continuar.",
+    authUnavailable: "Este método de acceso aún no está disponible. Prueba otra opción.",
+    invalidLogin: "El correo o la contraseña no coincide con un perfil activo.",
+    emailInUse: "Este correo ya tiene un perfil. Vuelve al inicio de sesión.",
+    weakPassword: "Usa una contraseña más fuerte de al menos 6 caracteres.",
+    popupClosed: "La ventana de acceso se cerró antes de confirmar.",
+    networkError: "El canal seguro está desconectado. Inténtalo de nuevo pronto.",
+    genericAuthError: "No se pudo confirmar el acceso. Intenta otra vez o entra como invitado.",
     signalA: "Canal cifrado",
     signalB: "Cortafuegos de sesión",
     signalC: "Máscara de identidad",
@@ -142,11 +163,22 @@ export default function AuthPanel({
   }, [copy.documentTitle]);
 
   function getAuthErrorMessage(error) {
-    if (!error?.code) return error?.message || "Authentication failed.";
+    if (!error?.code) return copy.genericAuthError;
 
-    return error.code
-      .replace("auth/", "")
-      .replaceAll("-", " ");
+    const errorMessages = {
+      "auth/operation-not-allowed": copy.authUnavailable,
+      "auth/admin-restricted-operation": copy.authUnavailable,
+      "auth/invalid-credential": copy.invalidLogin,
+      "auth/wrong-password": copy.invalidLogin,
+      "auth/user-not-found": copy.invalidLogin,
+      "auth/email-already-in-use": copy.emailInUse,
+      "auth/weak-password": copy.weakPassword,
+      "auth/popup-closed-by-user": copy.popupClosed,
+      "auth/cancelled-popup-request": copy.popupClosed,
+      "auth/network-request-failed": copy.networkError,
+    };
+
+    return errorMessages[error.code] || copy.genericAuthError;
   }
 
   async function runFirebaseAuth(action) {

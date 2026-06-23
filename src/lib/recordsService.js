@@ -15,7 +15,7 @@ import { LANGUAGE_OPTIONS, normalizeLanguage } from "./language.js";
 
 function requireFirestore() {
   if (!isFirebaseConfigured || !db) {
-    throw new Error("Firestore is not configured. Add VITE_FIREBASE_* values first.");
+    throw new Error("Archive storage is not available yet.");
   }
 
   return db;
@@ -95,6 +95,10 @@ function normalizeRecordReference(record) {
     record?.originalLanguage || record?.original_language || "en"
   );
   const translations = normalizeRecordTranslations(record, originalLanguage);
+  const recordIdentityMode =
+    record?.recordIdentityMode === "account" || record?.attributionMode === "account"
+      ? "account"
+      : "anonymous";
 
   return {
     recordId,
@@ -117,6 +121,15 @@ function normalizeRecordReference(record) {
     date: record?.dream_date || record?.date || "",
     dreamDate: record?.dreamDate || record?.dream_date || record?.date || "",
     creatorId: record?.ownerId || record?.creatorId || "",
+    recordIdentityMode,
+    creatorDisplayName:
+      recordIdentityMode === "account"
+        ? record?.creatorDisplayName || record?.displayName || ""
+        : "",
+    creatorAvatarUrl:
+      recordIdentityMode === "account"
+        ? record?.creatorAvatarUrl || record?.avatarUrl || ""
+        : "",
     pseudoId: record?.pseudo_id || record?.pseudoId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
   };
@@ -305,6 +318,18 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
       updates.ageAtDream === "" || updates.ageAtDream == null
         ? ""
         : Math.max(0, Number(updates.ageAtDream));
+  }
+
+  if ("recordIdentityMode" in updates) {
+    const recordIdentityMode =
+      updates.recordIdentityMode === "account" ? "account" : "anonymous";
+
+    metadata.recordIdentityMode = recordIdentityMode;
+    metadata.attributionMode = recordIdentityMode;
+    metadata.creatorDisplayName =
+      recordIdentityMode === "account" ? updates.creatorDisplayName || "" : "";
+    metadata.creatorAvatarUrl =
+      recordIdentityMode === "account" ? updates.creatorAvatarUrl || "" : "";
   }
 
   await setDoc(doc(requireFirestore(), "Records", recordId), metadata, { merge: true });

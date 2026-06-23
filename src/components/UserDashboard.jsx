@@ -44,6 +44,10 @@ const DASHBOARD_COPY = {
     lastSync: "Last Sync",
     recordsLoading: "Decrypting personal records",
     accountDetails: "Account Details",
+    displayNameLabel: "Public Name",
+    displayNamePlaceholder: "Dream researcher name",
+    avatarUrlLabel: "Profile Image URL",
+    avatarUrlPlaceholder: "https://example.com/profile.jpg",
     countryLabel: "Country",
     countryPlaceholder: "Taiwan, United States...",
     ageLabel: "Age",
@@ -79,6 +83,10 @@ const DASHBOARD_COPY = {
     activeStatus: "啟用中",
     lastSync: "最後同步",
     accountDetails: "帳戶資料",
+    displayNameLabel: "公開名稱",
+    displayNamePlaceholder: "夢境研究者名稱",
+    avatarUrlLabel: "個人圖片網址",
+    avatarUrlPlaceholder: "https://example.com/profile.jpg",
     countryLabel: "國家／地區",
     countryPlaceholder: "台灣、美國...",
     ageLabel: "年齡",
@@ -115,6 +123,10 @@ const DASHBOARD_COPY = {
     lastSync: "Última sincronización",
     recordsLoading: "Descifrando registros personales",
     accountDetails: "Datos de la cuenta",
+    displayNameLabel: "Nombre público",
+    displayNamePlaceholder: "Nombre de investigación",
+    avatarUrlLabel: "URL de imagen de perfil",
+    avatarUrlPlaceholder: "https://example.com/profile.jpg",
     countryLabel: "País / región",
     countryPlaceholder: "Taiwán, Estados Unidos...",
     ageLabel: "Edad",
@@ -295,12 +307,16 @@ export default function UserDashboard({
   }, [user]);
 
   const avatarText = useMemo(() => {
+    if (displayUser.displayName) {
+      return displayUser.displayName.slice(0, 2).toUpperCase();
+    }
+
     if (displayUser.pseudoId) {
       return displayUser.pseudoId.replace("DREAMER-", "").slice(0, 2);
     }
 
     return displayUser.email.slice(0, 2).toUpperCase();
-  }, [displayUser.email, displayUser.pseudoId]);
+  }, [displayUser.displayName, displayUser.email, displayUser.pseudoId]);
 
   async function handleSaveProfile() {
     if (!profileDraft) return;
@@ -396,8 +412,11 @@ export default function UserDashboard({
                   {copy.consoleLabel}
                 </p>
                 <h1 className="mt-2 truncate text-2xl font-semibold text-zinc-50 sm:text-3xl">
-                  {displayUser.email}
+                  {displayUser.displayName || displayUser.email}
                 </h1>
+                <p className="mt-2 truncate font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  {displayUser.email}
+                </p>
                 <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
                   {displayUser.pseudoId} / {copy.memberSince} {displayUser.memberSince}
                 </p>
@@ -435,7 +454,42 @@ export default function UserDashboard({
               </p>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[1fr_.65fr_auto_auto] lg:items-end">
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                  {copy.displayNameLabel}
+                </span>
+                <input
+                  value={profileDraft.displayName || ""}
+                  onChange={(event) =>
+                    setProfileDraft((current) => ({
+                      ...current,
+                      displayName: event.target.value,
+                    }))
+                  }
+                  placeholder={copy.displayNamePlaceholder}
+                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                  {copy.avatarUrlLabel}
+                </span>
+                <input
+                  type="url"
+                  value={profileDraft.avatarUrl || ""}
+                  onChange={(event) =>
+                    setProfileDraft((current) => ({
+                      ...current,
+                      avatarUrl: event.target.value,
+                    }))
+                  }
+                  placeholder={copy.avatarUrlPlaceholder}
+                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                />
+              </label>
+
               <label className="block">
                 <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                   {copy.countryLabel}
@@ -471,7 +525,9 @@ export default function UserDashboard({
                   className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                 />
               </label>
+            </div>
 
+            <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
                 <input
                   type="checkbox"
@@ -574,6 +630,7 @@ function normalizeDashboardUser(user, profile) {
       email: "dreamer@example.com",
       pseudoId: "DREAMER-7F3A9C",
       memberSince: "2026-06-23",
+      displayName: "",
       avatarUrl: "",
       country: "",
       age: "",
@@ -590,7 +647,8 @@ function normalizeDashboardUser(user, profile) {
     email: user.email || "anonymous@collective.local",
     pseudoId: `DREAMER-${uidSeed}`,
     memberSince: profile?.joinedAt || createdAt,
-    avatarUrl: user.photoURL || "",
+    displayName: profile?.displayName || user.displayName || "",
+    avatarUrl: profile?.avatarUrl || user.photoURL || "",
     country: profile?.country || "",
     age: profile?.age || "",
     showAge: Boolean(profile?.showAge),
@@ -634,6 +692,12 @@ function normalizeRecordItem(item, index) {
     ageAtDream: item.ageAtDream || "",
     ownerId: item.ownerId || item.creatorId || "",
     creatorId: item.creatorId || item.ownerId || "",
+    recordIdentityMode:
+      item.recordIdentityMode === "account" || item.attributionMode === "account"
+        ? "account"
+        : "anonymous",
+    creatorDisplayName: item.creatorDisplayName || "",
+    creatorAvatarUrl: item.creatorAvatarUrl || "",
     pseudoId: item.pseudoId || item.pseudo_id || "",
     visibility: item.visibility || (item.isPublic === false ? "private" : "public"),
     date: formatRecordDate(item.dream_date || item.date || item.createdAt || item.savedAt),

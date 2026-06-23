@@ -4,7 +4,7 @@ import { isSupportedLanguage } from "./language.js";
 
 function requireFirestore() {
   if (!isFirebaseConfigured || !db) {
-    throw new Error("Firestore is not configured. Add VITE_FIREBASE_* values first.");
+    throw new Error("Account storage is not available yet.");
   }
 
   return db;
@@ -20,6 +20,8 @@ export function createDefaultProfile(currentUser) {
     uid: currentUser.uid,
     email: currentUser.email || "",
     photoURL: currentUser.photoURL || "",
+    displayName: currentUser.displayName || "",
+    avatarUrl: currentUser.photoURL || "",
     joinedAt: formatAuthJoinedAt(currentUser),
     country: "",
     age: "",
@@ -72,6 +74,8 @@ export async function saveUserProfile(currentUser, updates) {
       uid: currentUser.uid,
       email: currentUser.email || "",
       photoURL: currentUser.photoURL || "",
+      displayName: updates.displayName || "",
+      avatarUrl: updates.avatarUrl || "",
       country: updates.country || "",
       age: Number.isFinite(normalizedAge) ? normalizedAge : "",
       showAge: Boolean(updates.showAge),

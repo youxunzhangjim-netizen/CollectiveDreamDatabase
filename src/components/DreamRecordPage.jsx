@@ -9,6 +9,7 @@ import {
   LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
+import { getOrCreateUserProfile } from "../lib/profileService.js";
 
 const DETAIL_COPY = {
   en: {
@@ -25,6 +26,10 @@ const DETAIL_COPY = {
     dreamDate: "Dream Date",
     ageAtDream: "Age at Dream",
     agePlaceholder: "Optional",
+    recordIdentity: "Record Identity",
+    recordAsAccount: "Use account",
+    recordAsAnonymous: "Stay anonymous",
+    anonymousCreator: "Anonymous recorder",
     creator: "Creator",
     recordDate: "Record Date",
     visibility: "Visibility",
@@ -62,6 +67,10 @@ const DETAIL_COPY = {
     dreamDate: "夢境日期",
     ageAtDream: "做夢時年齡",
     agePlaceholder: "選填",
+    recordIdentity: "紀錄身分",
+    recordAsAccount: "使用帳戶",
+    recordAsAnonymous: "保持匿名",
+    anonymousCreator: "匿名記錄者",
     creator: "創作者",
     recordDate: "紀錄日期",
     visibility: "可見性",
@@ -99,6 +108,10 @@ const DETAIL_COPY = {
     dreamDate: "Fecha del Sueño",
     ageAtDream: "Edad en el Sueño",
     agePlaceholder: "Opcional",
+    recordIdentity: "Identidad del Registro",
+    recordAsAccount: "Usar cuenta",
+    recordAsAnonymous: "Seguir anónimo",
+    anonymousCreator: "Registrador anónimo",
     creator: "Creador",
     recordDate: "Fecha del Registro",
     visibility: "Visibilidad",
@@ -141,6 +154,10 @@ export default function DreamRecordPage({
   );
   const [dreamDate, setDreamDate] = useState(normalizedRecord.dreamDate || "");
   const [ageAtDream, setAgeAtDream] = useState(normalizedRecord.ageAtDream || "");
+  const [recordIdentityMode, setRecordIdentityMode] = useState(
+    normalizedRecord.recordIdentityMode
+  );
+  const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState("");
   const [collecting, setCollecting] = useState(false);
   const title = getLocalizedRecordTitle(normalizedRecord, language);
@@ -151,6 +168,33 @@ export default function DreamRecordPage({
   useEffect(() => {
     document.title = title || "Dream Record";
   }, [title]);
+
+  useEffect(() => {
+    setDreamDate(normalizedRecord.dreamDate || "");
+    setAgeAtDream(normalizedRecord.ageAtDream || "");
+    setRecordIdentityMode(normalizedRecord.recordIdentityMode);
+  }, [normalizedRecord]);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return undefined;
+
+    let ignore = false;
+
+    async function loadProfile() {
+      try {
+        const profileData = await getOrCreateUserProfile(currentUser);
+        if (!ignore) setProfile(profileData);
+      } catch {
+        if (!ignore) setProfile(null);
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      ignore = true;
+    };
+  }, [currentUser]);
 
   async function handleCollect() {
     if (!currentUser?.uid) {
@@ -181,6 +225,9 @@ export default function DreamRecordPage({
       await updateOwnedRecordMetadata(currentUser, normalizedRecord.id, {
         dreamDate,
         ageAtDream,
+        recordIdentityMode,
+        creatorDisplayName: profile?.displayName || currentUser?.displayName || "",
+        creatorAvatarUrl: profile?.avatarUrl || currentUser?.photoURL || "",
       });
       setStatus(copy.metadataSaved);
     } catch (error) {
@@ -277,7 +324,7 @@ export default function DreamRecordPage({
 
             <aside className="border-t border-white/10 bg-black/30 p-6 sm:p-8 lg:border-l lg:border-t-0">
               <div className="space-y-3">
-                <InfoRow label={copy.creator} value={normalizedRecord.pseudoId || "--"} />
+                <CreatorIdentity copy={copy} record={normalizedRecord} />
                 <InfoRow
                   label={copy.recordDate}
                   value={normalizedRecord.dreamDate || normalizedRecord.date || "--"}
@@ -347,6 +394,25 @@ export default function DreamRecordPage({
                       className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                     />
                   </label>
+                  <div className="mt-4">
+                    <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      {copy.recordIdentity}
+                    </p>
+                    <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-black/40 p-1">
+                      <IdentityModeButton
+                        active={recordIdentityMode === "account"}
+                        onClick={() => setRecordIdentityMode("account")}
+                      >
+                        {copy.recordAsAccount}
+                      </IdentityModeButton>
+                      <IdentityModeButton
+                        active={recordIdentityMode === "anonymous"}
+                        onClick={() => setRecordIdentityMode("anonymous")}
+                      >
+                        {copy.recordAsAnonymous}
+                      </IdentityModeButton>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={handleSaveMetadata}
@@ -397,6 +463,12 @@ function normalizeDreamRecord(record) {
     dreamDate: record?.dreamDate || record?.dream_date || record?.date || "",
     ageAtDream: record?.ageAtDream || "",
     ownerId: record?.ownerId || record?.creatorId || "",
+    recordIdentityMode:
+      record?.recordIdentityMode === "account" || record?.attributionMode === "account"
+        ? "account"
+        : "anonymous",
+    creatorDisplayName: record?.creatorDisplayName || "",
+    creatorAvatarUrl: record?.creatorAvatarUrl || "",
     pseudoId: record?.pseudo_id || record?.pseudoId || record?.creatorId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
   };
@@ -489,6 +561,54 @@ function LanguageToggle({ language, setLanguage, copy }) {
         );
       })}
     </div>
+  );
+}
+
+function CreatorIdentity({ copy, record }) {
+  const showAccountIdentity =
+    record.recordIdentityMode === "account" && record.creatorDisplayName;
+  const displayName = showAccountIdentity
+    ? record.creatorDisplayName
+    : record.pseudoId || copy.anonymousCreator;
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+        {copy.creator}
+      </p>
+      <div className="mt-3 flex items-center gap-3">
+        {showAccountIdentity && record.creatorAvatarUrl ? (
+          <img
+            src={record.creatorAvatarUrl}
+            alt=""
+            className="h-11 w-11 rounded-xl border border-cyan-300/25 object-cover"
+          />
+        ) : (
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 font-mono text-xs font-bold text-cyan-100">
+            {displayName.slice(0, 2).toUpperCase()}
+          </div>
+        )}
+        <p className="break-words font-mono text-sm text-cyan-100">{displayName}</p>
+      </div>
+    </div>
+  );
+}
+
+function IdentityModeButton({ active, children, onClick }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={[
+        "rounded-xl px-3 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] transition",
+        active
+          ? "bg-cyan-300 text-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.18)]"
+          : "text-zinc-500 hover:bg-white/5 hover:text-cyan-100",
+      ].join(" ")}
+    >
+      {children}
+    </button>
   );
 }
 

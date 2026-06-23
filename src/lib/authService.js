@@ -9,7 +9,7 @@ import { auth, googleProvider, isFirebaseConfigured } from "./firebaseClient.js"
 
 function requireAuthClient() {
   if (!isFirebaseConfigured || !auth) {
-    throw new Error("Firebase is not configured. Add VITE_FIREBASE_* values first.");
+    throw new Error("Secure access is not available yet.");
   }
 
   return auth;

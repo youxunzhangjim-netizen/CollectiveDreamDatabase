@@ -19,15 +19,24 @@ service cloud.firestore {
         || data.originalLanguage in ["en", "zh", "es"];
     }
 
+    function validRecordIdentity(data) {
+      return !data.keys().hasAny(["recordIdentityMode"])
+        || data.recordIdentityMode in ["account", "anonymous"];
+    }
+
+    function validRecordMetadata(data) {
+      return validOriginalLanguage(data) && validRecordIdentity(data);
+    }
+
     match /Records/{recordId} {
       allow get, list: if isPublicRecord(resource.data) || isOwner(resource.data.ownerId);
 
       allow create: if isOwner(request.resource.data.ownerId)
-        && validOriginalLanguage(request.resource.data);
+        && validRecordMetadata(request.resource.data);
 
       allow update: if isOwner(resource.data.ownerId)
         && request.resource.data.ownerId == resource.data.ownerId
-        && validOriginalLanguage(request.resource.data);
+        && validRecordMetadata(request.resource.data);
 
       allow delete: if isOwner(resource.data.ownerId);
     }
@@ -39,7 +48,7 @@ service cloud.firestore {
         allow read, delete: if isSignedIn() && request.auth.uid == userId;
         allow create, update: if isSignedIn()
           && request.auth.uid == userId
-          && validOriginalLanguage(request.resource.data);
+          && validRecordMetadata(request.resource.data);
       }
 
       match /collections/{collectionId} {
@@ -49,7 +58,7 @@ service cloud.firestore {
           allow read, delete: if isSignedIn() && request.auth.uid == userId;
           allow create, update: if isSignedIn()
             && request.auth.uid == userId
-            && validOriginalLanguage(request.resource.data);
+            && validRecordMetadata(request.resource.data);
         }
       }
     }
