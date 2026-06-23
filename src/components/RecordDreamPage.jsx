@@ -1107,15 +1107,24 @@ function TagGroup({
 
 function getPublishErrorMessage(error, copy) {
   const code = error?.code || "";
+  const message = String(error?.message || "");
+  const lowerMessage = message.toLowerCase();
 
-  if (code === "permission-denied" || code === "firestore/permission-denied") {
+  if (
+    code === "permission-denied" ||
+    code === "firestore/permission-denied" ||
+    lowerMessage.includes("permission") ||
+    lowerMessage.includes("insufficient")
+  ) {
     return copy.publishPermissionDenied;
   }
 
   if (
     code === "auth/user-token-expired" ||
     code === "auth/user-disabled" ||
-    code === "unauthenticated"
+    code === "unauthenticated" ||
+    lowerMessage.includes("signed-in") ||
+    lowerMessage.includes("signed in")
   ) {
     return copy.publishAuthMismatch;
   }
@@ -1124,7 +1133,10 @@ function getPublishErrorMessage(error, copy) {
     code === "unavailable" ||
     code === "deadline-exceeded" ||
     code === "firestore/unavailable" ||
-    code === "auth/network-request-failed"
+    code === "auth/network-request-failed" ||
+    lowerMessage.includes("offline") ||
+    lowerMessage.includes("network") ||
+    lowerMessage.includes("not available")
   ) {
     return copy.publishUnavailable;
   }
@@ -1141,8 +1153,13 @@ function getPublishErrorMessage(error, copy) {
     return copy.pictureUploadFailed;
   }
 
-  if (code === "invalid-argument" || code === "failed-precondition") {
-    return `${copy.publishInvalidData} ${code}`;
+  if (
+    code === "invalid-argument" ||
+    code === "failed-precondition" ||
+    lowerMessage.includes("invalid data") ||
+    lowerMessage.includes("unsupported field")
+  ) {
+    return `${copy.publishInvalidData} ${code || "invalid-data"}`;
   }
 
   if (code) {

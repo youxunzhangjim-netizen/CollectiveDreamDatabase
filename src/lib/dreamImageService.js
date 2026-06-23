@@ -82,6 +82,47 @@ export async function uploadDreamImages(files, { ownerId, recordId }) {
   return uploadedImages;
 }
 
+export async function uploadProfileImage(file, { ownerId }) {
+  const validationCode = validateDreamImageFile(file);
+
+  if (validationCode) {
+    throwStorageError(
+      `storage/${validationCode}`,
+      "The selected profile picture cannot be uploaded."
+    );
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    throwStorageError(
+      "storage/not-configured",
+      "Picture storage is not configured."
+    );
+  }
+
+  const path = createProfileImagePath({ ownerId, file });
+  const { error } = await supabase.storage
+    .from(dreamImagesBucket)
+    .upload(path, file, {
+      cacheControl: "31536000",
+      contentType: file.type,
+      upsert: true,
+    });
+
+  if (error) {
+    throwStorageError("storage/upload-failed", error.message);
+  }
+
+  const { data } = supabase.storage.from(dreamImagesBucket).getPublicUrl(path);
+
+  return {
+    path,
+    url: data?.publicUrl || "",
+    name: file.name || "profile-picture",
+    size: file.size,
+    type: file.type,
+  };
+}
+
 export function normalizeDreamImages(record) {
   const images = Array.isArray(record?.images)
     ? record.images
@@ -149,6 +190,16 @@ function createDreamImagePath({ ownerId, recordId, file, index }) {
     sanitizePathPart(ownerId || "guest"),
     sanitizePathPart(recordId || "record"),
     `${Date.now()}-${index + 1}-${randomId}.${extension}`,
+  ].join("/");
+}
+
+function createProfileImagePath({ ownerId, file }) {
+  const extension = getFileExtension(file);
+
+  return [
+    "profile-images",
+    sanitizePathPart(ownerId || "user"),
+    `avatar.${extension}`,
   ].join("/");
 }
 

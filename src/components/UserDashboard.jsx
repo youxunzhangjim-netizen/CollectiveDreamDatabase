@@ -18,8 +18,12 @@ import {
   normalizeLanguage,
 } from "../lib/language.js";
 import {
+  DREAM_IMAGE_ACCEPT,
   getPrimaryDreamImageUrl,
+  MAX_DREAM_IMAGE_BYTES,
   normalizeDreamImages,
+  uploadProfileImage,
+  validateDreamImageFile,
 } from "../lib/dreamImageService.js";
 import { getTagLabel, RECORD_TAGS } from "../lib/tagTaxonomy.js";
 
@@ -57,6 +61,15 @@ const DASHBOARD_COPY = {
     displayNamePlaceholder: "Dream researcher name",
     avatarUrlLabel: "Profile Image URL",
     avatarUrlPlaceholder: "https://example.com/profile.jpg",
+    profilePhotoUpload: "Upload Profile Photo",
+    profilePhotoHelp: "Choose a JPG, PNG, WebP, or GIF up to 8 MB.",
+    profilePhotoUploading: "Uploading profile photo",
+    profilePhotoUploaded: "Profile photo uploaded. Save profile to keep it.",
+    invalidProfilePhotoType: "Only JPG, PNG, WebP, or GIF pictures can be used.",
+    profilePhotoTooLarge: "Profile photo must be 8 MB or smaller.",
+    profilePhotoStorageUnavailable:
+      "Picture storage is not ready yet. Check Supabase Storage settings.",
+    profilePhotoUploadFailed: "Profile photo upload failed. Try another image.",
     countryLabel: "Country",
     countryPlaceholder: "Taiwan, United States...",
     ageLabel: "Age",
@@ -121,6 +134,15 @@ const DASHBOARD_COPY = {
     displayNamePlaceholder: "夢境研究者名稱",
     avatarUrlLabel: "個人圖片網址",
     avatarUrlPlaceholder: "https://example.com/profile.jpg",
+    profilePhotoUpload: "上傳個人照片",
+    profilePhotoHelp: "可選擇 8 MB 以下的 JPG、PNG、WebP 或 GIF。",
+    profilePhotoUploading: "正在上傳個人照片",
+    profilePhotoUploaded: "個人照片已上傳。請儲存個人資料以保留變更。",
+    invalidProfilePhotoType: "只能使用 JPG、PNG、WebP 或 GIF 圖片。",
+    profilePhotoTooLarge: "個人照片必須小於 8 MB。",
+    profilePhotoStorageUnavailable:
+      "圖片儲存尚未準備好。請檢查 Supabase Storage 設定。",
+    profilePhotoUploadFailed: "個人照片上傳失敗。請試另一張圖片。",
     countryLabel: "國家／地區",
     countryPlaceholder: "台灣、美國...",
     ageLabel: "年齡",
@@ -185,6 +207,15 @@ const DASHBOARD_COPY = {
     displayNamePlaceholder: "Nombre de investigación",
     avatarUrlLabel: "URL de imagen de perfil",
     avatarUrlPlaceholder: "https://example.com/profile.jpg",
+    profilePhotoUpload: "Subir foto de perfil",
+    profilePhotoHelp: "Elige JPG, PNG, WebP o GIF de hasta 8 MB.",
+    profilePhotoUploading: "Subiendo foto de perfil",
+    profilePhotoUploaded: "Foto subida. Guarda el perfil para conservarla.",
+    invalidProfilePhotoType: "Solo se pueden usar imágenes JPG, PNG, WebP o GIF.",
+    profilePhotoTooLarge: "La foto debe tener 8 MB o menos.",
+    profilePhotoStorageUnavailable:
+      "El almacenamiento de imágenes aún no está listo. Revisa Supabase Storage.",
+    profilePhotoUploadFailed: "No se pudo subir la foto. Prueba otra imagen.",
     countryLabel: "País / región",
     countryPlaceholder: "Taiwán, Estados Unidos...",
     ageLabel: "Edad",
@@ -315,6 +346,7 @@ export default function UserDashboard({
     user ? createDefaultProfile(user) : null
   );
   const [profileSaving, setProfileSaving] = useState(false);
+  const [profilePhotoUploading, setProfilePhotoUploading] = useState(false);
   const [profileNotice, setProfileNotice] = useState("");
   const [observations, setObservations] = useState([]);
   const [savedRecords, setSavedRecords] = useState([]);
@@ -409,6 +441,47 @@ export default function UserDashboard({
 
     return "CD";
   }, [displayUser.displayName, displayUser.pseudoId]);
+
+  async function handleProfilePhotoSelection(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !user?.uid) return;
+
+    setProfileNotice("");
+
+    const validationCode = validateDreamImageFile(file);
+
+    if (validationCode === "invalid-type") {
+      setProfileNotice(copy.invalidProfilePhotoType);
+      return;
+    }
+
+    if (validationCode === "too-large") {
+      setProfileNotice(copy.profilePhotoTooLarge);
+      return;
+    }
+
+    setProfilePhotoUploading(true);
+
+    try {
+      const image = await uploadProfileImage(file, { ownerId: user.uid });
+
+      setProfileDraft((current) => ({
+        ...current,
+        avatarUrl: image.url,
+      }));
+      setProfileNotice(copy.profilePhotoUploaded);
+    } catch (error) {
+      if (error?.code === "storage/not-configured") {
+        setProfileNotice(copy.profilePhotoStorageUnavailable);
+      } else {
+        setProfileNotice(copy.profilePhotoUploadFailed);
+      }
+    } finally {
+      setProfilePhotoUploading(false);
+    }
+  }
 
   async function handleSaveProfile() {
     if (!profileDraft) return;
@@ -582,6 +655,40 @@ export default function UserDashboard({
                   className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                 />
               </label>
+
+              <div className="rounded-2xl border border-cyan-300/15 bg-black/30 p-3">
+                <div className="flex items-center gap-3">
+                  {profileDraft.avatarUrl ? (
+                    <img
+                      src={profileDraft.avatarUrl}
+                      alt=""
+                      className="h-14 w-14 rounded-xl border border-cyan-300/25 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/10 font-mono text-sm font-bold text-cyan-100">
+                      {avatarText}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                      {copy.profilePhotoUpload}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-zinc-400">
+                      {copy.profilePhotoHelp}
+                    </p>
+                  </div>
+                </div>
+                <label className="mt-3 flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15">
+                  {profilePhotoUploading ? copy.profilePhotoUploading : copy.profilePhotoUpload}
+                  <input
+                    type="file"
+                    accept={DREAM_IMAGE_ACCEPT}
+                    onChange={handleProfilePhotoSelection}
+                    disabled={profilePhotoUploading}
+                    className="sr-only"
+                  />
+                </label>
+              </div>
 
               <label className="block">
                 <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">

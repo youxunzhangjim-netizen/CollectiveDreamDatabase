@@ -114,14 +114,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
         : { title: "", excerpt: "", text: "" },
     ])
   );
-  const images = await uploadDreamImages(draft?.imageFiles || [], {
-    ownerId: currentUser.uid,
-    recordId: recordRef.id,
-  });
-  const imageUrls = images.map((image) => image.url).filter(Boolean);
-  const thumbnailUrl = imageUrls[0] || "";
-
-  const record = {
+  const coreRecord = {
     id: recordRef.id,
     dream_id: recordRef.id,
     ownerId: currentUser.uid,
@@ -133,13 +126,6 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     originalTitle: title,
     originalText: dreamText,
     originalExcerpt: excerpt,
-    images,
-    dreamImages: images,
-    imageUrls,
-    pictureUrls: imageUrls,
-    thumbnailUrl,
-    thumbnail_url: thumbnailUrl,
-    generated_image_url: thumbnailUrl,
     title,
     dream_text: dreamText,
     excerpt,
@@ -155,6 +141,38 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     pseudoId: buildPseudoId(recordRef.id),
     adultContent,
     minimumViewerAge: adultContent ? 18 : 0,
+    signal_coherence: 50,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  await setDoc(recordRef, coreRecord);
+
+  let images = [];
+  let imageUploadError = null;
+
+  try {
+    images = await uploadDreamImages(draft?.imageFiles || [], {
+      ownerId: currentUser.uid,
+      recordId: recordRef.id,
+    });
+  } catch (error) {
+    imageUploadError = {
+      code: error?.code || "storage/upload-failed",
+      message: error?.message || "Picture upload failed.",
+    };
+  }
+
+  const imageUrls = images.map((image) => image.url).filter(Boolean);
+  const thumbnailUrl = imageUrls[0] || "";
+  const optionalRecord = {
+    images,
+    dreamImages: images,
+    imageUrls,
+    pictureUrls: imageUrls,
+    thumbnailUrl,
+    thumbnail_url: thumbnailUrl,
+    generated_image_url: thumbnailUrl,
     emotionTags,
     styleTags,
     eraTags,
@@ -168,12 +186,26 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     anomaly_tag_slugs: tags
       .filter((tag) => tag.category === "Anomalies")
       .map((tag) => tag.slug),
-    signal_coherence: 50,
-    createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
 
-  await setDoc(recordRef, record);
+  let metadataMergeError = null;
+
+  try {
+    await setDoc(recordRef, optionalRecord, { merge: true });
+  } catch (error) {
+    metadataMergeError = {
+      code: error?.code || "metadata/merge-failed",
+      message: error?.message || "Record metadata merge failed.",
+    };
+  }
+
+  const record = {
+    ...coreRecord,
+    ...optionalRecord,
+    imageUploadError,
+    metadataMergeError,
+  };
 
   return {
     ...record,
