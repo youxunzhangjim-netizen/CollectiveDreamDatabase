@@ -14,18 +14,14 @@ import {
 } from "../lib/profileService.js";
 import {
   getLanguageName,
-  LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
 import {
-  DREAM_IMAGE_ACCEPT,
   getPrimaryDreamImageUrl,
-  MAX_DREAM_IMAGE_BYTES,
   normalizeDreamImages,
-  uploadProfileImage,
-  validateDreamImageFile,
 } from "../lib/dreamImageService.js";
 import { getTagLabel, RECORD_TAGS } from "../lib/tagTaxonomy.js";
+import LanguageMenu from "./LanguageMenu.jsx";
 
 const DASHBOARD_COPY = {
   en: {
@@ -59,21 +55,11 @@ const DASHBOARD_COPY = {
     accountDetails: "Account Details",
     displayNameLabel: "Public Name",
     displayNamePlaceholder: "Dream researcher name",
-    avatarUrlLabel: "Profile Image URL",
-    avatarUrlPlaceholder: "https://example.com/profile.jpg",
-    profilePhotoUpload: "Upload Profile Photo",
-    profilePhotoHelp: "Choose a JPG, PNG, WebP, or GIF up to 8 MB.",
-    profilePhotoUploading: "Uploading profile photo",
-    profilePhotoUploaded: "Profile photo uploaded. Save profile to keep it.",
-    invalidProfilePhotoType: "Only JPG, PNG, WebP, or GIF pictures can be used.",
-    profilePhotoTooLarge: "Profile photo must be 8 MB or smaller.",
-    profilePhotoStorageUnavailable:
-      "Picture storage is not ready yet. Check Supabase Storage settings.",
-    profilePhotoUploadFailed: "Profile photo upload failed. Try another image.",
     countryLabel: "Country",
     countryPlaceholder: "Taiwan, United States...",
     ageLabel: "Age",
     agePlaceholder: "Optional",
+    showEmailLabel: "Show email publicly",
     showAgeLabel: "Show age publicly",
     biologicalSexLabel: "Biological Sex",
     biologicalSexPlaceholder: "Prefer not to say",
@@ -132,21 +118,11 @@ const DASHBOARD_COPY = {
     accountDetails: "帳戶資料",
     displayNameLabel: "公開名稱",
     displayNamePlaceholder: "夢境研究者名稱",
-    avatarUrlLabel: "個人圖片網址",
-    avatarUrlPlaceholder: "https://example.com/profile.jpg",
-    profilePhotoUpload: "上傳個人照片",
-    profilePhotoHelp: "可選擇 8 MB 以下的 JPG、PNG、WebP 或 GIF。",
-    profilePhotoUploading: "正在上傳個人照片",
-    profilePhotoUploaded: "個人照片已上傳。請儲存個人資料以保留變更。",
-    invalidProfilePhotoType: "只能使用 JPG、PNG、WebP 或 GIF 圖片。",
-    profilePhotoTooLarge: "個人照片必須小於 8 MB。",
-    profilePhotoStorageUnavailable:
-      "圖片儲存尚未準備好。請檢查 Supabase Storage 設定。",
-    profilePhotoUploadFailed: "個人照片上傳失敗。請試另一張圖片。",
     countryLabel: "國家／地區",
     countryPlaceholder: "台灣、美國...",
     ageLabel: "年齡",
     agePlaceholder: "選填",
+    showEmailLabel: "公開顯示電子郵件",
     showAgeLabel: "公開顯示年齡",
     biologicalSexLabel: "生理性別",
     biologicalSexPlaceholder: "不透露",
@@ -205,21 +181,11 @@ const DASHBOARD_COPY = {
     accountDetails: "Datos de la cuenta",
     displayNameLabel: "Nombre público",
     displayNamePlaceholder: "Nombre de investigación",
-    avatarUrlLabel: "URL de imagen de perfil",
-    avatarUrlPlaceholder: "https://example.com/profile.jpg",
-    profilePhotoUpload: "Subir foto de perfil",
-    profilePhotoHelp: "Elige JPG, PNG, WebP o GIF de hasta 8 MB.",
-    profilePhotoUploading: "Subiendo foto de perfil",
-    profilePhotoUploaded: "Foto subida. Guarda el perfil para conservarla.",
-    invalidProfilePhotoType: "Solo se pueden usar imágenes JPG, PNG, WebP o GIF.",
-    profilePhotoTooLarge: "La foto debe tener 8 MB o menos.",
-    profilePhotoStorageUnavailable:
-      "El almacenamiento de imágenes aún no está listo. Revisa Supabase Storage.",
-    profilePhotoUploadFailed: "No se pudo subir la foto. Prueba otra imagen.",
     countryLabel: "País / región",
     countryPlaceholder: "Taiwán, Estados Unidos...",
     ageLabel: "Edad",
     agePlaceholder: "Opcional",
+    showEmailLabel: "Mostrar correo públicamente",
     showAgeLabel: "Mostrar edad públicamente",
     biologicalSexLabel: "Sexo biológico",
     biologicalSexPlaceholder: "Prefiero no decirlo",
@@ -346,7 +312,6 @@ export default function UserDashboard({
     user ? createDefaultProfile(user) : null
   );
   const [profileSaving, setProfileSaving] = useState(false);
-  const [profilePhotoUploading, setProfilePhotoUploading] = useState(false);
   const [profileNotice, setProfileNotice] = useState("");
   const [observations, setObservations] = useState([]);
   const [savedRecords, setSavedRecords] = useState([]);
@@ -442,47 +407,6 @@ export default function UserDashboard({
     return "CD";
   }, [displayUser.displayName, displayUser.pseudoId]);
 
-  async function handleProfilePhotoSelection(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-
-    if (!file || !user?.uid) return;
-
-    setProfileNotice("");
-
-    const validationCode = validateDreamImageFile(file);
-
-    if (validationCode === "invalid-type") {
-      setProfileNotice(copy.invalidProfilePhotoType);
-      return;
-    }
-
-    if (validationCode === "too-large") {
-      setProfileNotice(copy.profilePhotoTooLarge);
-      return;
-    }
-
-    setProfilePhotoUploading(true);
-
-    try {
-      const image = await uploadProfileImage(file, { ownerId: user.uid });
-
-      setProfileDraft((current) => ({
-        ...current,
-        avatarUrl: image.url,
-      }));
-      setProfileNotice(copy.profilePhotoUploaded);
-    } catch (error) {
-      if (error?.code === "storage/not-configured") {
-        setProfileNotice(copy.profilePhotoStorageUnavailable);
-      } else {
-        setProfileNotice(copy.profilePhotoUploadFailed);
-      }
-    } finally {
-      setProfilePhotoUploading(false);
-    }
-  }
-
   async function handleSaveProfile() {
     if (!profileDraft) return;
 
@@ -568,20 +492,12 @@ export default function UserDashboard({
         <section className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/75 shadow-terminal backdrop-blur">
           <div className="grid gap-0 lg:grid-cols-[1.2fr_.8fr]">
             <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-7">
-              {displayUser.avatarUrl ? (
-                <img
-                  src={displayUser.avatarUrl}
-                  alt=""
-                  className="h-20 w-20 rounded-2xl border border-cyan-300/30 object-cover"
-                />
-              ) : (
-                <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_34px_rgba(34,211,238,.16)]">
-                  <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_58%)]" />
-                  <span className="relative font-mono text-xl font-bold text-cyan-100">
-                    {avatarText}
-                  </span>
-                </div>
-              )}
+              <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_34px_rgba(34,211,238,.16)]">
+                <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_58%)]" />
+                <span className="relative font-mono text-xl font-bold text-cyan-100">
+                  {avatarText}
+                </span>
+              </div>
 
               <div className="min-w-0">
                 <p className="font-mono text-xs uppercase tracking-[0.34em] text-cyan-200/70">
@@ -591,7 +507,9 @@ export default function UserDashboard({
                   {displayUser.displayName || displayUser.pseudoId || copy.privateAccountLabel}
                 </h1>
                 <p className="mt-2 truncate font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
-                  {copy.accountEmailHidden}
+                  {displayUser.showEmail && displayUser.email
+                    ? displayUser.email
+                    : copy.accountEmailHidden}
                 </p>
                 <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
                   {displayUser.pseudoId} / {copy.memberSince} {displayUser.memberSince}
@@ -652,58 +570,6 @@ export default function UserDashboard({
                     }))
                   }
                   placeholder={copy.displayNamePlaceholder}
-                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
-                />
-              </label>
-
-              <div className="rounded-2xl border border-cyan-300/15 bg-black/30 p-3">
-                <div className="flex items-center gap-3">
-                  {profileDraft.avatarUrl ? (
-                    <img
-                      src={profileDraft.avatarUrl}
-                      alt=""
-                      className="h-14 w-14 rounded-xl border border-cyan-300/25 object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/10 font-mono text-sm font-bold text-cyan-100">
-                      {avatarText}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                      {copy.profilePhotoUpload}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-zinc-400">
-                      {copy.profilePhotoHelp}
-                    </p>
-                  </div>
-                </div>
-                <label className="mt-3 flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15">
-                  {profilePhotoUploading ? copy.profilePhotoUploading : copy.profilePhotoUpload}
-                  <input
-                    type="file"
-                    accept={DREAM_IMAGE_ACCEPT}
-                    onChange={handleProfilePhotoSelection}
-                    disabled={profilePhotoUploading}
-                    className="sr-only"
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                  {copy.avatarUrlLabel}
-                </span>
-                <input
-                  type="url"
-                  value={profileDraft.avatarUrl || ""}
-                  onChange={(event) =>
-                    setProfileDraft((current) => ({
-                      ...current,
-                      avatarUrl: event.target.value,
-                    }))
-                  }
-                  placeholder={copy.avatarUrlPlaceholder}
                   className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                 />
               </label>
@@ -769,6 +635,22 @@ export default function UserDashboard({
 
             <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(profileDraft.showEmail)}
+                    onChange={(event) =>
+                      setProfileDraft((current) => ({
+                        ...current,
+                        showEmail: event.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4 accent-cyan-300"
+                  />
+                  <span className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-300">
+                    {copy.showEmailLabel}
+                  </span>
+                </label>
                 <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
                   <input
                     type="checkbox"
@@ -896,9 +778,9 @@ function normalizeDashboardUser(user, profile) {
       pseudoId: "DREAMER-7F3A9C",
       memberSince: "2026-06-23",
       displayName: "",
-      avatarUrl: "",
       country: "",
       age: "",
+      showEmail: false,
       showAge: false,
       biologicalSex: "",
       showBiologicalSex: false,
@@ -915,9 +797,9 @@ function normalizeDashboardUser(user, profile) {
     pseudoId: `DREAMER-${uidSeed}`,
     memberSince: profile?.joinedAt || createdAt,
     displayName: profile?.displayName || user.displayName || "",
-    avatarUrl: profile?.avatarUrl || user.photoURL || "",
     country: profile?.country || "",
     age: profile?.age || "",
+    showEmail: Boolean(profile?.showEmail),
     showAge: Boolean(profile?.showAge),
     biologicalSex: profile?.biologicalSex || "",
     showBiologicalSex: Boolean(profile?.showBiologicalSex),
@@ -981,7 +863,6 @@ function normalizeRecordItem(item, index) {
         ? "account"
         : "anonymous",
     creatorDisplayName: item.creatorDisplayName || "",
-    creatorAvatarUrl: item.creatorAvatarUrl || "",
     pseudoId: item.pseudoId || item.pseudo_id || "",
     visibility: item.visibility || (item.isPublic === false ? "private" : "public"),
     tags: Array.isArray(item.tags) ? item.tags : [],
@@ -1157,42 +1038,7 @@ function DashboardBackground() {
 }
 
 function LanguageToggle({ language, setLanguage, copy }) {
-  return (
-    <div
-      className="relative flex h-11 shrink-0 items-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-1 shadow-[0_0_24px_rgba(34,211,238,.16)]"
-      role="group"
-      aria-label={copy.languageLabel}
-    >
-      <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
-      {LANGUAGE_OPTIONS.map((option) => {
-        const active = language === option.value;
-        const title =
-          option.value === "zh"
-            ? copy.chineseLabel
-            : option.value === "es"
-              ? copy.spanishLabel
-              : copy.englishLabel;
-
-        return (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={active}
-            title={title}
-            onClick={() => setLanguage(option.value)}
-            className={[
-              "relative z-10 flex h-8 min-w-9 items-center justify-center rounded-lg px-2 font-mono text-xs font-bold transition",
-              active
-                ? "bg-cyan-200 text-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.25)]"
-                : "text-cyan-100/70 hover:bg-white/10 hover:text-cyan-50",
-            ].join(" ")}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
+  return <LanguageMenu language={language} setLanguage={setLanguage} copy={copy} />;
 }
 
 function PersonalAnalysisPanel({ stats, copy }) {

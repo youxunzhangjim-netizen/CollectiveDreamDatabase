@@ -9,7 +9,7 @@ import {
   getKnownAuthErrorMessage,
   reportAuthError,
 } from "../lib/authErrorMessages.js";
-import { LANGUAGE_OPTIONS } from "../lib/language.js";
+import LanguageMenu from "./LanguageMenu.jsx";
 
 const AUTH_COPY = {
   en: {
@@ -441,43 +441,7 @@ function AuthBackground() {
 }
 
 function LanguageToggle({ language, setLanguage, copy }) {
-  return (
-    <div
-      className="relative flex h-11 shrink-0 items-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-1 shadow-[0_0_24px_rgba(34,211,238,.16)]"
-      role="group"
-      aria-label={copy.languageLabel}
-    >
-      <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
-
-      {LANGUAGE_OPTIONS.map((option) => {
-        const active = language === option.value;
-        const title =
-          option.value === "zh"
-            ? copy.chineseLabel
-            : option.value === "es"
-              ? copy.spanishLabel
-              : copy.englishLabel;
-
-        return (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={active}
-            title={title}
-            onClick={() => setLanguage(option.value)}
-            className={[
-              "relative z-10 flex h-8 min-w-9 items-center justify-center rounded-lg px-2 font-mono text-xs font-bold transition",
-              active
-                ? "bg-cyan-200 text-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.25)]"
-                : "text-cyan-100/70 hover:bg-white/10 hover:text-cyan-50",
-            ].join(" ")}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
+  return <LanguageMenu language={language} setLanguage={setLanguage} copy={copy} />;
 }
 
 function ModeButton({ active, children, onClick }) {

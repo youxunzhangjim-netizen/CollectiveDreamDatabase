@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   DREAM_TRANSLATIONS,
-  FALLBACK_DREAMS,
-  FALLBACK_TAGS,
   TAG_TRANSLATIONS,
 } from "../data/fallbackDreams.js";
 import {
@@ -15,11 +13,13 @@ import {
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
 } from "../lib/dreamImageService.js";
-import { isSupabaseConfigured, supabase } from "../lib/supabaseClient.js";
 import {
   collectRecordForUser,
+  fetchFollowingRecorders,
   fetchPublicRecords,
+  followRecorderForUser,
   saveRecordForUser,
+  unfollowRecorderForUser,
 } from "../lib/recordsService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import {
@@ -27,6 +27,7 @@ import {
   RECORD_TAGS,
   TAG_CATEGORY_ORDER,
 } from "../lib/tagTaxonomy.js";
+import LanguageMenu from "./LanguageMenu.jsx";
 
 const CATEGORY_STYLES = {
   Environment:
@@ -73,8 +74,10 @@ const CATEGORY_DOT_STYLES = {
   Content: "bg-amber-300",
 };
 
-const CATEGORY_FILTERS = ["All", ...TAG_CATEGORY_ORDER];
 const DEFAULT_TAGS = Object.values(RECORD_TAGS);
+const PAGE_SIZE = 20;
+const REPORT_SUGGESTION_MAILTO =
+  "mailto:collectivedreamdatabase@gmail.com?subject=Collective%20Dream%20Database%20Report%20or%20Suggestion";
 
 const UI_COPY = {
   en: {
@@ -85,6 +88,9 @@ const UI_COPY = {
     mobileSubmit: "Submit",
     globalDatabase: "Global Database",
     submitObservation: "Submit Observation",
+    loginButton: "Login",
+    accountButton: "Account",
+    reportSuggestion: "Report / Suggestion",
     searchLabel: "Search dream observations",
     searchPlaceholder: "Search dreams, pseudo-IDs, emotions, anomalies...",
     languageLabel: "Switch interface language",
@@ -103,9 +109,10 @@ const UI_COPY = {
     loadStates: {
       loading: "Connecting to live archive",
       live: "Live archive dataset",
-      fallback: "Local fallback dataset",
+      fallback: "Live archive unavailable",
+      empty: "No public records yet",
     },
-    loadError: "The live archive is unavailable, so local fallback data is shown:",
+    loadError: "The live archive is unavailable:",
     schemaFocus: "Schema Focus",
     anomalySearch: "Anomaly-tag search",
     ontologyConsistency: "Ontology consistency",
@@ -123,10 +130,13 @@ const UI_COPY = {
     sortCoherence: "Sort: Coherence",
     sortNewest: "Sort: Newest",
     sortTitle: "Sort: Title",
+    selectedLabel: "selected",
     clearFilters: "Clear filters",
     noMatchesTitle: "No matching dream observations",
     noMatchesText:
       "Remove a tag, switch from match all to match any, or broaden the search query to restore the signal.",
+    noRecordsTitle: "No public dream records yet",
+    noRecordsText: "The global database is ready for the first real submitted record.",
     generatedImage: "Generated Image",
     generatedImageAlt: "Generated visual for dream titled",
     visualHash: "Visual hash",
@@ -155,6 +165,16 @@ const UI_COPY = {
     collectDream: "Collect",
     collectedDream: "Collected",
     signInToCollect: "Sign in to collect",
+    followRecorder: "Follow recorder",
+    followingRecorder: "Following",
+    signInToFollow: "Sign in to follow",
+    followLimitReached: "You can follow up to ten recorders.",
+    publicEmailLabel: "Public email",
+    pageLabel: "Page",
+    pageOf: "of",
+    showingLabel: "Showing",
+    previousPage: "Previous",
+    nextPage: "Next",
   },
   zh: {
     documentTitle: "集體夢境資料庫",
@@ -164,6 +184,9 @@ const UI_COPY = {
     mobileSubmit: "提交",
     globalDatabase: "全球資料庫",
     submitObservation: "提交觀測",
+    loginButton: "登入",
+    accountButton: "帳戶",
+    reportSuggestion: "回報／建議",
     searchLabel: "搜尋夢境觀測",
     searchPlaceholder: "搜尋夢境、匿名 ID、情緒、異常現象...",
     languageLabel: "切換介面語言",
@@ -182,9 +205,10 @@ const UI_COPY = {
     loadStates: {
       loading: "連線至即時檔案庫",
       live: "即時檔案庫資料集",
-      fallback: "本機備用資料集",
+      fallback: "即時檔案庫無法使用",
+      empty: "尚無公開紀錄",
     },
-    loadError: "即時檔案庫暫時無法使用，因此改顯示本機備用資料：",
+    loadError: "即時檔案庫暫時無法使用：",
     schemaFocus: "架構焦點",
     anomalySearch: "異常標籤搜尋",
     ontologyConsistency: "本體一致性",
@@ -202,9 +226,12 @@ const UI_COPY = {
     sortCoherence: "排序：一致性",
     sortNewest: "排序：最新",
     sortTitle: "排序：標題",
+    selectedLabel: "已選",
     clearFilters: "清除篩選",
     noMatchesTitle: "沒有相符的夢境觀測",
     noMatchesText: "移除標籤、改用任一符合，或放寬搜尋字詞以恢復訊號。",
+    noRecordsTitle: "尚無公開夢境紀錄",
+    noRecordsText: "全球資料庫已準備好接收第一筆真實提交的紀錄。",
     generatedImage: "生成影像",
     generatedImageAlt: "夢境生成視覺，標題為",
     visualHash: "視覺雜湊",
@@ -230,6 +257,16 @@ const UI_COPY = {
     collectDream: "收藏",
     collectedDream: "已收藏",
     signInToCollect: "登入後可收藏",
+    followRecorder: "追蹤記錄者",
+    followingRecorder: "追蹤中",
+    signInToFollow: "登入後可追蹤",
+    followLimitReached: "最多可追蹤十位記錄者。",
+    publicEmailLabel: "公開電子郵件",
+    pageLabel: "頁",
+    pageOf: "／",
+    showingLabel: "顯示",
+    previousPage: "上一頁",
+    nextPage: "下一頁",
   },
   es: {
     documentTitle: "Base de Sueños Colectivos",
@@ -239,6 +276,9 @@ const UI_COPY = {
     mobileSubmit: "Enviar",
     globalDatabase: "Base global",
     submitObservation: "Enviar observación",
+    loginButton: "Iniciar sesión",
+    accountButton: "Cuenta",
+    reportSuggestion: "Reporte / sugerencia",
     searchLabel: "Buscar observaciones de sueños",
     searchPlaceholder: "Buscar sueños, pseudo-ID, emociones, anomalías...",
     languageLabel: "Cambiar idioma de la interfaz",
@@ -257,10 +297,11 @@ const UI_COPY = {
     loadStates: {
       loading: "Conectando con el archivo activo",
       live: "Archivo activo",
-      fallback: "Datos locales de respaldo",
+      fallback: "Archivo activo no disponible",
+      empty: "Aún no hay registros públicos",
     },
     loadError:
-      "El archivo activo no está disponible, por eso se muestran datos locales:",
+      "El archivo activo no está disponible:",
     schemaFocus: "Enfoque del Esquema",
     anomalySearch: "Búsqueda por etiquetas",
     ontologyConsistency: "Consistencia ontológica",
@@ -278,10 +319,13 @@ const UI_COPY = {
     sortCoherence: "Orden: Coherencia",
     sortNewest: "Orden: Más reciente",
     sortTitle: "Orden: Título",
+    selectedLabel: "seleccionadas",
     clearFilters: "Limpiar filtros",
     noMatchesTitle: "No hay observaciones coincidentes",
     noMatchesText:
       "Quita una etiqueta, cambia a cualquiera o amplía la búsqueda para recuperar la señal.",
+    noRecordsTitle: "Aún no hay registros públicos",
+    noRecordsText: "La base global está lista para el primer registro real enviado.",
     generatedImage: "Imagen generada",
     generatedImageAlt: "Visual generado para el sueño titulado",
     visualHash: "Hash visual",
@@ -310,10 +354,21 @@ const UI_COPY = {
     collectDream: "Coleccionar",
     collectedDream: "Coleccionado",
     signInToCollect: "Inicia sesión para coleccionar",
+    followRecorder: "Seguir registrador",
+    followingRecorder: "Siguiendo",
+    signInToFollow: "Inicia sesión para seguir",
+    followLimitReached: "Puedes seguir hasta diez registradores.",
+    publicEmailLabel: "Correo público",
+    pageLabel: "Página",
+    pageOf: "de",
+    showingLabel: "Mostrando",
+    previousPage: "Anterior",
+    nextPage: "Siguiente",
   },
 };
 
 const INITIAL_LOAD_STATE = "loading";
+const EMPTY_LOAD_STATE = "empty";
 
 export default function CollectiveDreamDashboard({
   language: selectedLanguage,
@@ -326,16 +381,17 @@ export default function CollectiveDreamDashboard({
   const [localLanguage, setLocalLanguage] = useState("zh");
   const language = selectedLanguage || localLanguage;
   const setLanguage = setSelectedLanguage || setLocalLanguage;
-  const [dreams, setDreams] = useState(FALLBACK_DREAMS);
-  const [tags, setTags] = useState(() => mergeTagSets(DEFAULT_TAGS, FALLBACK_TAGS));
+  const [dreams, setDreams] = useState([]);
+  const [tags, setTags] = useState(() => DEFAULT_TAGS);
   const [query, setQuery] = useState("");
   const [selectedTagSlugs, setSelectedTagSlugs] = useState([]);
   const [matchMode, setMatchMode] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("All");
   const [sortMode, setSortMode] = useState("newest");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loadState, setLoadState] = useState(INITIAL_LOAD_STATE);
   const [loadError, setLoadError] = useState(null);
   const [viewerProfile, setViewerProfile] = useState(null);
+  const [followingRecorders, setFollowingRecorders] = useState([]);
   const [adultConfirmations, setAdultConfirmations] = useState({});
   const copy = UI_COPY[language] || UI_COPY.zh;
   const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
@@ -356,8 +412,6 @@ export default function CollectiveDreamDashboard({
 
       const loadErrors = [];
       let firestoreDreams = [];
-      let supabaseDreams = [];
-      let supabaseTags = [];
 
       try {
         firestoreDreams = await fetchPublicRecords({
@@ -367,40 +421,15 @@ export default function CollectiveDreamDashboard({
         loadErrors.push(error.message);
       }
 
-      if (isSupabaseConfigured && supabase) {
-        const [dreamResponse, tagResponse] = await Promise.all([
-          supabase
-            .from("v_dream_cards")
-            .select("*")
-            .order("dream_date", { ascending: false })
-            .limit(100),
-          supabase
-            .from("tags")
-            .select("id, category, name, slug")
-            .order("category", { ascending: true })
-            .order("name", { ascending: true }),
-        ]);
-
-        if (dreamResponse.error || tagResponse.error) {
-          loadErrors.push(dreamResponse.error?.message || tagResponse.error?.message);
-        } else {
-          supabaseDreams = dreamResponse.data || [];
-          supabaseTags = tagResponse.data || [];
-        }
-      }
-
       if (ignore) return;
 
-      const liveDreams = mergeDreamSets(
-        firestoreDreams.map(normalizeDreamCard),
-        supabaseDreams.map(normalizeDreamCard)
-      );
+      const liveDreams = mergeDreamSets(firestoreDreams.map(normalizeDreamCard));
 
       if (liveDreams.length === 0) {
-        setLoadState("fallback");
+        setLoadState(loadErrors.length > 0 ? "fallback" : EMPTY_LOAD_STATE);
         setLoadError(loadErrors[0] || null);
-        setDreams(FALLBACK_DREAMS);
-        setTags(mergeTagSets(DEFAULT_TAGS, FALLBACK_TAGS));
+        setDreams([]);
+        setTags(DEFAULT_TAGS);
         return;
       }
 
@@ -408,8 +437,6 @@ export default function CollectiveDreamDashboard({
       setTags(
         mergeTagSets(
           DEFAULT_TAGS,
-          FALLBACK_TAGS,
-          supabaseTags,
           liveDreams.flatMap((dream) => dream.tags)
         )
       );
@@ -448,10 +475,30 @@ export default function CollectiveDreamDashboard({
     };
   }, [currentUser]);
 
-  const visibleTags = useMemo(() => {
-    if (categoryFilter === "All") return tags;
-    return tags.filter((tag) => tag.category === categoryFilter);
-  }, [tags, categoryFilter]);
+  useEffect(() => {
+    if (!currentUser?.uid || currentUser.isAnonymous) {
+      setFollowingRecorders([]);
+      return undefined;
+    }
+
+    let ignore = false;
+
+    async function loadFollowingRecorders() {
+      try {
+        const records = await fetchFollowingRecorders(currentUser);
+        if (!ignore) setFollowingRecorders(records);
+      } catch {
+        if (!ignore) setFollowingRecorders([]);
+      }
+    }
+
+    loadFollowingRecorders();
+
+    return () => {
+      ignore = true;
+    };
+  }, [currentUser]);
+
   function canAccessAdultDream(dream) {
     if (!isAdultDream(dream)) return true;
     if (isAgeVerifiedAdult) return true;
@@ -501,9 +548,6 @@ export default function CollectiveDreamDashboard({
           .toLowerCase();
 
         const matchesSearch = needle.length === 0 || searchableText.includes(needle);
-        const matchesCategory =
-          categoryFilter === "All" ||
-          dream.tags.some((tag) => tag.category === categoryFilter);
 
         const matchesTags =
           selectedTagSlugs.length === 0 ||
@@ -511,7 +555,7 @@ export default function CollectiveDreamDashboard({
             ? selectedTagSlugs.every((slug) => dreamTagSlugs.includes(slug))
             : selectedTagSlugs.some((slug) => dreamTagSlugs.includes(slug)));
 
-        return matchesSearch && matchesCategory && matchesTags;
+        return matchesSearch && matchesTags;
       })
       .sort((a, b) => {
         if (sortMode === "newest") {
@@ -535,11 +579,27 @@ export default function CollectiveDreamDashboard({
     query,
     selectedTagSlugs,
     matchMode,
-    categoryFilter,
     sortMode,
     language,
     isAgeVerifiedAdult,
   ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, selectedTagSlugs, matchMode, sortMode]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredDreams.length / PAGE_SIZE));
+  const boundedCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedDreams = filteredDreams.slice(
+    (boundedCurrentPage - 1) * PAGE_SIZE,
+    boundedCurrentPage * PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage !== boundedCurrentPage) {
+      setCurrentPage(boundedCurrentPage);
+    }
+  }, [boundedCurrentPage, currentPage]);
 
   const activeAnomalyCount = selectedTagSlugs.filter((slug) => {
     const tag = tags.find((item) => item.slug === slug);
@@ -548,6 +608,11 @@ export default function CollectiveDreamDashboard({
   const researchStats = useMemo(
     () => buildResearchStats(dreams, filteredDreams, language),
     [dreams, filteredDreams, language]
+  );
+  const tagCounts = useMemo(() => buildTagCounts(dreams), [dreams]);
+  const followingRecorderIds = useMemo(
+    () => new Set(followingRecorders.map((item) => item.recorderId || item.id)),
+    [followingRecorders]
   );
 
   function toggleTag(slug) {
@@ -558,19 +623,58 @@ export default function CollectiveDreamDashboard({
     );
   }
 
+  async function handleToggleFollow(dream) {
+    const recorderId = getRecorderId(dream);
+
+    if (!currentUser?.uid || currentUser.isAnonymous) {
+      throw new Error(copy.signInToFollow);
+    }
+
+    if (!recorderId || recorderId === currentUser.uid) return false;
+
+    if (followingRecorderIds.has(recorderId)) {
+      await unfollowRecorderForUser(currentUser, recorderId);
+      setFollowingRecorders((current) =>
+        current.filter((item) => (item.recorderId || item.id) !== recorderId)
+      );
+      return false;
+    }
+
+    if (followingRecorders.length >= 10) {
+      throw new Error(copy.followLimitReached);
+    }
+
+    await followRecorderForUser(currentUser, {
+      recorderId,
+      creatorDisplayName: dream.creatorDisplayName,
+      creatorEmail: dream.creatorEmail,
+    });
+    setFollowingRecorders((current) => [
+      {
+        id: recorderId,
+        recorderId,
+        displayName: dream.creatorDisplayName || "",
+        email: dream.creatorEmail || "",
+      },
+      ...current,
+    ]);
+    return true;
+  }
+
   return (
     <main className="min-h-screen bg-[#030407] text-zinc-100 selection:bg-cyan-300/30 selection:text-cyan-50">
       <BackgroundField />
 
-      <TopNav
-        query={query}
-        setQuery={setQuery}
-        language={language}
-        setLanguage={setLanguage}
-        copy={copy}
-        onOpenAuth={onOpenAuth}
-        onOpenRecorder={onOpenRecorder}
-      />
+        <TopNav
+          query={query}
+          setQuery={setQuery}
+          language={language}
+          setLanguage={setLanguage}
+          copy={copy}
+          currentUser={currentUser}
+          onOpenAuth={onOpenAuth}
+          onOpenRecorder={onOpenRecorder}
+        />
 
       <section className="relative mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
         <HeroPanel
@@ -585,14 +689,13 @@ export default function CollectiveDreamDashboard({
         <ResearchPanel stats={researchStats} copy={copy} />
 
         <FilterPanel
-          tags={visibleTags}
+          tags={tags}
+          tagCounts={tagCounts}
           selectedTagSlugs={selectedTagSlugs}
           toggleTag={toggleTag}
           clearTags={() => setSelectedTagSlugs([])}
           matchMode={matchMode}
           setMatchMode={setMatchMode}
-          categoryFilter={categoryFilter}
-          setCategoryFilter={setCategoryFilter}
           sortMode={sortMode}
           setSortMode={setSortMode}
           language={language}
@@ -600,17 +703,29 @@ export default function CollectiveDreamDashboard({
         />
 
         <ObservationGrid
-          dreams={filteredDreams}
+          dreams={paginatedDreams}
+          totalDreamCount={dreams.length}
           language={language}
           copy={copy}
           currentUser={currentUser}
+          followingRecorderIds={followingRecorderIds}
           canSeeImages={canSeeImages}
           isAgeVerifiedAdult={isAgeVerifiedAdult}
           canAccessAdultDream={canAccessAdultDream}
+          onToggleFollow={handleToggleFollow}
           onConfirmAdultDream={(dreamId) =>
             setAdultConfirmations((current) => ({ ...current, [dreamId]: true }))
           }
           onOpenRecord={onOpenRecord}
+        />
+
+        <PaginationControls
+          currentPage={boundedCurrentPage}
+          totalPages={totalPages}
+          totalItems={filteredDreams.length}
+          pageSize={PAGE_SIZE}
+          copy={copy}
+          onPageChange={setCurrentPage}
         />
       </section>
     </main>
@@ -657,7 +772,7 @@ function normalizeDreamCard(row) {
         ? "account"
         : "anonymous",
     creatorDisplayName: row.creatorDisplayName || "",
-    creatorAvatarUrl: row.creatorAvatarUrl || "",
+    creatorEmail: row.creatorEmail || "",
     originalLanguage,
     originalTitle,
     originalText,
@@ -698,7 +813,7 @@ function normalizeDreamCard(row) {
 function ensureAdultTag(tags) {
   if (tags.some((tag) => tag.slug === "adult-content")) return tags;
 
-  const adultTag = FALLBACK_TAGS.find((tag) => tag.slug === "adult-content");
+  const adultTag = RECORD_TAGS["adult-content"];
   return adultTag ? [...tags, adultTag] : tags;
 }
 
@@ -911,6 +1026,23 @@ function buildResearchStats(dreams, visibleDreams, language) {
   };
 }
 
+function buildTagCounts(dreams) {
+  const counts = new Map();
+
+  dreams.forEach((dream) => {
+    dream.tags?.forEach((tag) => {
+      if (!tag?.slug) return;
+      counts.set(tag.slug, (counts.get(tag.slug) || 0) + 1);
+    });
+  });
+
+  return counts;
+}
+
+function getRecorderId(dream) {
+  return dream?.creatorId || dream?.ownerId || "";
+}
+
 function getTopMapEntry(map) {
   let topKey = "";
   let topValue = 0;
@@ -942,9 +1074,16 @@ function TopNav({
   language,
   setLanguage,
   copy,
+  currentUser,
   onOpenAuth,
   onOpenRecorder,
 }) {
+  const accountLabel = currentUser?.uid ? copy.accountButton : copy.loginButton;
+
+  function openReportSuggestion() {
+    window.location.href = REPORT_SUGGESTION_MAILTO;
+  }
+
   return (
     <nav className="sticky top-0 z-40 border-b border-cyan-300/10 bg-black/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
@@ -970,6 +1109,7 @@ function TopNav({
             <NavButton onClick={onOpenRecorder || onOpenAuth}>
               {copy.mobileSubmit}
             </NavButton>
+            <NavButton onClick={onOpenAuth}>{accountLabel}</NavButton>
           </div>
         </div>
 
@@ -977,6 +1117,10 @@ function TopNav({
           <NavButton active>{copy.globalDatabase}</NavButton>
           <NavButton onClick={onOpenRecorder || onOpenAuth}>
             {copy.submitObservation}
+          </NavButton>
+          <NavButton onClick={onOpenAuth}>{accountLabel}</NavButton>
+          <NavButton onClick={openReportSuggestion}>
+            {copy.reportSuggestion}
           </NavButton>
         </div>
 
@@ -993,6 +1137,13 @@ function TopNav({
           </label>
 
           <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
+          <button
+            type="button"
+            onClick={openReportSuggestion}
+            className="rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15 lg:hidden"
+          >
+            {copy.reportSuggestion}
+          </button>
         </div>
       </div>
     </nav>
@@ -1000,43 +1151,7 @@ function TopNav({
 }
 
 function LanguageToggle({ language, setLanguage, copy }) {
-  return (
-    <div
-      className="relative flex h-11 shrink-0 items-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-1 shadow-[0_0_24px_rgba(34,211,238,.16)]"
-      role="group"
-      aria-label={copy.languageLabel}
-    >
-      <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
-
-      {LANGUAGE_OPTIONS.map((option) => {
-        const active = language === option.value;
-        const title =
-          option.value === "zh"
-            ? copy.chineseLabel
-            : option.value === "es"
-              ? copy.spanishLabel
-              : copy.englishLabel;
-
-        return (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={active}
-            title={title}
-            onClick={() => setLanguage(option.value)}
-            className={[
-              "relative z-10 flex h-8 min-w-9 items-center justify-center rounded-lg px-2 font-mono text-xs font-bold transition",
-              active
-                ? "bg-cyan-200 text-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.25)]"
-                : "text-cyan-100/70 hover:bg-white/10 hover:text-cyan-50",
-            ].join(" ")}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
+  return <LanguageMenu language={language} setLanguage={setLanguage} copy={copy} />;
 }
 
 function HeroPanel({ total, visible, loadState, loadError, activeAnomalyCount, copy }) {
@@ -1154,18 +1269,34 @@ function ResearchMetric({ label, value }) {
 
 function FilterPanel({
   tags,
+  tagCounts,
   selectedTagSlugs,
   toggleTag,
   clearTags,
   matchMode,
   setMatchMode,
-  categoryFilter,
-  setCategoryFilter,
   sortMode,
   setSortMode,
   language,
   copy,
 }) {
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const tagGroups = useMemo(
+    () =>
+      TAG_CATEGORY_ORDER.map((category) => ({
+        category,
+        tags: tags.filter((tag) => tag.category === category),
+      })).filter((group) => group.tags.length > 0),
+    [tags]
+  );
+
+  function toggleCategory(category) {
+    setExpandedCategories((current) => ({
+      ...current,
+      [category]: !current[category],
+    }));
+  }
+
   return (
     <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -1187,19 +1318,6 @@ function FilterPanel({
           </SegmentButton>
 
           <select
-            value={categoryFilter}
-            onChange={(event) => setCategoryFilter(event.target.value)}
-            className="rounded-full border border-white/10 bg-black/40 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-200 outline-none transition focus:border-cyan-300/40 focus:ring-2 focus:ring-cyan-300/20"
-            aria-label={copy.categorySelectLabel}
-          >
-            {CATEGORY_FILTERS.map((category) => (
-              <option key={category} value={category}>
-                {getCategoryLabel(category, language)}
-              </option>
-            ))}
-          </select>
-
-          <select
             value={sortMode}
             onChange={(event) => setSortMode(event.target.value)}
             className="rounded-full border border-white/10 bg-black/40 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-200 outline-none transition focus:border-cyan-300/40 focus:ring-2 focus:ring-cyan-300/20"
@@ -1212,64 +1330,119 @@ function FilterPanel({
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        {tags.map((tag) => {
-          const active = selectedTagSlugs.includes(tag.slug);
-          const tagName = getTagName(tag, language);
+      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+        {tagGroups.map(({ category, tags: categoryTags }) => {
+          const expanded = Boolean(expandedCategories[category]);
+          const activeCount = categoryTags.filter((tag) =>
+            selectedTagSlugs.includes(tag.slug)
+          ).length;
 
           return (
-            <button
-              key={tag.id || tag.slug}
-              type="button"
-              aria-pressed={active}
-              onClick={() => toggleTag(tag.slug)}
-              className={[
-                "rounded-full border px-3 py-2 font-mono text-xs uppercase tracking-[0.18em] transition",
-                active
-                  ? CATEGORY_STYLES[tag.category]
-                  : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
-              ].join(" ")}
-              title={`${getCategoryLabel(tag.category, language)}: ${tagName}`}
+            <div
+              key={category}
+              className="overflow-hidden rounded-2xl border border-white/10 bg-black/25"
             >
-              <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full ${CATEGORY_DOT_STYLES[tag.category]}`} />
-              #{tagName}
-            </button>
+              <button
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => toggleCategory(category)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-white/[0.04]"
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <span
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                      CATEGORY_DOT_STYLES[category] || "bg-zinc-300"
+                    }`}
+                  />
+                  <span className="truncate font-mono text-xs uppercase tracking-[0.2em] text-zinc-100">
+                    {getCategoryLabel(category, language)}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                  {activeCount > 0 && (
+                    <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-cyan-100">
+                      {activeCount} {copy.selectedLabel}
+                    </span>
+                  )}
+                  <span>{categoryTags.length}</span>
+                  <span className="text-cyan-100">{expanded ? "-" : "+"}</span>
+                </span>
+              </button>
+
+              {expanded && (
+                <div className="max-h-52 overflow-y-auto border-t border-white/10 p-3">
+                  <div className="flex flex-wrap gap-2">
+                    {categoryTags.map((tag) => {
+                      const active = selectedTagSlugs.includes(tag.slug);
+                      const tagName = getTagName(tag, language);
+                      const tagCount = tagCounts.get(tag.slug) || 0;
+
+                      return (
+                        <button
+                          key={tag.id || tag.slug}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => toggleTag(tag.slug)}
+                          className={[
+                            "rounded-full border px-3 py-2 font-mono text-xs uppercase tracking-[0.18em] transition",
+                            active
+                              ? CATEGORY_STYLES[tag.category]
+                              : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+                          ].join(" ")}
+                          title={`${getCategoryLabel(tag.category, language)}: ${tagName}`}
+                        >
+                          #{tagName}
+                          <span className="ml-2 rounded-full bg-black/25 px-1.5 py-0.5 text-[10px] text-zinc-300">
+                            {tagCount}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
-
-        {selectedTagSlugs.length > 0 && (
-          <button
-            type="button"
-            onClick={clearTags}
-            className="rounded-full border border-red-300/20 bg-red-400/5 px-3 py-2 font-mono text-xs uppercase tracking-[0.18em] text-red-200/80 transition hover:border-red-300/40 hover:bg-red-400/10"
-          >
-            {copy.clearFilters}
-          </button>
-        )}
       </div>
+
+      {selectedTagSlugs.length > 0 && (
+        <button
+          type="button"
+          onClick={clearTags}
+          className="mt-4 rounded-full border border-red-300/20 bg-red-400/5 px-3 py-2 font-mono text-xs uppercase tracking-[0.18em] text-red-200/80 transition hover:border-red-300/40 hover:bg-red-400/10"
+        >
+          {copy.clearFilters}
+        </button>
+      )}
     </section>
   );
 }
 
 function ObservationGrid({
   dreams,
+  totalDreamCount,
   language,
   copy,
   currentUser,
+  followingRecorderIds,
   canSeeImages,
   isAgeVerifiedAdult,
   canAccessAdultDream,
   onConfirmAdultDream,
+  onToggleFollow,
   onOpenRecord,
 }) {
   if (dreams.length === 0) {
+    const emptyDatabase = totalDreamCount === 0;
+
     return (
       <section className="rounded-3xl border border-dashed border-cyan-300/20 bg-cyan-300/5 p-10 text-center">
         <p className="font-mono text-sm uppercase tracking-[0.25em] text-cyan-100">
-          {copy.noMatchesTitle}
+          {emptyDatabase ? copy.noRecordsTitle : copy.noMatchesTitle}
         </p>
         <p className="mt-3 text-sm text-zinc-400">
-          {copy.noMatchesText}
+          {emptyDatabase ? copy.noRecordsText : copy.noMatchesText}
         </p>
       </section>
     );
@@ -1284,14 +1457,60 @@ function ObservationGrid({
           language={language}
           copy={copy}
           currentUser={currentUser}
+          followingRecorderIds={followingRecorderIds}
           canSeeImages={canSeeImages}
           isAgeVerifiedAdult={isAgeVerifiedAdult}
           canAccessAdultDream={canAccessAdultDream}
           onConfirmAdultDream={onConfirmAdultDream}
+          onToggleFollow={onToggleFollow}
           onOpenRecord={onOpenRecord}
         />
       ))}
     </section>
+  );
+}
+
+function PaginationControls({
+  currentPage,
+  totalPages,
+  totalItems,
+  pageSize,
+  copy,
+  onPageChange,
+}) {
+  if (totalItems <= pageSize) return null;
+
+  const firstVisible = (currentPage - 1) * pageSize + 1;
+  const lastVisible = Math.min(currentPage * pageSize, totalItems);
+
+  return (
+    <nav className="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-950/70 p-4 font-mono text-xs uppercase tracking-[0.16em] text-zinc-300 sm:flex-row sm:items-center sm:justify-between">
+      <p>
+        {copy.showingLabel} {firstVisible}-{lastVisible} / {totalItems}
+      </p>
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={currentPage <= 1}
+          onClick={() => onPageChange(currentPage - 1)}
+          className="rounded-full border border-white/10 bg-black/30 px-3 py-2 transition enabled:hover:border-cyan-300/35 enabled:hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {copy.previousPage}
+        </button>
+        <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-cyan-100">
+          {copy.pageLabel} {currentPage} {copy.pageOf} {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={currentPage >= totalPages}
+          onClick={() => onPageChange(currentPage + 1)}
+          className="rounded-full border border-white/10 bg-black/30 px-3 py-2 transition enabled:hover:border-cyan-300/35 enabled:hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {copy.nextPage}
+        </button>
+      </div>
+    </nav>
   );
 }
 
@@ -1300,16 +1519,32 @@ function ObservationCard({
   language,
   copy,
   currentUser,
+  followingRecorderIds,
   canSeeImages,
   isAgeVerifiedAdult,
   canAccessAdultDream,
   onConfirmAdultDream,
+  onToggleFollow,
   onOpenRecord,
 }) {
   const [collectStatus, setCollectStatus] = useState("");
+  const [followStatus, setFollowStatus] = useState("");
   const adultDream = isAdultDream(dream);
   const adultAccessible = canAccessAdultDream(dream);
   const guestAdultGate = adultDream && !adultAccessible && !isAgeVerifiedAdult;
+  const displayTitle = guestAdultGate
+    ? copy.adultRestrictedTitle
+    : getDreamTitle(dream, language);
+  const canShowThumbnail = Boolean(canSeeImages && getPrimaryDreamImageUrl(dream));
+  const recorderId = getRecorderId(dream);
+  const canShowFollow =
+    !guestAdultGate &&
+    dream.recordIdentityMode === "account" &&
+    recorderId &&
+    recorderId !== currentUser?.uid;
+  const isFollowingRecorder = Boolean(
+    recorderId && followingRecorderIds?.has(recorderId)
+  );
 
   async function handleCollect(event) {
     event.stopPropagation();
@@ -1357,6 +1592,23 @@ function ObservationCard({
     }
   }
 
+  async function handleFollow(event) {
+    event.stopPropagation();
+    setFollowStatus("");
+
+    if (!currentUser?.uid || currentUser.isAnonymous) {
+      setFollowStatus(copy.signInToFollow);
+      return;
+    }
+
+    try {
+      await onToggleFollow?.(dream);
+      setFollowStatus("");
+    } catch (error) {
+      setFollowStatus(error.message || copy.followLimitReached);
+    }
+  }
+
   return (
     <article
       onClick={() => {
@@ -1388,13 +1640,15 @@ function ObservationCard({
           currentUser={currentUser}
           onConfirm={() => onConfirmAdultDream(dream.dream_id)}
         />
-      ) : (
+      ) : canShowThumbnail ? (
         <ObservationThumbnail
           dream={dream}
           language={language}
           copy={copy}
           canSeeImages={canSeeImages}
         />
+      ) : (
+        null
       )}
 
       <div className="p-5">
@@ -1407,9 +1661,11 @@ function ObservationCard({
           </span>
         </div>
 
-        <h2 className="text-xl font-semibold tracking-[-0.03em] text-zinc-50">
-          {guestAdultGate ? copy.adultRestrictedTitle : getDreamTitle(dream, language)}
-        </h2>
+        {displayTitle && (
+          <h2 className="text-xl font-semibold tracking-[-0.03em] text-zinc-50">
+            {displayTitle}
+          </h2>
+        )}
         <p className="mt-2 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
           {copy.originalLanguageLabel}: {getLanguageName(dream.originalLanguage, language)}
         </p>
@@ -1422,6 +1678,33 @@ function ObservationCard({
         <p className="mt-3 text-sm leading-7 text-zinc-300">
           {guestAdultGate ? copy.adultGuestPrompt : getDreamExcerpt(dream, language)}
         </p>
+
+        {!guestAdultGate && dream.recordIdentityMode === "account" && (
+          <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3">
+            <p className="break-words font-mono text-xs uppercase tracking-[0.16em] text-cyan-100">
+              {dream.creatorDisplayName || dream.pseudo_id}
+            </p>
+            {dream.creatorEmail && (
+              <p className="mt-1 break-words font-mono text-[11px] text-zinc-500">
+                {copy.publicEmailLabel}: {dream.creatorEmail}
+              </p>
+            )}
+            {canShowFollow && (
+              <button
+                type="button"
+                onClick={handleFollow}
+                className="mt-3 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15"
+              >
+                {isFollowingRecorder ? copy.followingRecorder : copy.followRecorder}
+              </button>
+            )}
+            {followStatus && (
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-amber-100">
+                {followStatus}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mt-5 flex flex-wrap gap-2">
           {dream.tags.map((tag) => (
@@ -1494,43 +1777,27 @@ function AdultGatePanel({ copy, currentUser, onConfirm }) {
 }
 
 function ObservationThumbnail({ dream, language, copy, canSeeImages }) {
-  const anomalyIntensity = Math.max(0.12, Math.min(0.52, dream.signal_coherence / 210));
-  const background = {
-    background: `
-      radial-gradient(circle at 18% 20%, rgba(34,211,238,${anomalyIntensity}), transparent 28%),
-      radial-gradient(circle at 88% 72%, rgba(217,70,239,${anomalyIntensity * 0.85}), transparent 34%),
-      linear-gradient(135deg, #05060a 0%, #101827 52%, #030407 100%)
-    `,
-  };
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUrl = getPrimaryDreamImageUrl(dream);
+
+  if (!canSeeImages || !imageUrl || imageFailed) return null;
 
   return (
     <div className="relative h-48 overflow-hidden border-b border-white/10 bg-black">
-      {canSeeImages && dream.generated_image_url ? (
-        <img
-          src={dream.generated_image_url}
-          alt={`${copy.generatedImageAlt} ${getDreamTitle(dream, language)}`}
-          className="h-full w-full object-cover opacity-90"
-          onError={(event) => {
-            event.currentTarget.style.display = "none";
-          }}
-        />
-      ) : (
-        <div className="absolute inset-0" style={background} />
-      )}
+      <img
+        src={imageUrl}
+        alt={`${copy.generatedImageAlt} ${getDreamTitle(dream, language)}`}
+        className="h-full w-full object-cover opacity-90"
+        onError={() => setImageFailed(true)}
+      />
 
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px)] bg-[size:28px_28px] opacity-20" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.24),transparent_42%)]" />
       <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-zinc-950 via-zinc-950/70 to-transparent" />
 
       <div className="absolute left-4 top-4 rounded-full border border-cyan-300/20 bg-black/50 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-100 backdrop-blur">
-        {canSeeImages ? copy.generatedImage : copy.wordsOnlyForGuest}
+        {copy.generatedImage}
       </div>
-
-      {!canSeeImages && (
-        <div className="absolute right-4 top-4 max-w-[11rem] rounded-xl border border-amber-300/20 bg-black/50 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-amber-100 backdrop-blur">
-          {copy.imageHiddenForGuest}
-        </div>
-      )}
 
       <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
         <div>

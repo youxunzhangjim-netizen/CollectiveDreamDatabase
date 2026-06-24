@@ -38,7 +38,7 @@ for insert
 to anon, authenticated
 with check (
   bucket_id = 'dream-images'
-  and (storage.foldername(name))[1] in ('dream-records', 'profile-images')
+  and (storage.foldername(name))[1] = 'dream-records'
 );
 
 commit;

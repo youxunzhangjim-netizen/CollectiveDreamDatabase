@@ -97,15 +97,16 @@ service cloud.firestore {
     }
 
     function validProfileMetadata(data) {
-      return !data.keys().hasAny(["biologicalSex"])
-        || data.biologicalSex in [
-          "",
-          "preferNotToSay",
-          "female",
-          "male",
-          "intersex",
-          "notListed"
-        ];
+      return (!data.keys().hasAny(["showEmail"]) || data.showEmail is bool)
+        && (!data.keys().hasAny(["biologicalSex"])
+          || data.biologicalSex in [
+            "",
+            "preferNotToSay",
+            "female",
+            "male",
+            "intersex",
+            "notListed"
+          ]);
     }
 
     match /Records/{recordId} {
@@ -136,6 +137,14 @@ service cloud.firestore {
         allow create, update: if isSignedIn()
           && request.auth.uid == userId
           && validRecordMetadata(request.resource.data);
+      }
+
+      match /following/{recorderId} {
+        allow read, delete: if isSignedIn() && request.auth.uid == userId;
+        allow create, update: if isSignedIn()
+          && request.auth.uid == userId
+          && request.resource.data.ownerId == userId
+          && request.resource.data.recorderId == recorderId;
       }
 
       match /collections/{collectionId} {

@@ -103,9 +103,9 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     recordIdentityMode === "account"
       ? profile?.displayName || currentUser.displayName || ""
       : "";
-  const creatorAvatarUrl =
-    recordIdentityMode === "account"
-      ? profile?.avatarUrl || currentUser.photoURL || ""
+  const creatorEmail =
+    recordIdentityMode === "account" && profile?.showEmail
+      ? currentUser.email || ""
       : "";
   const tags = buildRecordTags(
     draft?.selectedTagSlugs || draft?.emotionTags || [],
@@ -161,7 +161,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     recordIdentityMode,
     attributionMode: recordIdentityMode,
     creatorDisplayName,
-    creatorAvatarUrl,
+    creatorEmail,
     pseudoId: buildPseudoId(recordRef.id),
     adultContent,
     minimumViewerAge: adultContent ? 18 : 0,
@@ -269,6 +269,70 @@ export async function fetchCollectionRecords(currentUser, collectionId = "liked-
   return mapRecordSnapshot(snapshot);
 }
 
+export async function fetchFollowingRecorders(currentUser) {
+  if (!currentUser?.uid || currentUser.isAnonymous) return [];
+
+  const followingQuery = query(
+    collection(requireFirestore(), "users", currentUser.uid, "following"),
+    orderBy("followedAt", "desc")
+  );
+
+  const snapshot = await getDocs(followingQuery);
+  return mapRecordSnapshot(snapshot);
+}
+
+export async function followRecorderForUser(currentUser, recorder) {
+  if (!currentUser?.uid || currentUser.isAnonymous) {
+    throw new Error("A signed-in account is required to follow recorders.");
+  }
+
+  const recorderId = recorder?.recorderId || recorder?.creatorId || recorder?.ownerId;
+
+  if (!recorderId) {
+    throw new Error("This record does not expose a followable recorder.");
+  }
+
+  if (recorderId === currentUser.uid) {
+    throw new Error("You are already the owner of this recorder identity.");
+  }
+
+  const firestore = requireFirestore();
+  const followingRef = collection(firestore, "users", currentUser.uid, "following");
+  const followRef = doc(followingRef, recorderId);
+  const existingFollow = await getDoc(followRef);
+
+  if (!existingFollow.exists()) {
+    const currentFollowing = await getDocs(followingRef);
+
+    if (currentFollowing.size >= 10) {
+      throw new Error("You can follow up to ten recorders.");
+    }
+  }
+
+  await setDoc(
+    followRef,
+    {
+      recorderId,
+      ownerId: currentUser.uid,
+      displayName: recorder?.creatorDisplayName || recorder?.displayName || "",
+      email: recorder?.creatorEmail || "",
+      followedAt: existingFollow.exists()
+        ? existingFollow.data().followedAt || serverTimestamp()
+        : serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+export async function unfollowRecorderForUser(currentUser, recorderId) {
+  if (!currentUser?.uid || currentUser.isAnonymous || !recorderId) return;
+
+  await deleteDoc(
+    doc(requireFirestore(), "users", currentUser.uid, "following", recorderId)
+  );
+}
+
 export async function fetchRecordById(recordId) {
   if (!recordId) return null;
 
@@ -340,10 +404,8 @@ function normalizeRecordReference(record) {
       recordIdentityMode === "account"
         ? record?.creatorDisplayName || record?.displayName || ""
         : "",
-    creatorAvatarUrl:
-      recordIdentityMode === "account"
-        ? record?.creatorAvatarUrl || record?.avatarUrl || ""
-        : "",
+    creatorEmail:
+      recordIdentityMode === "account" ? record?.creatorEmail || "" : "",
     pseudoId: record?.pseudo_id || record?.pseudoId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
     adultContent,
@@ -652,8 +714,10 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     metadata.attributionMode = recordIdentityMode;
     metadata.creatorDisplayName =
       recordIdentityMode === "account" ? updates.creatorDisplayName || "" : "";
-    metadata.creatorAvatarUrl =
-      recordIdentityMode === "account" ? updates.creatorAvatarUrl || "" : "";
+    metadata.creatorEmail =
+      recordIdentityMode === "account" && updates.showEmail
+        ? updates.creatorEmail || ""
+        : "";
   }
 
   if ("selectedTagSlugs" in updates || "customTagLabels" in updates) {

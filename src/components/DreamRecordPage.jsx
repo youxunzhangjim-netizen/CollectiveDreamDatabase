@@ -6,7 +6,6 @@ import {
 } from "../lib/recordsService.js";
 import {
   getLanguageName,
-  LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
 import {
@@ -22,6 +21,7 @@ import {
   RECORD_TAGS,
   tagExists,
 } from "../lib/tagTaxonomy.js";
+import LanguageMenu from "./LanguageMenu.jsx";
 
 const EDITABLE_TAG_SLUGS = new Set(
   RECORDER_TAG_GROUPS.flatMap((group) => group.slugs)
@@ -415,7 +415,8 @@ export default function DreamRecordPage({
         minimumViewerAge: adultContent ? 18 : 0,
         recordIdentityMode,
         creatorDisplayName: profile?.displayName || currentUser?.displayName || "",
-        creatorAvatarUrl: profile?.avatarUrl || currentUser?.photoURL || "",
+        creatorEmail: profile?.showEmail ? currentUser?.email || "" : "",
+        showEmail: Boolean(profile?.showEmail),
         selectedTagSlugs,
         customTagLabels: customTagEntries,
       });
@@ -430,7 +431,8 @@ export default function DreamRecordPage({
           minimumViewerAge: adultContent ? 18 : 0,
           recordIdentityMode,
           creatorDisplayName: profile?.displayName || currentUser?.displayName || "",
-          creatorAvatarUrl: profile?.avatarUrl || currentUser?.photoURL || "",
+          creatorEmail: profile?.showEmail ? currentUser?.email || "" : "",
+          showEmail: Boolean(profile?.showEmail),
         })
       );
       setStatus(copy.metadataSaved);
@@ -788,7 +790,7 @@ function normalizeDreamRecord(record) {
         ? "account"
         : "anonymous",
     creatorDisplayName: record?.creatorDisplayName || "",
-    creatorAvatarUrl: record?.creatorAvatarUrl || "",
+    creatorEmail: record?.creatorEmail || "",
     pseudoId: record?.pseudo_id || record?.pseudoId || record?.creatorId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
     tags: Array.isArray(record?.tags) ? record.tags : [],
@@ -944,8 +946,10 @@ function mergeRecordEdits(record, updates) {
     attributionMode: updates.recordIdentityMode,
     creatorDisplayName:
       updates.recordIdentityMode === "account" ? updates.creatorDisplayName || "" : "",
-    creatorAvatarUrl:
-      updates.recordIdentityMode === "account" ? updates.creatorAvatarUrl || "" : "",
+    creatorEmail:
+      updates.recordIdentityMode === "account" && updates.showEmail
+        ? updates.creatorEmail || ""
+        : "",
   };
 }
 
@@ -1073,42 +1077,7 @@ function EditableTagGroup({
 }
 
 function LanguageToggle({ language, setLanguage, copy }) {
-  return (
-    <div
-      className="relative flex h-11 shrink-0 items-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-1 shadow-[0_0_24px_rgba(34,211,238,.16)]"
-      role="group"
-      aria-label={copy.languageLabel}
-    >
-      <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
-      {LANGUAGE_OPTIONS.map((option) => {
-        const active = language === option.value;
-        const title =
-          option.value === "zh"
-            ? copy.chineseLabel
-            : option.value === "es"
-              ? copy.spanishLabel
-              : copy.englishLabel;
-
-        return (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={active}
-            title={title}
-            onClick={() => setLanguage(option.value)}
-            className={[
-              "relative z-10 flex h-8 min-w-9 items-center justify-center rounded-lg px-2 font-mono text-xs font-bold transition",
-              active
-                ? "bg-cyan-200 text-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.25)]"
-                : "text-cyan-100/70 hover:bg-white/10 hover:text-cyan-50",
-            ].join(" ")}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
+  return <LanguageMenu language={language} setLanguage={setLanguage} copy={copy} />;
 }
 
 function CreatorIdentity({ copy, record }) {
@@ -1124,18 +1093,17 @@ function CreatorIdentity({ copy, record }) {
         {copy.creator}
       </p>
       <div className="mt-3 flex items-center gap-3">
-        {showAccountIdentity && record.creatorAvatarUrl ? (
-          <img
-            src={record.creatorAvatarUrl}
-            alt=""
-            className="h-11 w-11 rounded-xl border border-cyan-300/25 object-cover"
-          />
-        ) : (
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 font-mono text-xs font-bold text-cyan-100">
-            {displayName.slice(0, 2).toUpperCase()}
-          </div>
-        )}
-        <p className="break-words font-mono text-sm text-cyan-100">{displayName}</p>
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 font-mono text-xs font-bold text-cyan-100">
+          {displayName.slice(0, 2).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="break-words font-mono text-sm text-cyan-100">{displayName}</p>
+          {showAccountIdentity && record.creatorEmail && (
+            <p className="mt-1 break-words font-mono text-[11px] text-zinc-500">
+              {record.creatorEmail}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
