@@ -14,6 +14,7 @@ import {
 import {
   getHtmlLang,
   getLanguageFromStorage,
+  getStoredLanguagePreference,
   isSupportedLanguage,
   saveLanguageToStorage,
 } from "./lib/language.js";
@@ -47,8 +48,17 @@ export default function App() {
     async function syncPreferredLanguage() {
       try {
         const profile = await getOrCreateUserProfile(currentUser);
+        const storedLanguage = getStoredLanguagePreference();
 
-        if (!ignore && isSupportedLanguage(profile?.preferredLanguage)) {
+        if (ignore) return;
+
+        if (isSupportedLanguage(storedLanguage)) {
+          setLanguageState(storedLanguage);
+          savePreferredLanguage(currentUser, storedLanguage).catch(() => {});
+          return;
+        }
+
+        if (isSupportedLanguage(profile?.preferredLanguage)) {
           setLanguageState(profile.preferredLanguage);
           saveLanguageToStorage(profile.preferredLanguage);
         }

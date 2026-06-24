@@ -65,6 +65,13 @@ export function getLanguageFromStorage() {
   return isSupportedLanguage(storedLanguage) ? storedLanguage : "zh";
 }
 
+export function getStoredLanguagePreference() {
+  if (typeof window === "undefined") return "";
+
+  const storedLanguage = window.localStorage.getItem("cddb-language");
+  return isSupportedLanguage(storedLanguage) ? storedLanguage : "";
+}
+
 export function saveLanguageToStorage(language) {
   if (typeof window === "undefined" || !isSupportedLanguage(language)) return;
   window.localStorage.setItem("cddb-language", language);

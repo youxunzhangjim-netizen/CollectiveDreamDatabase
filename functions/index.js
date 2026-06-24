@@ -23,6 +23,20 @@ const GOOGLE_LANGUAGE_CODES = {
   es: "es",
 };
 const TRANSLATION_PROVIDER = "google-cloud-translate-v2";
+const CUSTOM_TAG_CATEGORIES = new Set([
+  "Environment",
+  "Entities",
+  "Anomalies",
+  "Emotions",
+  "Styles",
+  "Eras",
+  "Weather",
+  "Dream Types",
+  "Perspective",
+  "Psychological Observables",
+  "Dream Analysis",
+  "Custom",
+]);
 
 exports.translateDreamRecord = onDocumentWritten(
   {
@@ -35,6 +49,11 @@ exports.translateDreamRecord = onDocumentWritten(
     const after = event.data?.after;
 
     if (!after?.exists) return;
+
+    await publishCustomTagsFromRecord({
+      recordId: event.params.recordId,
+      record: after.data(),
+    });
 
     const result = await translateRecordData({
       recordId: event.params.recordId,
@@ -132,6 +151,76 @@ exports.backfillDreamTranslations = onRequest(
   }
 );
 
+exports.backfillCustomTags = onRequest(
+  {
+    region: REGION,
+    timeoutSeconds: 540,
+    memory: "512MiB",
+    secrets: [TRANSLATION_BACKFILL_KEY],
+  },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Use POST." });
+      return;
+    }
+
+    const expectedKey = TRANSLATION_BACKFILL_KEY.value();
+    const providedKey = getRequestValue(req, "key") || req.get("x-backfill-key");
+
+    if (!expectedKey || providedKey !== expectedKey) {
+      res.status(403).json({ error: "Missing or invalid backfill key." });
+      return;
+    }
+
+    const requestedLimit = Number(getRequestValue(req, "limit") || 200);
+    const limit = Math.min(
+      Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 200, 1),
+      500
+    );
+    const startAfter = String(getRequestValue(req, "startAfter") || "").trim();
+
+    let recordsQuery = db
+      .collection("Records")
+      .orderBy(FieldPath.documentId())
+      .limit(limit);
+
+    if (startAfter) {
+      recordsQuery = recordsQuery.startAfter(startAfter);
+    }
+
+    const snapshot = await recordsQuery.get();
+    const response = {
+      scanned: snapshot.size,
+      tagsPublished: 0,
+      failed: 0,
+      errors: [],
+      nextStartAfter: snapshot.docs.at(-1)?.id || "",
+      complete: snapshot.size < limit,
+    };
+
+    for (const doc of snapshot.docs) {
+      try {
+        response.tagsPublished += await publishCustomTagsFromRecord({
+          recordId: doc.id,
+          record: doc.data(),
+        });
+      } catch (error) {
+        response.failed += 1;
+        response.errors.push({
+          recordId: doc.id,
+          message: error.message,
+        });
+        logger.error("Custom tag backfill failed for dream record.", {
+          recordId: doc.id,
+          error: error.message,
+        });
+      }
+    }
+
+    res.json(response);
+  }
+);
+
 async function translateRecordData({ recordId, record, ref, force = false }) {
   const original = getOriginalDreamFields(record);
 
@@ -190,6 +279,80 @@ async function translateRecordData({ recordId, record, ref, force = false }) {
     status: "translated",
     recordId,
     sourceLanguage: original.language,
+  };
+}
+
+async function publishCustomTagsFromRecord({ recordId, record }) {
+  const customTags = getCustomTagsFromRecord(record);
+
+  if (customTags.length === 0) return 0;
+
+  await Promise.all(
+    customTags.map((tagData) =>
+      db
+        .collection("customTags")
+        .doc(tagData.slug)
+        .set(
+          {
+            ...tagData,
+            status: "active",
+            custom: true,
+            shared: true,
+            sourceRecordIds: FieldValue.arrayUnion(recordId),
+            lastSeenInRecordId: recordId,
+            updatedAt: FieldValue.serverTimestamp(),
+            lastUsedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        )
+    )
+  );
+
+  return customTags.length;
+}
+
+function getCustomTagsFromRecord(record) {
+  const customSlugs = new Set(Array.isArray(record?.customTags) ? record.customTags : []);
+  const tags = Array.isArray(record?.tags) ? record.tags : [];
+  const customTags = new Map();
+
+  tags.forEach((tagData) => {
+    const isCustom = tagData?.custom === true || customSlugs.has(tagData?.slug);
+    const normalized = normalizeCustomTag(tagData, isCustom);
+
+    if (normalized) {
+      customTags.set(normalized.slug, normalized);
+    }
+  });
+
+  return [...customTags.values()];
+}
+
+function normalizeCustomTag(tagData, isCustom) {
+  if (!isCustom) return null;
+
+  const category = CUSTOM_TAG_CATEGORIES.has(tagData?.category)
+    ? tagData.category
+    : "Custom";
+  const name = normalizeCustomTagLabel(
+    tagData?.name || tagData?.label || tagData?.name_zh || tagData?.name_es
+  );
+
+  if (!name || category === "Content") return null;
+
+  const slug = tagData?.slug
+    ? makeSlug(tagData.slug)
+    : makeSharedTagSlug(category, name);
+
+  if (!slug) return null;
+
+  return {
+    id: tagData?.id || `custom-${slug}`,
+    slug,
+    category,
+    name,
+    name_zh: normalizeCustomTagLabel(tagData?.name_zh || tagData?.nameZh || name),
+    name_es: normalizeCustomTagLabel(tagData?.name_es || tagData?.nameEs || name),
   };
 }
 
@@ -262,6 +425,23 @@ function getBooleanRequestValue(req, key) {
   const value = getRequestValue(req, key);
 
   return value === true || value === "true" || value === "1";
+}
+
+function normalizeCustomTagLabel(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, 40);
+}
+
+function makeSharedTagSlug(category, label) {
+  return [category, label].map(makeSlug).filter(Boolean).join("-");
+}
+
+function makeSlug(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9\u4e00-\u9fff-]+/gi, "")
+    .replace(/^-+|-+$/g, "");
 }
 
 function makeSourceHash(original) {

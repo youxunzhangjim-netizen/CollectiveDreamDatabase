@@ -2,7 +2,6 @@ import {
   collection,
   doc,
   getDocs,
-  increment,
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
@@ -67,7 +66,6 @@ export async function upsertSharedCustomTags(currentUser, customTagEntries = [])
         lastUsedBy: currentUser.uid,
         updatedAt: serverTimestamp(),
         lastUsedAt: serverTimestamp(),
-        usageCount: increment(1),
       },
       { merge: true }
     ).then(() => tagData);
