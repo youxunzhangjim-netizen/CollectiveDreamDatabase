@@ -485,9 +485,11 @@ export default function DreamRecordPage({
               <p className="mb-4 font-mono text-xs uppercase tracking-[0.38em] text-cyan-200/70">
                 {copy.recordText}
               </p>
-              <h1 className="text-4xl font-semibold text-zinc-50 sm:text-5xl">
-                {pageTitle}
-              </h1>
+              {pageTitle && (
+                <h1 className="text-4xl font-semibold text-zinc-50 sm:text-5xl">
+                  {pageTitle}
+                </h1>
+              )}
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
                   {copy.originalLanguage}: {getLanguageName(originalLanguage, language)}
@@ -794,6 +796,13 @@ function normalizeDreamRecord(record) {
     pseudoId: record?.pseudo_id || record?.pseudoId || record?.creatorId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
     tags: Array.isArray(record?.tags) ? record.tags : [],
+    environmentTags: Array.isArray(record?.environmentTags) ? record.environmentTags : [],
+    entityTags: Array.isArray(record?.entityTags) ? record.entityTags : [],
+    anomalyTags: Array.isArray(record?.anomalyTags)
+      ? record.anomalyTags
+      : Array.isArray(record?.anomaly_tag_slugs)
+        ? record.anomaly_tag_slugs
+        : [],
     emotionTags: Array.isArray(record?.emotionTags) ? record.emotionTags : [],
     styleTags: Array.isArray(record?.styleTags) ? record.styleTags : [],
     eraTags: Array.isArray(record?.eraTags) ? record.eraTags : [],
@@ -882,6 +891,9 @@ function getEditableSelectedTagSlugs(record) {
     .forEach((tag) => slugs.add(tag.slug));
 
   [
+    record.environmentTags,
+    record.entityTags,
+    record.anomalyTags,
     record.emotionTags,
     record.styleTags,
     record.eraTags,

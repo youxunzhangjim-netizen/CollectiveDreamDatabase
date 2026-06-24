@@ -86,7 +86,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   const firestore = requireFirestore();
   const recordRef = doc(collection(firestore, "Records"));
   const originalLanguage = normalizeLanguage(draft?.originalLanguage || "zh");
-  const title = String(draft?.title || "").trim();
+  const title = normalizeOptionalTitle(draft?.title, dreamText);
   const excerpt = createExcerpt(dreamText);
   const dreamDate = draft?.dreamDate || new Date().toISOString().slice(0, 10);
   const ageAtDream =
@@ -112,6 +112,9 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     draft?.customTagLabels || [],
     adultContent
   );
+  const environmentTags = getTagSlugsByCategory(tags, "Environment");
+  const entityTags = getTagSlugsByCategory(tags, "Entities");
+  const anomalyTags = getTagSlugsByCategory(tags, "Anomalies");
   const emotionTags = getTagSlugsByCategory(tags, "Emotions");
   const styleTags = getTagSlugsByCategory(tags, "Styles");
   const eraTags = getTagSlugsByCategory(tags, "Eras");
@@ -197,6 +200,9 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,
+    environmentTags,
+    entityTags,
+    anomalyTags,
     emotionTags,
     styleTags,
     eraTags,
@@ -207,9 +213,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     dreamAnalysisTags,
     customTags,
     tags,
-    anomaly_tag_slugs: tags
-      .filter((tag) => tag.category === "Anomalies")
-      .map((tag) => tag.slug),
+    anomaly_tag_slugs: anomalyTags,
     updatedAt: serverTimestamp(),
   };
 
@@ -415,6 +419,13 @@ function normalizeRecordReference(record) {
       record?.minimum_viewer_age ||
       (adultContent ? 18 : 0),
     tags: Array.isArray(record?.tags) ? record.tags : [],
+    environmentTags: Array.isArray(record?.environmentTags) ? record.environmentTags : [],
+    entityTags: Array.isArray(record?.entityTags) ? record.entityTags : [],
+    anomalyTags: Array.isArray(record?.anomalyTags)
+      ? record.anomalyTags
+      : Array.isArray(record?.anomaly_tag_slugs)
+        ? record.anomaly_tag_slugs
+        : [],
     emotionTags: Array.isArray(record?.emotionTags) ? record.emotionTags : [],
     styleTags: Array.isArray(record?.styleTags) ? record.styleTags : [],
     eraTags: Array.isArray(record?.eraTags) ? record.eraTags : [],
@@ -527,6 +538,20 @@ function buildOriginalLanguageFields(language, title, text, excerpt) {
     excerptEn: excerpt,
     excerpt_en: excerpt,
   };
+}
+
+function normalizeOptionalTitle(title, dreamText) {
+  const trimmedTitle = String(title || "").trim();
+  const trimmedText = String(dreamText || "").trim();
+
+  if (!trimmedTitle) return "";
+
+  const sentenceMatch = trimmedText.match(/^(.{1,180}?[.!?。！？])(?:\s|$)/u);
+  const firstSentence = sentenceMatch?.[1]?.trim() || "";
+
+  if (firstSentence && trimmedTitle === firstSentence) return "";
+
+  return trimmedTitle;
 }
 
 function createExcerpt(text) {
@@ -656,8 +681,8 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
 
   if ("title" in updates || "dreamText" in updates) {
     const originalLanguage = normalizeLanguage(updates.originalLanguage || "zh");
-    const title = String(updates.title || "").trim();
     const dreamText = String(updates.dreamText || "").trim();
+    const title = normalizeOptionalTitle(updates.title, dreamText);
 
     if (!dreamText) {
       throw new Error("Dream text is required.");
@@ -727,6 +752,9 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
       Boolean(metadata.adultContent ?? updates.adultContent)
     );
 
+    metadata.environmentTags = getTagSlugsByCategory(tags, "Environment");
+    metadata.entityTags = getTagSlugsByCategory(tags, "Entities");
+    metadata.anomalyTags = getTagSlugsByCategory(tags, "Anomalies");
     metadata.tags = tags;
     metadata.emotionTags = getTagSlugsByCategory(tags, "Emotions");
     metadata.styleTags = getTagSlugsByCategory(tags, "Styles");
@@ -740,9 +768,7 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     );
     metadata.dreamAnalysisTags = getTagSlugsByCategory(tags, "Dream Analysis");
     metadata.customTags = tags.filter((tag) => tag.custom).map((tag) => tag.slug);
-    metadata.anomaly_tag_slugs = tags
-      .filter((tag) => tag.category === "Anomalies")
-      .map((tag) => tag.slug);
+    metadata.anomaly_tag_slugs = metadata.anomalyTags;
   }
 
   await setDoc(doc(requireFirestore(), "Records", recordId), metadata, { merge: true });

@@ -775,6 +775,10 @@ function normalizeDreamCard(row) {
   const images = normalizeDreamImages(row);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(row);
+  const anomalyTags = Array.isArray(row.anomalyTags)
+    ? row.anomalyTags
+    : row.anomaly_tag_slugs ||
+      tags.filter((tag) => tag.category === "Anomalies").map((tag) => tag.slug);
 
   return {
     dream_id: row.dream_id || row.id,
@@ -817,11 +821,14 @@ function normalizeDreamCard(row) {
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,
+    environmentTags: Array.isArray(row.environmentTags) ? row.environmentTags : [],
+    entityTags: Array.isArray(row.entityTags) ? row.entityTags : [],
+    anomalyTags,
     pseudo_id: row.pseudo_id || row.pseudoId || "",
     pseudoId: row.pseudoId || row.pseudo_id || "",
     signal_coherence: row.signal_coherence || 50,
     tags,
-    anomaly_tag_slugs: row.anomaly_tag_slugs || tags.filter((tag) => tag.category === "Anomalies").map((tag) => tag.slug),
+    anomaly_tag_slugs: anomalyTags,
   };
 }
 

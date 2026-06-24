@@ -866,6 +866,13 @@ function normalizeRecordItem(item, index) {
     pseudoId: item.pseudoId || item.pseudo_id || "",
     visibility: item.visibility || (item.isPublic === false ? "private" : "public"),
     tags: Array.isArray(item.tags) ? item.tags : [],
+    environmentTags: Array.isArray(item.environmentTags) ? item.environmentTags : [],
+    entityTags: Array.isArray(item.entityTags) ? item.entityTags : [],
+    anomalyTags: Array.isArray(item.anomalyTags)
+      ? item.anomalyTags
+      : Array.isArray(item.anomaly_tag_slugs)
+        ? item.anomaly_tag_slugs
+        : [],
     emotionTags: Array.isArray(item.emotionTags) ? item.emotionTags : [],
     styleTags: Array.isArray(item.styleTags) ? item.styleTags : [],
     eraTags: Array.isArray(item.eraTags) ? item.eraTags : [],
@@ -1156,7 +1163,7 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
             {item.date}
           </span>
         </div>
-        <h2 className="min-h-14 text-xl font-semibold text-zinc-50">{title}</h2>
+        {title && <h2 className="text-xl font-semibold text-zinc-50">{title}</h2>}
         <p className="mt-3 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
           {copy.originalLanguageLabel}: {getLanguageName(item.originalLanguage, language)}
         </p>
