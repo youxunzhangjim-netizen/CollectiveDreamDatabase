@@ -15,7 +15,7 @@ const GOOGLE_REDIRECT_FALLBACK_CODES = new Set([
 
 function requireAuthClient() {
   if (!isFirebaseConfigured || !auth) {
-    throw new Error("Secure access is not available yet.");
+    throw new Error("Account login is not available yet.");
   }
 
   return auth;

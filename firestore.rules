@@ -106,7 +106,9 @@ service cloud.firestore {
             "male",
             "intersex",
             "notListed"
-          ]);
+          ])
+        && (!data.keys().hasAny(["preferredLanguage"])
+          || data.preferredLanguage in ["en", "zh", "es"]);
     }
 
     function validCustomTagCategory(category) {

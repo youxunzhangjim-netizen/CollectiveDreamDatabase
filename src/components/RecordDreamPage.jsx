@@ -87,13 +87,13 @@ const RECORD_COPY = {
     textRequired: "Write at least a few words before publishing.",
     publishError: "The record could not be published. Check your connection and try again.",
     publishPermissionDenied:
-      "The archive permission blocked publishing. Please paste the latest Firestore rules, then try again.",
+      "The record could not be accepted right now. Check the required fields and try again.",
     publishAuthMismatch:
       "Your account session was still syncing. Try publishing once more.",
     publishUnavailable:
       "The archive is not reachable right now. Try again in a moment.",
     publishInvalidData:
-      "One record field was rejected before publishing. Diagnostic code:",
+      "One record field needs adjustment before publishing.",
     accountEditable:
       "Account-backed records can be edited or deleted later from your account.",
     anonymousLocked:
@@ -116,7 +116,7 @@ const RECORD_COPY = {
     linkedNotice: "Account linked. This draft will publish to your account.",
     emailRequired: "Enter an email address.",
     passwordRequired: "Enter a password.",
-    authError: "Account access could not be confirmed. The draft is still here.",
+    authError: "The account state could not be confirmed. The draft is still here.",
     rulesTitle: "Recording standards",
     rules: [
       "Dream records need written words; images are optional.",
@@ -128,7 +128,7 @@ const RECORD_COPY = {
       "Places are allowed, but do not publish a complete detailed address.",
       "Names of public works, celebrities, or public figures already visible on wiki pages or popular internet sources may be recorded.",
       "Keep the original words in the language you used, then label that original language.",
-      "Mark adult content so age limits can protect readers.",
+      "Mark adult content so readers see the right age notice.",
     ],
   },
   zh: {
@@ -184,10 +184,10 @@ const RECORD_COPY = {
     submitting: "正在發布記錄",
     textRequired: "發布前請至少寫下幾個字。",
     publishError: "記錄無法發布。請檢查連線後再試一次。",
-    publishPermissionDenied: "資料庫權限擋住發布。請貼上最新 Firestore 規則後再試一次。",
+    publishPermissionDenied: "紀錄目前無法送出。請檢查必填內容後再試一次。",
     publishAuthMismatch: "你的帳戶狀態還在同步。請再按一次發布。",
     publishUnavailable: "資料庫目前無法連線。請稍後再試。",
-    publishInvalidData: "有一個紀錄欄位在發布前被拒絕。診斷代碼：",
+    publishInvalidData: "有一個紀錄欄位需要調整後才能發布。",
     accountEditable: "連到帳戶的記錄之後可以在帳戶中修改或刪除。",
     anonymousLocked: "匿名記錄發布後會成為公開檔案項目，之後不能修改或刪除。",
     authTitle: "選用帳戶連結",
@@ -208,7 +208,7 @@ const RECORD_COPY = {
     linkedNotice: "帳戶已連結。這份草稿會發布到你的帳戶。",
     emailRequired: "請輸入電子郵件。",
     passwordRequired: "請輸入密碼。",
-    authError: "無法確認帳戶存取；草稿仍然保留在這裡。",
+    authError: "無法確認帳戶狀態；草稿仍然保留在這裡。",
     rulesTitle: "記錄標準",
     rules: [
       "夢境記錄必須有文字；圖片可以有，但不是必要。",
@@ -220,7 +220,7 @@ const RECORD_COPY = {
       "可以寫地點，但不要公開完整詳細地址。",
       "已在維基或熱門網路來源公開可見的作品、名人或公眾人物名稱可以記錄。",
       "保留你最初使用語言的原文，並標示原始語言。",
-      "如果包含成人內容，請加上標記，讓年齡限制保護讀者。",
+      "如果包含成人內容，請加上標記，讓讀者看到正確的年齡提示。",
     ],
   },
   es: {
@@ -279,13 +279,13 @@ const RECORD_COPY = {
     textRequired: "Escribe al menos unas palabras antes de publicar.",
     publishError: "No se pudo publicar el registro. Revisa la conexión e inténtalo otra vez.",
     publishPermissionDenied:
-      "El permiso del archivo bloqueó la publicación. Pega las reglas Firestore más recientes e inténtalo otra vez.",
+      "El registro no se pudo aceptar ahora. Revisa los campos necesarios e inténtalo otra vez.",
     publishAuthMismatch:
       "La sesión de tu cuenta todavía se estaba sincronizando. Intenta publicar una vez más.",
     publishUnavailable:
       "El archivo no está disponible ahora. Inténtalo de nuevo en un momento.",
     publishInvalidData:
-      "Un campo del registro fue rechazado antes de publicar. Código:",
+      "Un campo del registro necesita ajuste antes de publicar.",
     accountEditable:
       "Los registros conectados a una cuenta se pueden editar o eliminar más tarde.",
     anonymousLocked:
@@ -320,7 +320,7 @@ const RECORD_COPY = {
       "Puedes incluir lugares, pero no una dirección completa y detallada.",
       "Se pueden registrar obras, celebridades o figuras públicas ya visibles en wikis o fuentes populares de internet.",
       "Conserva las palabras originales en el idioma que usaste y etiqueta ese idioma original.",
-      "Marca el contenido adulto para que el límite de edad proteja a los lectores.",
+      "Marca el contenido adulto para que los lectores vean el aviso de edad adecuado.",
     ],
   },
 };
@@ -1253,11 +1253,11 @@ function getPublishErrorMessage(error, copy) {
     lowerMessage.includes("invalid data") ||
     lowerMessage.includes("unsupported field")
   ) {
-    return `${copy.publishInvalidData} ${code || "invalid-data"}`;
+    return copy.publishInvalidData;
   }
 
   if (code) {
-    return `${copy.publishError} (${code})`;
+    return copy.publishError;
   }
 
   return copy.publishError;

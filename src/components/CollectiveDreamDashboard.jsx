@@ -106,7 +106,7 @@ const UI_COPY = {
     heroTitle: "Collective Dream Database",
     heroText:
       "Anonymous dream observations are normalized into an ontology of environments, entities, and anomalies. The interface is built for rapid visual scanning while preserving the sober structure of a research archive.",
-    accessLabel: "Access",
+    accessLabel: "Viewing",
     accessValue: "Anonymous",
     datasetLabel: "Dataset",
     visibleLabel: "Visible",
@@ -117,18 +117,18 @@ const UI_COPY = {
       fallback: "Live archive unavailable",
       empty: "No public records yet",
     },
-    loadError: "The live archive is unavailable:",
-    schemaFocus: "Schema Focus",
-    anomalySearch: "Anomaly-tag search",
-    ontologyConsistency: "Ontology consistency",
-    identityExposure: "Identity exposure",
-    databaseNote: "Database note",
+    loadError: "The public records are temporarily unavailable.",
+    schemaFocus: "Pattern Focus",
+    anomalySearch: "Emotion tagging",
+    ontologyConsistency: "Psychological observables",
+    analysisMarkerCoverage: "Analysis markers",
+    databaseNote: "Research note",
     databaseNoteText:
-      "Tags help researchers locate related dream signals quickly while keeping identity exposure low.",
-    schemaNote: ({ total, anomalyCount, ontologyCount, exposedCount }) =>
+      "Tags help researchers compare feeling, setting, behavior, and recurring dream patterns.",
+    schemaNote: ({ total, emotionCount, psychologyCount, analysisCount }) =>
       total === 0
         ? "No public dream records are loaded yet, so these analysis values are zero."
-        : `Computed from ${total} loaded dream records: ${anomalyCount} include anomaly tags, ${ontologyCount} have complete core schema fields, and ${exposedCount} expose account identity.`,
+        : `Based on ${total} loaded dream records: ${emotionCount} include emotion tags, ${psychologyCount} include psychological observables, and ${analysisCount} include dream-analysis markers.`,
     filterTitle: "Advanced Tag Filtering",
     filterText:
       "Filter by ontology category or combine specific tags. Match all is best for narrow anomaly research; match any is best for discovery.",
@@ -209,7 +209,7 @@ const UI_COPY = {
     heroTitle: "集體夢境資料庫",
     heroText:
       "匿名夢境觀測會被整理成環境、實體與異常現象的本體分類。此介面保留研究檔案的嚴謹結構，同時方便快速視覺掃描。",
-    accessLabel: "存取",
+    accessLabel: "瀏覽",
     accessValue: "匿名",
     datasetLabel: "資料集",
     visibleLabel: "可見",
@@ -220,18 +220,18 @@ const UI_COPY = {
       fallback: "即時檔案庫無法使用",
       empty: "尚無公開紀錄",
     },
-    loadError: "即時檔案庫暫時無法使用：",
-    schemaFocus: "架構焦點",
-    anomalySearch: "異常標籤搜尋",
-    ontologyConsistency: "本體一致性",
-    identityExposure: "身分暴露",
-    databaseNote: "資料庫備註",
+    loadError: "公開紀錄暫時無法讀取。",
+    schemaFocus: "心理模式焦點",
+    anomalySearch: "情緒標記",
+    ontologyConsistency: "心理觀察項",
+    analysisMarkerCoverage: "夢境分析標記",
+    databaseNote: "研究備註",
     databaseNoteText:
-      "標籤能協助研究者快速定位相關夢境訊號，同時降低身分暴露。",
-    schemaNote: ({ total, anomalyCount, ontologyCount, exposedCount }) =>
+      "標籤可以協助比較感受、場景、行為與反覆出現的夢境模式。",
+    schemaNote: ({ total, emotionCount, psychologyCount, analysisCount }) =>
       total === 0
         ? "尚未載入公開夢境紀錄，因此分析值為 0。"
-        : `根據目前載入的 ${total} 筆夢境紀錄計算：${anomalyCount} 筆含異常標籤，${ontologyCount} 筆具有完整核心欄位，${exposedCount} 筆公開帳戶身分。`,
+        : `根據目前載入的 ${total} 筆夢境紀錄計算：${emotionCount} 筆含情緒標籤，${psychologyCount} 筆含心理觀察項，${analysisCount} 筆含夢境分析標記。`,
     filterTitle: "進階標籤篩選",
     filterText:
       "可依本體類別篩選，或組合特定標籤。全部符合適合精準的異常研究；任一符合適合探索。",
@@ -308,7 +308,7 @@ const UI_COPY = {
     heroTitle: "Base de Sueños Colectivos",
     heroText:
       "Las observaciones anónimas de sueños se organizan en una ontología de entornos, entidades y anomalías. La interfaz permite una lectura visual rápida sin perder la estructura sobria de un archivo de investigación.",
-    accessLabel: "Acceso",
+    accessLabel: "Vista",
     accessValue: "Anónimo",
     datasetLabel: "Datos",
     visibleLabel: "Visible",
@@ -320,18 +320,18 @@ const UI_COPY = {
       empty: "Aún no hay registros públicos",
     },
     loadError:
-      "El archivo activo no está disponible:",
-    schemaFocus: "Enfoque del Esquema",
-    anomalySearch: "Búsqueda por etiquetas",
-    ontologyConsistency: "Consistencia ontológica",
-    identityExposure: "Exposición de identidad",
-    databaseNote: "Nota de base de datos",
+      "Los registros públicos no están disponibles por ahora.",
+    schemaFocus: "Enfoque de patrones",
+    anomalySearch: "Etiquetado emocional",
+    ontologyConsistency: "Observables psicológicos",
+    analysisMarkerCoverage: "Marcadores de análisis",
+    databaseNote: "Nota de investigación",
     databaseNoteText:
-      "Las etiquetas ayudan a localizar señales relacionadas con rapidez y reducen la exposición de identidad.",
-    schemaNote: ({ total, anomalyCount, ontologyCount, exposedCount }) =>
+      "Las etiquetas ayudan a comparar sentimientos, escenas, conductas y patrones recurrentes.",
+    schemaNote: ({ total, emotionCount, psychologyCount, analysisCount }) =>
       total === 0
         ? "Aún no hay registros públicos cargados, así que estos valores son cero."
-        : `Calculado desde ${total} registros cargados: ${anomalyCount} incluyen etiquetas de anomalía, ${ontologyCount} tienen campos centrales completos y ${exposedCount} exponen identidad de cuenta.`,
+        : `Calculado desde ${total} registros cargados: ${emotionCount} incluyen emociones, ${psychologyCount} incluyen observables psicológicos y ${analysisCount} incluyen marcadores de análisis.`,
     filterTitle: "Filtrado Avanzado",
     filterText:
       "Filtra por categoría ontológica o combina etiquetas específicas. Coincidir todo sirve para investigación precisa; coincidir cualquiera sirve para exploración.",
@@ -1081,49 +1081,36 @@ function buildResearchStats(dreams, visibleDreams, language) {
 
 function buildSchemaStats(dreams) {
   const total = dreams.length;
-  const anomalyCount = dreams.filter(hasAnomalyTags).length;
-  const ontologyCount = dreams.filter(hasCompleteCoreSchema).length;
-  const exposedCount = dreams.filter(exposesAccountIdentity).length;
+  const emotionCount = dreams.filter(hasEmotionTags).length;
+  const psychologyCount = dreams.filter(hasPsychologyTags).length;
+  const analysisCount = dreams.filter(hasDreamAnalysisTags).length;
 
   return {
     total,
-    anomalyCount,
-    ontologyCount,
-    exposedCount,
-    anomalySearch: toPercent(anomalyCount, total),
-    ontologyConsistency: toPercent(ontologyCount, total),
-    identityExposure: toPercent(exposedCount, total),
+    emotionCount,
+    psychologyCount,
+    analysisCount,
+    anomalySearch: toPercent(emotionCount, total),
+    ontologyConsistency: toPercent(psychologyCount, total),
+    analysisMarkerCoverage: toPercent(analysisCount, total),
   };
 }
 
-function hasAnomalyTags(dream) {
-  return dream.tags?.some((tag) => tag.category === "Anomalies") || false;
+function hasEmotionTags(dream) {
+  return dream.tags?.some((tag) => tag.category === "Emotions") || false;
 }
 
-function hasCompleteCoreSchema(dream) {
-  const hasKnownTag = dream.tags?.some((tag) =>
-    TAG_CATEGORY_ORDER.includes(tag.category)
-  );
-  const hasDreamText = Boolean(
-    dream.originalText ||
-      dream.original_text ||
-      dream.dream_text ||
-      dream.dreamText ||
-      dream.text
-  );
-
-  return Boolean(
-    dream.dream_id &&
-      dream.originalLanguage &&
-      hasDreamText &&
-      hasKnownTag
+function hasPsychologyTags(dream) {
+  return (
+    dream.tags?.some((tag) => tag.category === "Psychological Observables") ||
+    false
   );
 }
 
-function exposesAccountIdentity(dream) {
-  return Boolean(
-    dream.recordIdentityMode === "account" &&
-      (dream.creatorDisplayName || dream.creatorEmail)
+function hasDreamAnalysisTags(dream) {
+  return (
+    dream.tags?.some((tag) => tag.category === "Dream Analysis") ||
+    false
   );
 }
 
@@ -1321,7 +1308,7 @@ function HeroPanel({
 
           {loadError && (
             <p className="mt-5 max-w-3xl rounded-2xl border border-amber-300/20 bg-amber-300/5 p-4 font-mono text-xs leading-6 text-amber-100/80">
-              {copy.loadError} {loadError}
+              {copy.loadError}
             </p>
           )}
         </div>
@@ -1339,8 +1326,8 @@ function HeroPanel({
                 value={schemaStats.ontologyConsistency}
               />
               <SignalRow
-                label={copy.identityExposure}
-                value={schemaStats.identityExposure}
+                label={copy.analysisMarkerCoverage}
+                value={schemaStats.analysisMarkerCoverage}
                 inverse
               />
             </div>

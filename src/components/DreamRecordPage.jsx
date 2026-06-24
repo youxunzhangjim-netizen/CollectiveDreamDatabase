@@ -95,7 +95,7 @@ const DETAIL_COPY = {
     signInToCollect: "Sign in to collect this dream",
     recorderRulesTitle: "Recording Standards",
     recorderRules: [
-      "Record only dreams you personally observed or have permission to archive.",
+      "Record only dreams you personally observed or were clearly allowed to record.",
       "First-person wording such as I, me, and my is allowed and does not count as exposing a private real name.",
       "Record the actual feelings, views, sensory details, and uncertainty you remember.",
       "Do not invent, imagine, or reshape the dream to satisfy morals, expectations, beauty, fluency, or literary style.",

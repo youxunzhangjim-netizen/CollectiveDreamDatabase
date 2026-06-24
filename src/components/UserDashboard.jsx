@@ -14,6 +14,7 @@ import {
 } from "../lib/profileService.js";
 import {
   getLanguageName,
+  LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
 import {
@@ -36,7 +37,7 @@ const DASHBOARD_COPY = {
     spanishLabel: "Spanish interface",
     databaseButton: "Public Database",
     recordButton: "Record Dream",
-    consoleLabel: "Authenticated User Console",
+    consoleLabel: "Account Console",
     memberSince: "Member since",
     signOut: "Sign Out",
     observationsTab: "My Observations",
@@ -50,12 +51,12 @@ const DASHBOARD_COPY = {
     lockedButton: "Locked",
     observationCount: "Observations",
     savedCount: "Saved",
-    identityStatus: "Identity Mask",
+    identityStatus: "Preferred language",
     activeStatus: "Active",
     accountEmailHidden: "Account email hidden",
     privateAccountLabel: "Private account",
     lastSync: "Last Sync",
-    recordsLoading: "Decrypting personal records",
+    recordsLoading: "Loading personal records",
     accountDetails: "Account Details",
     displayNameLabel: "Public Name",
     displayNamePlaceholder: "Dream researcher name",
@@ -68,6 +69,7 @@ const DASHBOARD_COPY = {
     biologicalSexLabel: "Biological Sex",
     biologicalSexPlaceholder: "Prefer not to say",
     showBiologicalSexLabel: "Show biological sex publicly",
+    preferredLanguageLabel: "Preferred Language",
     biologicalSexOptions: {
       female: "Female",
       male: "Male",
@@ -87,8 +89,9 @@ const DASHBOARD_COPY = {
       "A private summary of the dreams uploaded from this account for self-study and pattern tracking.",
     analysisTotal: "Uploaded",
     analysisAdult: "Mature tagged",
-    analysisShownIdentity: "Shown identity",
-    analysisHiddenIdentity: "Hidden identity",
+    analysisDreamTypeLead: "Leading dream type",
+    analysisPsychologyLead: "Leading psyche signal",
+    analysisAnalysisLead: "Leading analysis marker",
     analysisLanguageLead: "Leading language",
     analysisEmotionLead: "Leading emotion",
     analysisAverageAge: "Avg dream age",
@@ -102,7 +105,7 @@ const DASHBOARD_COPY = {
     spanishLabel: "西班牙文介面",
     databaseButton: "公開資料庫",
     recordButton: "記錄夢境",
-    consoleLabel: "已驗證使用者終端",
+    consoleLabel: "帳戶終端",
     memberSince: "會員起始日",
     signOut: "登出",
     observationsTab: "我的觀測",
@@ -116,11 +119,12 @@ const DASHBOARD_COPY = {
     lockedButton: "已鎖定",
     observationCount: "觀測",
     savedCount: "已儲存",
-    identityStatus: "身分遮罩",
+    identityStatus: "偏好語言",
     activeStatus: "啟用中",
     accountEmailHidden: "帳戶電子郵件已隱藏",
     privateAccountLabel: "私人帳戶",
     lastSync: "最後同步",
+    recordsLoading: "正在載入個人紀錄",
     accountDetails: "帳戶資料",
     displayNameLabel: "公開名稱",
     displayNamePlaceholder: "夢境研究者名稱",
@@ -133,6 +137,7 @@ const DASHBOARD_COPY = {
     biologicalSexLabel: "生理性別",
     biologicalSexPlaceholder: "不透露",
     showBiologicalSexLabel: "公開顯示生理性別",
+    preferredLanguageLabel: "偏好語言",
     biologicalSexOptions: {
       female: "女性",
       male: "男性",
@@ -151,8 +156,9 @@ const DASHBOARD_COPY = {
     analysisText: "只根據此帳戶上傳的夢境建立的私人摘要，可用於自我研究與模式追蹤。",
     analysisTotal: "已上傳",
     analysisAdult: "成人標記",
-    analysisShownIdentity: "顯示身分",
-    analysisHiddenIdentity: "隱藏身分",
+    analysisDreamTypeLead: "主要夢境類型",
+    analysisPsychologyLead: "主要心理訊號",
+    analysisAnalysisLead: "主要分析標記",
     analysisLanguageLead: "主要語言",
     analysisEmotionLead: "主要情緒",
     analysisAverageAge: "平均夢中年齡",
@@ -166,7 +172,7 @@ const DASHBOARD_COPY = {
     spanishLabel: "Interfaz en español",
     databaseButton: "Base pública",
     recordButton: "Registrar sueño",
-    consoleLabel: "Consola de usuario autenticado",
+    consoleLabel: "Consola de cuenta",
     memberSince: "Miembro desde",
     signOut: "Cerrar sesión",
     observationsTab: "Mis observaciones",
@@ -180,12 +186,12 @@ const DASHBOARD_COPY = {
     lockedButton: "Bloqueado",
     observationCount: "Observaciones",
     savedCount: "Guardados",
-    identityStatus: "Máscara de identidad",
+    identityStatus: "Idioma preferido",
     activeStatus: "Activa",
     accountEmailHidden: "Correo de cuenta oculto",
     privateAccountLabel: "Cuenta privada",
     lastSync: "Última sincronización",
-    recordsLoading: "Descifrando registros personales",
+    recordsLoading: "Cargando registros personales",
     accountDetails: "Datos de la cuenta",
     displayNameLabel: "Nombre público",
     displayNamePlaceholder: "Nombre de investigación",
@@ -198,6 +204,7 @@ const DASHBOARD_COPY = {
     biologicalSexLabel: "Sexo biológico",
     biologicalSexPlaceholder: "Prefiero no decirlo",
     showBiologicalSexLabel: "Mostrar sexo biológico públicamente",
+    preferredLanguageLabel: "Idioma preferido",
     biologicalSexOptions: {
       female: "Femenino",
       male: "Masculino",
@@ -217,8 +224,9 @@ const DASHBOARD_COPY = {
       "Resumen privado de los sueños subidos desde esta cuenta para estudio propio y seguimiento de patrones.",
     analysisTotal: "Subidos",
     analysisAdult: "Madurez marcada",
-    analysisShownIdentity: "Identidad visible",
-    analysisHiddenIdentity: "Identidad oculta",
+    analysisDreamTypeLead: "Tipo principal",
+    analysisPsychologyLead: "Señal psíquica principal",
+    analysisAnalysisLead: "Marcador principal",
     analysisLanguageLead: "Idioma principal",
     analysisEmotionLead: "Emoción principal",
     analysisAverageAge: "Edad media",
@@ -550,7 +558,10 @@ export default function UserDashboard({
               <StatusBlock label={copy.observationCount} value={String(observations.length)} />
               <StatusBlock label={copy.savedCount} value={String(savedRecords.length)} />
               <StatusBlock label={copy.collectionsTab} value={String(collectionRecords.length)} />
-              <StatusBlock label={copy.identityStatus} value={copy.activeStatus} />
+              <StatusBlock
+                label={copy.identityStatus}
+                value={getLanguageName(displayUser.preferredLanguage || language, language)}
+              />
             </div>
           </div>
         </section>
@@ -637,6 +648,30 @@ export default function UserDashboard({
                   {BIOLOGICAL_SEX_OPTIONS.map((option) => (
                     <option key={option} value={option}>
                       {copy.biologicalSexOptions[option] || copy.biologicalSexPlaceholder}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                  {copy.preferredLanguageLabel}
+                </span>
+                <select
+                  value={profileDraft.preferredLanguage || language}
+                  onChange={(event) => {
+                    const nextLanguage = event.target.value;
+                    setProfileDraft((current) => ({
+                      ...current,
+                      preferredLanguage: nextLanguage,
+                    }));
+                    setLanguage(nextLanguage);
+                  }}
+                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                >
+                  {LANGUAGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label} / {getLanguageName(option.value, language)}
                     </option>
                   ))}
                 </select>
@@ -749,7 +784,7 @@ export default function UserDashboard({
           <LoadingState
             label={
               copy.recordsLoading ||
-              (language === "zh" ? "正在解密個人紀錄" : "Decrypting personal records")
+              (language === "zh" ? "正在載入個人紀錄" : "Loading personal records")
             }
           />
         ) : activeItems.length > 0 ? (
@@ -794,6 +829,7 @@ function normalizeDashboardUser(user, profile) {
       showAge: false,
       biologicalSex: "",
       showBiologicalSex: false,
+      preferredLanguage: "zh",
     };
   }
 
@@ -813,6 +849,7 @@ function normalizeDashboardUser(user, profile) {
     showAge: Boolean(profile?.showAge),
     biologicalSex: profile?.biologicalSex || "",
     showBiologicalSex: Boolean(profile?.showBiologicalSex),
+    preferredLanguage: normalizeLanguage(profile?.preferredLanguage || "zh"),
   };
 }
 
@@ -939,21 +976,16 @@ function getRecordDateDisplay(item, copy) {
 function buildPersonalDreamAnalysis(items, language, copy) {
   const languageCounts = new Map();
   const emotionCounts = new Map();
+  const dreamTypeCounts = new Map();
+  const psychologyCounts = new Map();
+  const analysisCounts = new Map();
   let adultCount = 0;
-  let shownIdentityCount = 0;
-  let hiddenIdentityCount = 0;
   let ageTotal = 0;
   let ageCount = 0;
 
   items.forEach((item) => {
     const originalLanguage = normalizeLanguage(item.originalLanguage);
     languageCounts.set(originalLanguage, (languageCounts.get(originalLanguage) || 0) + 1);
-
-    if (item.recordIdentityMode === "account") {
-      shownIdentityCount += 1;
-    } else {
-      hiddenIdentityCount += 1;
-    }
 
     if (item.adultContent || Number(item.minimumViewerAge || 0) >= 18) {
       adultCount += 1;
@@ -968,20 +1000,36 @@ function buildPersonalDreamAnalysis(items, language, copy) {
     getEmotionLabels(item, language).forEach((emotion) => {
       emotionCounts.set(emotion, (emotionCounts.get(emotion) || 0) + 1);
     });
+
+    getCategoryTagLabels(item, "Dream Types", language).forEach((label) => {
+      dreamTypeCounts.set(label, (dreamTypeCounts.get(label) || 0) + 1);
+    });
+
+    getCategoryTagLabels(item, "Psychological Observables", language).forEach((label) => {
+      psychologyCounts.set(label, (psychologyCounts.get(label) || 0) + 1);
+    });
+
+    getCategoryTagLabels(item, "Dream Analysis", language).forEach((label) => {
+      analysisCounts.set(label, (analysisCounts.get(label) || 0) + 1);
+    });
   });
 
   const leadingLanguage = getTopMapEntry(languageCounts);
   const leadingEmotion = getTopMapEntry(emotionCounts);
+  const leadingDreamType = getTopMapEntry(dreamTypeCounts);
+  const leadingPsychology = getTopMapEntry(psychologyCounts);
+  const leadingAnalysis = getTopMapEntry(analysisCounts);
 
   return {
     total: items.length,
     adultCount,
-    shownIdentityCount,
-    hiddenIdentityCount,
     leadingLanguage: leadingLanguage
       ? getLanguageName(leadingLanguage, language)
       : copy.analysisNoData,
     leadingEmotion: leadingEmotion || copy.analysisNoData,
+    leadingDreamType: leadingDreamType || copy.analysisNoData,
+    leadingPsychology: leadingPsychology || copy.analysisNoData,
+    leadingAnalysis: leadingAnalysis || copy.analysisNoData,
     averageAge: ageCount > 0 ? Math.round(ageTotal / ageCount) : copy.analysisNoData,
   };
 }
@@ -1017,6 +1065,22 @@ function getEmotionLabels(item, language) {
   item.emotionTags?.forEach((emotion) => {
     addLabel(emotion, getEmotionFallbackLabel(emotion, language));
   });
+
+  return labels;
+}
+
+function getCategoryTagLabels(item, category, language) {
+  const labels = [];
+  const seen = new Set();
+
+  item.tags
+    ?.filter((tag) => tag.category === category)
+    .forEach((tag) => {
+      const key = tag.slug || tag.name;
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      labels.push(getTagLabel(tag, language));
+    });
 
   return labels;
 }
@@ -1081,19 +1145,14 @@ function PersonalAnalysisPanel({ stats, copy }) {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatusBlock label={copy.analysisTotal} value={String(stats.total)} />
         <StatusBlock label={copy.analysisAdult} value={String(stats.adultCount)} />
-        <StatusBlock
-          label={copy.analysisShownIdentity}
-          value={String(stats.shownIdentityCount)}
-        />
-        <StatusBlock
-          label={copy.analysisHiddenIdentity}
-          value={String(stats.hiddenIdentityCount)}
-        />
         <StatusBlock label={copy.analysisLanguageLead} value={stats.leadingLanguage} />
         <StatusBlock label={copy.analysisEmotionLead} value={stats.leadingEmotion} />
+        <StatusBlock label={copy.analysisDreamTypeLead} value={stats.leadingDreamType} />
+        <StatusBlock label={copy.analysisPsychologyLead} value={stats.leadingPsychology} />
+        <StatusBlock label={copy.analysisAnalysisLead} value={stats.leadingAnalysis} />
         <StatusBlock label={copy.analysisAverageAge} value={String(stats.averageAge)} />
       </div>
     </section>

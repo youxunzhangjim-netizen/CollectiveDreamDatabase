@@ -295,10 +295,10 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
 function AuthLoadingScreen({ language }) {
   const label =
     language === "zh"
-      ? "正在同步身分狀態"
+      ? "正在載入帳戶"
       : language === "es"
-        ? "Sincronizando identidad"
-        : "Syncing identity state";
+        ? "Cargando cuenta"
+        : "Loading account";
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#030407] text-zinc-100">
