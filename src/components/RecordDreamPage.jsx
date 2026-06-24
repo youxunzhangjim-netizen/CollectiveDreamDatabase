@@ -17,13 +17,14 @@ import {
 } from "../lib/dreamImageService.js";
 import { auth } from "../lib/firebaseClient.js";
 import { LANGUAGE_OPTIONS } from "../lib/language.js";
+import { fetchSharedCustomTags } from "../lib/customTagsService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import { createDreamRecord } from "../lib/recordsService.js";
 import {
   getCategoryLabel,
   getTagLabel,
+  mergeRecorderTagGroups,
   normalizeCustomTagLabel,
-  RECORDER_TAG_GROUPS,
   RECORD_TAGS,
   tagExists,
 } from "../lib/tagTaxonomy.js";
@@ -347,6 +348,7 @@ export default function RecordDreamPage({
   const [selectedTagSlugs, setSelectedTagSlugs] = useState([]);
   const [customTagDrafts, setCustomTagDrafts] = useState({});
   const [customTagEntries, setCustomTagEntries] = useState([]);
+  const [sharedTags, setSharedTags] = useState([]);
   const [tagNotices, setTagNotices] = useState({});
   const [recordIdentityMode, setRecordIdentityMode] = useState("anonymous");
   const [submitError, setSubmitError] = useState("");
@@ -367,10 +369,37 @@ export default function RecordDreamPage({
       })),
     [imageFiles]
   );
+  const tagGroups = useMemo(() => mergeRecorderTagGroups(sharedTags), [sharedTags]);
+  const tagLookup = useMemo(
+    () =>
+      Object.fromEntries(
+        [...Object.values(RECORD_TAGS), ...sharedTags].map((tagData) => [
+          tagData.slug,
+          tagData,
+        ])
+      ),
+    [sharedTags]
+  );
 
   useEffect(() => {
     document.title = copy.documentTitle;
   }, [copy.documentTitle]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    fetchSharedCustomTags()
+      .then((tags) => {
+        if (!ignore) setSharedTags(tags);
+      })
+      .catch(() => {
+        if (!ignore) setSharedTags([]);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(
     () => () => {
@@ -407,7 +436,7 @@ export default function RecordDreamPage({
 
     if (!label) return;
 
-    if (tagExists(label, customTagEntries)) {
+    if (tagExists(label, customTagEntries, sharedTags)) {
       setTagNotices((current) => ({ ...current, [category]: copy.duplicateTag }));
       return;
     }
@@ -580,6 +609,7 @@ export default function RecordDreamPage({
           imageFiles,
           selectedTagSlugs,
           customTagLabels: customTagEntries,
+          sharedTags,
           recordIdentityMode,
         },
         profile
@@ -851,13 +881,14 @@ export default function RecordDreamPage({
                 </p>
 
                 <div className="max-h-[28rem] space-y-3 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-3 pr-2 [scrollbar-color:rgba(34,211,238,.45)_rgba(255,255,255,.08)] [scrollbar-width:thin]">
-                  {RECORDER_TAG_GROUPS.map((group) => (
+                  {tagGroups.map((group) => (
                     <TagGroup
                       key={group.category}
                       group={group}
                       language={language}
                       selectedTagSlugs={selectedTagSlugs}
                       onToggleTag={toggleTag}
+                      tagLookup={tagLookup}
                       copy={copy}
                       customTagValue={customTagDrafts[group.category] || ""}
                       customTags={customTagEntries.filter(
@@ -1087,6 +1118,7 @@ function TagGroup({
   language,
   selectedTagSlugs,
   onToggleTag,
+  tagLookup,
   copy,
   customTagValue,
   customTags,
@@ -1103,7 +1135,7 @@ function TagGroup({
       <div className="flex flex-wrap gap-2">
         {group.slugs.map((slug) => {
           const active = selectedTagSlugs.includes(slug);
-          const tagData = RECORD_TAGS[slug];
+          const tagData = tagLookup?.[slug] || RECORD_TAGS[slug];
 
           return (
             <button

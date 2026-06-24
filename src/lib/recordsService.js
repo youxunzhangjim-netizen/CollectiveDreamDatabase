@@ -16,6 +16,7 @@ import {
   normalizeDreamImages,
   uploadDreamImages,
 } from "./dreamImageService.js";
+import { upsertSharedCustomTags } from "./customTagsService.js";
 import {
   DREAM_DATE_STATUS,
   getDreamDateStatus,
@@ -122,7 +123,8 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   const tags = buildRecordTags(
     draft?.selectedTagSlugs || draft?.emotionTags || [],
     draft?.customTagLabels || [],
-    adultContent
+    adultContent,
+    draft?.sharedTags || []
   );
   const environmentTags = getTagSlugsByCategory(tags, "Environment");
   const entityTags = getTagSlugsByCategory(tags, "Entities");
@@ -230,6 +232,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   };
 
   let metadataMergeError = null;
+  let customTagCatalogError = null;
 
   try {
     await setDoc(recordRef, optionalRecord, { merge: true });
@@ -240,11 +243,21 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     };
   }
 
+  try {
+    await upsertSharedCustomTags(currentUser, draft?.customTagLabels || []);
+  } catch (error) {
+    customTagCatalogError = {
+      code: error?.code || "custom-tags/share-failed",
+      message: error?.message || "Custom tag catalog update failed.",
+    };
+  }
+
   const record = {
     ...coreRecord,
     ...optionalRecord,
     imageUploadError,
     metadataMergeError,
+    customTagCatalogError,
   };
 
   return {
@@ -811,7 +824,8 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     const tags = buildRecordTags(
       updates.selectedTagSlugs || [],
       updates.customTagLabels || [],
-      Boolean(metadata.adultContent ?? updates.adultContent)
+      Boolean(metadata.adultContent ?? updates.adultContent),
+      updates.sharedTags || []
     );
 
     metadata.environmentTags = getTagSlugsByCategory(tags, "Environment");
@@ -834,4 +848,10 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
   }
 
   await setDoc(doc(requireFirestore(), "Records", recordId), metadata, { merge: true });
+
+  if ("customTagLabels" in updates) {
+    await upsertSharedCustomTags(currentUser, updates.customTagLabels || []).catch(
+      () => {}
+    );
+  }
 }

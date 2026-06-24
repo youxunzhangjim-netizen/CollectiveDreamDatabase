@@ -109,6 +109,38 @@ service cloud.firestore {
           ]);
     }
 
+    function validCustomTagCategory(category) {
+      return category in [
+        "Environment",
+        "Entities",
+        "Anomalies",
+        "Emotions",
+        "Styles",
+        "Eras",
+        "Weather",
+        "Dream Types",
+        "Perspective",
+        "Psychological Observables",
+        "Dream Analysis",
+        "Custom"
+      ];
+    }
+
+    function validCustomTagData(data, tagId) {
+      return data.keys().hasAll(["slug", "name", "category"])
+        && data.slug == tagId
+        && data.slug is string
+        && data.slug.size() >= 2
+        && data.slug.size() <= 120
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 40
+        && validCustomTagCategory(data.category)
+        && (!data.keys().hasAny(["status"]) || data.status in ["active", "hidden"])
+        && (!data.keys().hasAny(["custom"]) || data.custom == true)
+        && (!data.keys().hasAny(["shared"]) || data.shared == true);
+    }
+
     match /Records/{recordId} {
       allow get, list: if canReadPublicRecord(resource.data)
         || isOwner(resource.data.ownerId);
@@ -124,6 +156,13 @@ service cloud.firestore {
 
       allow delete: if isOwner(resource.data.ownerId)
         && isNotAnonymousLocked(resource.data);
+    }
+
+    match /customTags/{tagId} {
+      allow read: if true;
+      allow create, update: if isSignedIn()
+        && validCustomTagData(request.resource.data, tagId);
+      allow delete: if false;
     }
 
     match /users/{userId} {

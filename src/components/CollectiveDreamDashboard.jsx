@@ -17,6 +17,7 @@ import {
   getDreamDateStatus,
   getVisibleDreamDate,
 } from "../lib/dreamDate.js";
+import { fetchSharedCustomTags } from "../lib/customTagsService.js";
 import {
   collectRecordForUser,
   fetchFollowingRecorders,
@@ -437,11 +438,15 @@ export default function CollectiveDreamDashboard({
 
       const loadErrors = [];
       let firestoreDreams = [];
+      let sharedTags = [];
 
       try {
-        firestoreDreams = await fetchPublicRecords({
-          includeAdult: canLoadAdultRecords,
-        });
+        [firestoreDreams, sharedTags] = await Promise.all([
+          fetchPublicRecords({
+            includeAdult: canLoadAdultRecords,
+          }),
+          fetchSharedCustomTags(),
+        ]);
       } catch (error) {
         loadErrors.push(error.message);
       }
@@ -454,7 +459,7 @@ export default function CollectiveDreamDashboard({
         setLoadState(loadErrors.length > 0 ? "fallback" : EMPTY_LOAD_STATE);
         setLoadError(loadErrors[0] || null);
         setDreams([]);
-        setTags(DEFAULT_TAGS);
+        setTags(mergeTagSets(DEFAULT_TAGS, sharedTags));
         return;
       }
 
@@ -462,6 +467,7 @@ export default function CollectiveDreamDashboard({
       setTags(
         mergeTagSets(
           DEFAULT_TAGS,
+          sharedTags,
           liveDreams.flatMap((dream) => dream.tags)
         )
       );

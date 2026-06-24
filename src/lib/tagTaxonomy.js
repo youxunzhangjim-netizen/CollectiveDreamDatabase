@@ -496,18 +496,30 @@ export function getTagLabel(tagOrSlug, language = "en") {
   return tagData.name;
 }
 
-export function buildRecordTags(selectedTagSlugs = [], customTagEntries = [], adultContent = false) {
+export function buildRecordTags(
+  selectedTagSlugs = [],
+  customTagEntries = [],
+  adultContent = false,
+  sharedTags = []
+) {
+  const sharedTagMap = new Map(
+    normalizeSharedTags(sharedTags).map((tagData) => [tagData.slug, tagData])
+  );
   const slugs = new Set(
-    selectedTagSlugs.filter((slug) => RECORD_TAGS[slug]).map((slug) => String(slug))
+    selectedTagSlugs
+      .map((slug) => String(slug))
+      .filter((slug) => RECORD_TAGS[slug] || sharedTagMap.has(slug))
   );
 
   if (adultContent) {
     slugs.add("adult-content");
   }
 
-  const builtInTags = [...slugs].map((slug) => RECORD_TAGS[slug]).filter(Boolean);
+  const selectedTags = [...slugs]
+    .map((slug) => RECORD_TAGS[slug] || sharedTagMap.get(slug))
+    .filter(Boolean);
   const existingNames = new Set(
-    Object.values(RECORD_TAGS).flatMap((item) => [
+    [...Object.values(RECORD_TAGS), ...sharedTagMap.values()].flatMap((item) => [
       item.slug,
       normalizeTagName(item.name),
       normalizeTagName(item.name_zh),
@@ -520,9 +532,7 @@ export function buildRecordTags(selectedTagSlugs = [], customTagEntries = [], ad
     const normalizedEntry = normalizeCustomTagEntry(entry);
     const normalizedLabel = normalizedEntry.label;
     const normalizedKey = normalizeTagName(normalizedLabel);
-    const categoryPrefix = makeCustomTagSlug(normalizedEntry.category);
-    const baseSlug = makeCustomTagSlug(normalizedLabel);
-    const slug = `${categoryPrefix}-${baseSlug}`;
+    const slug = makeSharedTagSlug(normalizedEntry.category, normalizedLabel);
 
     if (!normalizedLabel || existingNames.has(normalizedKey) || slugs.has(slug)) return;
 
@@ -539,7 +549,7 @@ export function buildRecordTags(selectedTagSlugs = [], customTagEntries = [], ad
     });
   });
 
-  return [...builtInTags, ...customTags];
+  return [...selectedTags, ...customTags];
 }
 
 export function getTagSlugsByCategory(tags = [], category) {
@@ -568,7 +578,7 @@ export function normalizeCustomTagEntry(entry) {
   };
 }
 
-export function tagExists(labelOrSlug, selectedCustomEntries = []) {
+export function tagExists(labelOrSlug, selectedCustomEntries = [], sharedTags = []) {
   const normalized = normalizeTagName(labelOrSlug);
 
   return (
@@ -578,11 +588,71 @@ export function tagExists(labelOrSlug, selectedCustomEntries = []) {
         .map(normalizeTagName)
         .includes(normalized)
     ) ||
+    normalizeSharedTags(sharedTags).some((tagData) =>
+      [tagData.slug, tagData.name, tagData.name_zh, tagData.name_es]
+        .map(normalizeTagName)
+        .includes(normalized)
+    ) ||
     selectedCustomEntries.some((entry) => {
       const normalizedEntry = normalizeCustomTagEntry(entry);
       return normalizeTagName(normalizedEntry.label) === normalized;
     })
   );
+}
+
+export function mergeRecorderTagGroups(sharedTags = []) {
+  const sharedTagsByCategory = normalizeSharedTags(sharedTags).reduce((groups, tagData) => {
+    if (!groups.has(tagData.category)) groups.set(tagData.category, []);
+    groups.get(tagData.category).push(tagData.slug);
+    return groups;
+  }, new Map());
+
+  return RECORDER_TAG_GROUPS.map((group) => {
+    const sharedSlugs = sharedTagsByCategory.get(group.category) || [];
+    const slugs = [...new Set([...group.slugs, ...sharedSlugs])];
+
+    return {
+      ...group,
+      slugs,
+    };
+  });
+}
+
+export function normalizeSharedTags(sharedTags = []) {
+  return sharedTags.map(normalizeSharedTag).filter(Boolean);
+}
+
+export function normalizeSharedTag(tagData) {
+  const category = TAG_CATEGORY_ORDER.includes(tagData?.category)
+    ? tagData.category
+    : "Custom";
+  const name = normalizeCustomTagLabel(
+    tagData?.name || tagData?.label || tagData?.name_zh || tagData?.name_es
+  );
+
+  if (!name || category === "Content") return null;
+
+  const slug = tagData?.slug
+    ? makeCustomTagSlug(tagData.slug)
+    : makeSharedTagSlug(category, name);
+
+  return {
+    id: tagData?.id || `custom-${slug}`,
+    category,
+    name,
+    name_zh: normalizeCustomTagLabel(tagData?.name_zh || tagData?.nameZh || name),
+    name_es: normalizeCustomTagLabel(tagData?.name_es || tagData?.nameEs || name),
+    slug,
+    custom: true,
+    shared: true,
+  };
+}
+
+export function makeSharedTagSlug(category, label) {
+  const categoryPrefix = makeCustomTagSlug(category);
+  const baseSlug = makeCustomTagSlug(label);
+
+  return [categoryPrefix, baseSlug].filter(Boolean).join("-");
 }
 
 function tag(id, category, name, nameZh, nameEs) {
@@ -600,7 +670,7 @@ function normalizeTagName(value) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, "-");
 }
 
-function makeCustomTagSlug(value) {
+export function makeCustomTagSlug(value) {
   return normalizeTagName(value)
     .replace(/[^a-z0-9\u4e00-\u9fff-]+/gi, "")
     .replace(/^-+|-+$/g, "");
