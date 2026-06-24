@@ -12,6 +12,10 @@ import {
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
 } from "../lib/dreamImageService.js";
+import {
+  getDreamDateStatus,
+  getVisibleDreamDate,
+} from "../lib/dreamDate.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import {
   getCategoryLabel,
@@ -50,6 +54,8 @@ const DETAIL_COPY = {
     dreamDate: "Dream Date",
     useTodayDate: "Use today",
     unknownDreamDate: "Date unknown",
+    hideDreamDate: "Do not show date",
+    hiddenDreamDate: "Date hidden",
     ageAtDream: "Age at Dream",
     agePlaceholder: "Optional",
     markAdultContent: "Mark as adult content",
@@ -119,6 +125,8 @@ const DETAIL_COPY = {
     dreamDate: "夢境日期",
     useTodayDate: "使用今天",
     unknownDreamDate: "日期不確定",
+    hideDreamDate: "不顯示日期",
+    hiddenDreamDate: "日期已隱藏",
     ageAtDream: "做夢時年齡",
     agePlaceholder: "選填",
     markAdultContent: "標記為成人內容",
@@ -186,6 +194,8 @@ const DETAIL_COPY = {
     dreamDate: "Fecha del Sueño",
     useTodayDate: "Usar hoy",
     unknownDreamDate: "Fecha desconocida",
+    hideDreamDate: "No mostrar fecha",
+    hiddenDreamDate: "Fecha oculta",
     ageAtDream: "Edad en el Sueño",
     agePlaceholder: "Opcional",
     markAdultContent: "Marcar como contenido adulto",
@@ -262,6 +272,9 @@ export default function DreamRecordPage({
     normalizedRecord.originalText || ""
   );
   const [dreamDate, setDreamDate] = useState(normalizedRecord.dreamDate || "");
+  const [dreamDateStatus, setDreamDateStatus] = useState(
+    normalizedRecord.dreamDateStatus
+  );
   const [ageAtDream, setAgeAtDream] = useState(normalizedRecord.ageAtDream || "");
   const [adultContent, setAdultContent] = useState(
     isAdultRecord(normalizedRecord)
@@ -304,6 +317,7 @@ export default function DreamRecordPage({
     setTitleDraft(normalizedRecord.originalTitle || "");
     setDreamTextDraft(normalizedRecord.originalText || "");
     setDreamDate(normalizedRecord.dreamDate || "");
+    setDreamDateStatus(normalizedRecord.dreamDateStatus);
     setAgeAtDream(normalizedRecord.ageAtDream || "");
     setAdultContent(isAdultRecord(normalizedRecord));
     setRecordIdentityMode(normalizedRecord.recordIdentityMode);
@@ -417,6 +431,7 @@ export default function DreamRecordPage({
         dreamText: nextDreamText,
         originalLanguage,
         dreamDate,
+        dreamDateStatus,
         ageAtDream,
         adultContent,
         minimumViewerAge: adultContent ? 18 : 0,
@@ -433,6 +448,7 @@ export default function DreamRecordPage({
           dreamText: nextDreamText,
           originalLanguage,
           dreamDate,
+          dreamDateStatus,
           ageAtDream,
           adultContent,
           minimumViewerAge: adultContent ? 18 : 0,
@@ -585,7 +601,7 @@ export default function DreamRecordPage({
                 <CreatorIdentity copy={copy} record={normalizedRecord} />
                 <InfoRow
                   label={copy.recordDate}
-                  value={normalizedRecord.dreamDate || normalizedRecord.date || copy.unknownDreamDate}
+                  value={getDreamDateDisplay(normalizedRecord, copy)}
                 />
                 <InfoRow
                   label={copy.ageAtDream}
@@ -657,16 +673,22 @@ export default function DreamRecordPage({
                     <input
                       type="date"
                       value={dreamDate}
-                      onChange={(event) => setDreamDate(event.target.value)}
+                      onChange={(event) => {
+                        setDreamDate(event.target.value);
+                        setDreamDateStatus(event.target.value ? "known" : "unknown");
+                      }}
                       className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                     />
-                    <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
                       <button
                         type="button"
-                        onClick={() => setDreamDate(today)}
+                        onClick={() => {
+                          setDreamDate(today);
+                          setDreamDateStatus("known");
+                        }}
                         className={[
                           "rounded-xl border px-3 py-2 font-mono text-xs font-bold transition",
-                          dreamDate === today
+                          dreamDateStatus === "known" && dreamDate === today
                             ? "border-cyan-300/35 bg-cyan-300 text-zinc-950"
                             : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
                         ].join(" ")}
@@ -675,15 +697,33 @@ export default function DreamRecordPage({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setDreamDate("")}
+                        onClick={() => {
+                          setDreamDate("");
+                          setDreamDateStatus("unknown");
+                        }}
                         className={[
                           "rounded-xl border px-3 py-2 font-mono text-xs font-bold transition",
-                          !dreamDate
+                          dreamDateStatus === "unknown"
                             ? "border-cyan-300/35 bg-cyan-300 text-zinc-950"
                             : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
                         ].join(" ")}
                       >
                         {copy.unknownDreamDate}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDreamDate("");
+                          setDreamDateStatus("hidden");
+                        }}
+                        className={[
+                          "rounded-xl border px-3 py-2 font-mono text-xs font-bold transition",
+                          dreamDateStatus === "hidden"
+                            ? "border-cyan-300/35 bg-cyan-300 text-zinc-950"
+                            : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+                        ].join(" ")}
+                      >
+                        {copy.hideDreamDate}
                       </button>
                     </div>
                   </label>
@@ -789,6 +829,8 @@ function normalizeDreamRecord(record) {
   const images = normalizeDreamImages(record);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(record);
+  const dreamDate = getVisibleDreamDate(record);
+  const dreamDateStatus = getDreamDateStatus(record);
 
   return {
     id: record?.id || record?.dream_id || record?.recordId || "",
@@ -815,8 +857,10 @@ function normalizeDreamRecord(record) {
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,
-    date: record?.dream_date || record?.date || "",
-    dreamDate: record?.dreamDate || record?.dream_date || record?.date || "",
+    date: dreamDate,
+    dreamDate,
+    dreamDateStatus,
+    dream_date_status: dreamDateStatus,
     ageAtDream: record?.ageAtDream || "",
     ownerId: record?.ownerId || record?.creatorId || "",
     anonymousLocked: Boolean(record?.anonymousLocked),
@@ -863,6 +907,11 @@ function normalizeDreamRecord(record) {
 
 function isAdultRecord(record) {
   return Boolean(record.adultContent) || Number(record.minimumViewerAge || 0) >= 18;
+}
+
+function getDreamDateDisplay(record, copy) {
+  if (record.dreamDateStatus === "hidden") return copy.hiddenDreamDate;
+  return record.dreamDate || copy.unknownDreamDate;
 }
 
 function getLocalizedRecordTitle(record, language) {
@@ -981,6 +1030,8 @@ function mergeRecordEdits(record, updates) {
     },
     dreamDate: updates.dreamDate || "",
     dream_date: updates.dreamDate || "",
+    dreamDateStatus: updates.dreamDateStatus,
+    dream_date_status: updates.dreamDateStatus,
     ageAtDream:
       updates.ageAtDream === "" || updates.ageAtDream == null
         ? ""

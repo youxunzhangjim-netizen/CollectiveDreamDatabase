@@ -16,6 +16,12 @@ import {
   normalizeDreamImages,
   uploadDreamImages,
 } from "./dreamImageService.js";
+import {
+  DREAM_DATE_STATUS,
+  getDreamDateStatus,
+  getVisibleDreamDate,
+  normalizeDreamDateStatus,
+} from "./dreamDate.js";
 import { LANGUAGE_OPTIONS, normalizeLanguage } from "./language.js";
 import { buildRecordTags, getTagSlugsByCategory } from "./tagTaxonomy.js";
 
@@ -88,7 +94,13 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   const originalLanguage = normalizeLanguage(draft?.originalLanguage || "zh");
   const title = normalizeOptionalTitle(draft?.title, dreamText);
   const excerpt = createExcerpt(dreamText);
-  const dreamDate = String(draft?.dreamDate || "").trim();
+  const submittedDreamDate = String(draft?.dreamDate || "").trim();
+  const dreamDateStatus = normalizeDreamDateStatus(
+    draft?.dreamDateStatus,
+    submittedDreamDate
+  );
+  const dreamDate =
+    dreamDateStatus === DREAM_DATE_STATUS.KNOWN ? submittedDreamDate : "";
   const ageAtDream =
     draft?.ageAtDream === "" || draft?.ageAtDream == null
       ? ""
@@ -160,6 +172,8 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     translations,
     dreamDate,
     dream_date: dreamDate,
+    dreamDateStatus,
+    dream_date_status: dreamDateStatus,
     ageAtDream: Number.isFinite(ageAtDream) ? ageAtDream : "",
     recordIdentityMode,
     attributionMode: recordIdentityMode,
@@ -374,6 +388,8 @@ function normalizeRecordReference(record) {
   const images = normalizeDreamImages(record);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(record);
+  const dreamDateStatus = getDreamDateStatus(record);
+  const dreamDate = getVisibleDreamDate(record);
 
   return {
     recordId,
@@ -400,8 +416,10 @@ function normalizeRecordReference(record) {
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,
     translations,
-    date: record?.dream_date || record?.date || "",
-    dreamDate: record?.dreamDate || record?.dream_date || record?.date || "",
+    date: dreamDate,
+    dreamDate,
+    dreamDateStatus,
+    dream_date_status: dreamDateStatus,
     creatorId: record?.ownerId || record?.creatorId || "",
     recordIdentityMode,
     creatorDisplayName:
@@ -712,9 +730,19 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     );
   }
 
-  if ("dreamDate" in updates) {
-    metadata.dreamDate = updates.dreamDate || "";
-    metadata.dream_date = updates.dreamDate || "";
+  if ("dreamDate" in updates || "dreamDateStatus" in updates) {
+    const submittedDreamDate = String(updates.dreamDate || "").trim();
+    const dreamDateStatus = normalizeDreamDateStatus(
+      updates.dreamDateStatus,
+      submittedDreamDate
+    );
+    const dreamDate =
+      dreamDateStatus === DREAM_DATE_STATUS.KNOWN ? submittedDreamDate : "";
+
+    metadata.dreamDate = dreamDate;
+    metadata.dream_date = dreamDate;
+    metadata.dreamDateStatus = dreamDateStatus;
+    metadata.dream_date_status = dreamDateStatus;
   }
 
   if ("ageAtDream" in updates) {

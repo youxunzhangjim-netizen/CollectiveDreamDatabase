@@ -20,6 +20,10 @@ import {
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
 } from "../lib/dreamImageService.js";
+import {
+  getDreamDateStatus,
+  getVisibleDreamDate,
+} from "../lib/dreamDate.js";
 import { getTagLabel, RECORD_TAGS } from "../lib/tagTaxonomy.js";
 import LanguageMenu from "./LanguageMenu.jsx";
 
@@ -77,6 +81,7 @@ const DASHBOARD_COPY = {
     hiddenAge: "Hidden",
     originalLanguageLabel: "Original language",
     unknownDate: "Date unknown",
+    hiddenDate: "Date hidden",
     analysisTitle: "Personal Upload Analysis",
     analysisText:
       "A private summary of the dreams uploaded from this account for self-study and pattern tracking.",
@@ -141,6 +146,7 @@ const DASHBOARD_COPY = {
     hiddenAge: "已隱藏",
     originalLanguageLabel: "原始語言",
     unknownDate: "日期不確定",
+    hiddenDate: "日期已隱藏",
     analysisTitle: "個人上傳分析",
     analysisText: "只根據此帳戶上傳的夢境建立的私人摘要，可用於自我研究與模式追蹤。",
     analysisTotal: "已上傳",
@@ -205,6 +211,7 @@ const DASHBOARD_COPY = {
     hiddenAge: "Oculta",
     originalLanguageLabel: "Idioma original",
     unknownDate: "Fecha desconocida",
+    hiddenDate: "Fecha oculta",
     analysisTitle: "Análisis personal",
     analysisText:
       "Resumen privado de los sueños subidos desde esta cuenta para estudio propio y seguimiento de patrones.",
@@ -828,6 +835,8 @@ function normalizeRecordItem(item, index) {
   const images = normalizeDreamImages(item);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(item);
+  const dreamDate = getVisibleDreamDate(item);
+  const dreamDateStatus = getDreamDateStatus(item);
 
   return {
     id,
@@ -856,7 +865,9 @@ function normalizeRecordItem(item, index) {
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,
-    dreamDate: item.dreamDate || item.dream_date || item.date || "",
+    dreamDate,
+    dreamDateStatus,
+    dream_date_status: dreamDateStatus,
     ageAtDream: item.ageAtDream || "",
     ownerId: item.ownerId || item.creatorId || "",
     creatorId: item.creatorId || item.ownerId || "",
@@ -891,7 +902,7 @@ function normalizeRecordItem(item, index) {
     customTags: Array.isArray(item.customTags) ? item.customTags : [],
     adultContent: Boolean(item.adultContent || item.adult_content || item.isAdult || item.is_adult),
     minimumViewerAge: item.minimumViewerAge || item.minimum_viewer_age || 0,
-    date: formatRecordDate(item.dream_date || item.date || item.createdAt || item.savedAt),
+    date: formatRecordDate(dreamDate),
     hash: item.hash || `VX-${String(id || "record").slice(0, 8).toUpperCase()}`,
     accent: item.accent || accents[index % accents.length],
   };
@@ -918,6 +929,11 @@ function formatRecordDate(value) {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
 
   return "";
+}
+
+function getRecordDateDisplay(item, copy) {
+  if (item.dreamDateStatus === "hidden") return copy.hiddenDate;
+  return item.date || copy.unknownDate;
 }
 
 function buildPersonalDreamAnalysis(items, language, copy) {
@@ -1163,7 +1179,7 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
       <div className="p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
           <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-zinc-500">
-            {item.date || copy.unknownDate}
+            {getRecordDateDisplay(item, copy)}
           </span>
         </div>
         {title && <h2 className="text-xl font-semibold text-zinc-50">{title}</h2>}

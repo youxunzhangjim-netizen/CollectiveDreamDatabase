@@ -14,6 +14,10 @@ import {
   normalizeDreamImages,
 } from "../lib/dreamImageService.js";
 import {
+  getDreamDateStatus,
+  getVisibleDreamDate,
+} from "../lib/dreamDate.js";
+import {
   collectRecordForUser,
   fetchFollowingRecorders,
   fetchPublicRecords,
@@ -784,6 +788,8 @@ function normalizeDreamCard(row) {
   const images = normalizeDreamImages(row);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(row);
+  const dreamDate = getVisibleDreamDate(row);
+  const dreamDateStatus = getDreamDateStatus(row);
   const anomalyTags = Array.isArray(row.anomalyTags)
     ? row.anomalyTags
     : row.anomaly_tag_slugs ||
@@ -819,8 +825,10 @@ function normalizeDreamCard(row) {
     dream_text: row.dream_text || row.dreamText || row.text || row.originalText,
     dream_text_zh: row.dream_text_zh || row.dreamTextZh,
     dream_text_es: row.dream_text_es || row.dreamTextEs,
-    dream_date: row.dream_date || row.dreamDate || row.date || "",
-    dreamDate: row.dreamDate || row.dream_date || row.date || "",
+    dream_date: dreamDate,
+    dreamDate,
+    dreamDateStatus,
+    dream_date_status: dreamDateStatus,
     adultContent,
     minimumViewerAge: row.minimumViewerAge || row.minimum_viewer_age || (adultContent ? 18 : 0),
     images,
@@ -966,9 +974,7 @@ function createExcerpt(value) {
 }
 
 function getDreamDateMillis(dream) {
-  const parsed = new Date(
-    dream?.dreamDate || dream?.dream_date || dream?.date || ""
-  ).getTime();
+  const parsed = new Date(getVisibleDreamDate(dream)).getTime();
 
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -1675,6 +1681,7 @@ function ObservationCard({
     dream.recordIdentityMode === "account" &&
     recorderId &&
     recorderId !== currentUser?.uid;
+  const showDreamDate = dream.dreamDateStatus !== "hidden";
   const isFollowingRecorder = Boolean(
     recorderId && followingRecorderIds?.has(recorderId)
   );
@@ -1712,6 +1719,8 @@ function ObservationCard({
       textZh: getDreamText(dream, "zh"),
       textEs: getDreamText(dream, "es"),
       date: dream.dream_date,
+      dreamDate: dream.dreamDate || dream.dream_date || "",
+      dreamDateStatus: dream.dreamDateStatus,
       pseudoId: dream.pseudo_id,
     };
 
@@ -1763,6 +1772,8 @@ function ObservationCard({
           textZh: getDreamText(dream, "zh"),
           textEs: getDreamText(dream, "es"),
           date: dream.dream_date,
+          dreamDate: dream.dreamDate || dream.dream_date || "",
+          dreamDateStatus: dream.dreamDateStatus,
           pseudoId: dream.pseudo_id,
         });
       }}
@@ -1790,9 +1801,11 @@ function ObservationCard({
           <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">
             {dream.pseudo_id}
           </span>
-          <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-fuchsia-100">
-            {dream.dream_date || copy.unknownDate}
-          </span>
+          {showDreamDate && (
+            <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-fuchsia-100">
+              {dream.dream_date || copy.unknownDate}
+            </span>
+          )}
         </div>
 
         {displayTitle && (
