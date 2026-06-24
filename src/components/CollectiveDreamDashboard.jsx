@@ -146,6 +146,7 @@ const UI_COPY = {
     visualHash: "Visual hash",
     signalCoherence: "Signal coherence",
     originalLanguageLabel: "Original language",
+    unknownDate: "Date unknown",
     adultContentLabel: "Adult content",
     adultRestrictedTitle: "Age-restricted dream",
     adultGuestPrompt:
@@ -245,6 +246,7 @@ const UI_COPY = {
     visualHash: "視覺雜湊",
     signalCoherence: "訊號一致性",
     originalLanguageLabel: "原始語言",
+    unknownDate: "日期不確定",
     adultContentLabel: "成人內容",
     adultRestrictedTitle: "年齡限制夢境",
     adultGuestPrompt: "此紀錄可能包含成人內容。請確認你已滿 18 歲，才能閱讀此紀錄。",
@@ -343,6 +345,7 @@ const UI_COPY = {
     visualHash: "Hash visual",
     signalCoherence: "Coherencia de señal",
     originalLanguageLabel: "Idioma original",
+    unknownDate: "Fecha desconocida",
     adultContentLabel: "Contenido adulto",
     adultRestrictedTitle: "Sueño con restricción de edad",
     adultGuestPrompt:
@@ -571,7 +574,7 @@ export default function CollectiveDreamDashboard({
       })
       .sort((a, b) => {
         if (sortMode === "newest") {
-          return new Date(b.dream_date).getTime() - new Date(a.dream_date).getTime();
+          return getDreamDateMillis(b) - getDreamDateMillis(a);
         }
 
         if (sortMode === "title") {
@@ -956,6 +959,14 @@ function createExcerpt(value) {
   return value.length > 220 ? `${value.slice(0, 220)}...` : value;
 }
 
+function getDreamDateMillis(dream) {
+  const parsed = new Date(
+    dream?.dreamDate || dream?.dream_date || dream?.date || ""
+  ).getTime();
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function buildDreamTranslations(dream) {
   return Object.fromEntries(
     LANGUAGE_OPTIONS.map((option) => [
@@ -970,15 +981,17 @@ function buildDreamTranslations(dream) {
 }
 
 function getTagName(tag, language) {
+  const canonicalTag = RECORD_TAGS[tag.slug];
+
   if (language === "zh") {
-    return TAG_TRANSLATIONS[tag.slug]?.zh || tag.name_zh || tag.nameZh || tag.name;
+    return TAG_TRANSLATIONS[tag.slug]?.zh || canonicalTag?.name_zh || tag.name_zh || tag.nameZh || tag.name;
   }
 
   if (language === "es") {
-    return TAG_TRANSLATIONS[tag.slug]?.es || tag.name_es || tag.nameEs || tag.name;
+    return TAG_TRANSLATIONS[tag.slug]?.es || canonicalTag?.name_es || tag.name_es || tag.nameEs || tag.name;
   }
 
-  return tag.name;
+  return canonicalTag?.name || tag.name;
 }
 
 function getCategoryLabel(category, language) {
@@ -1085,7 +1098,6 @@ function hasCompleteCoreSchema(dream) {
     dream.dream_id &&
       dream.originalLanguage &&
       hasDreamText &&
-      (dream.dreamDate || dream.dream_date) &&
       hasKnownTag
   );
 }
@@ -1771,7 +1783,7 @@ function ObservationCard({
             {dream.pseudo_id}
           </span>
           <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-fuchsia-100">
-            {dream.dream_date}
+            {dream.dream_date || copy.unknownDate}
           </span>
         </div>
 

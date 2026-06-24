@@ -46,6 +46,19 @@ html[data-appearance="morning"] [class*="bg-white/"] {
   background-color: rgba(15, 23, 42, 0.045) !important;
 }
 
+html[data-appearance="morning"] [class*="bg-cyan-300/"],
+html[data-appearance="morning"] [class*="bg-fuchsia-300/"],
+html[data-appearance="morning"] [class*="bg-amber-300/"] {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+}
+
+html[data-appearance="morning"] [class*="bg-cyan-300"]:not([class*="bg-cyan-300/"]),
+html[data-appearance="morning"] [class*="bg-cyan-200"],
+html[data-appearance="morning"] [class*="bg-fuchsia-300"]:not([class*="bg-fuchsia-300/"]),
+html[data-appearance="morning"] [class*="bg-amber-300"]:not([class*="bg-amber-300/"]) {
+  color: #082f49 !important;
+}
+
 html[data-appearance="morning"] [class*="text-zinc-50"],
 html[data-appearance="morning"] [class*="text-zinc-100"],
 html[data-appearance="morning"] [class*="text-zinc-200"] {
@@ -77,6 +90,24 @@ html[data-appearance="morning"] [class*="border-white/"],
 html[data-appearance="morning"] [class*="border-cyan-300/"],
 html[data-appearance="morning"] [class*="border-fuchsia-300/"] {
   border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
+html[data-appearance="morning"] button,
+html[data-appearance="morning"] a[role="button"],
+html[data-appearance="morning"] label[class*="cursor-pointer"] {
+  color: #0f172a !important;
+  letter-spacing: 0 !important;
+  text-shadow: none !important;
+}
+
+html[data-appearance="morning"] button:disabled {
+  color: #64748b !important;
+}
+
+html[data-appearance="morning"] button:hover:not(:disabled),
+html[data-appearance="morning"] a[role="button"]:hover,
+html[data-appearance="morning"] label[class*="cursor-pointer"]:hover {
+  color: #075985 !important;
 }
 
 html[data-appearance="morning"] input,

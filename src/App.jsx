@@ -246,10 +246,10 @@ export default function App() {
 function AppearanceToggle({ language, appearance, setAppearance }) {
   const copy =
     language === "zh"
-      ? { label: "切換外觀", morning: "晨", night: "夜" }
+      ? { label: "切換明暗外觀", morning: "日間", night: "夜間" }
       : language === "es"
         ? { label: "Cambiar apariencia", morning: "Día", night: "Noche" }
-        : { label: "Switch appearance", morning: "Morning", night: "Night" };
+        : { label: "Switch appearance", morning: "Day", night: "Night" };
 
   return (
     <div
@@ -268,7 +268,7 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
             title={option === "morning" ? copy.morning : copy.night}
             onClick={() => setAppearance(option)}
             className={[
-              "min-h-8 min-w-10 rounded-lg px-3 font-mono text-[11px] font-bold uppercase tracking-[0.12em] transition",
+              "min-h-8 min-w-14 rounded-lg px-3 font-mono text-xs font-bold transition",
               active
                 ? "bg-cyan-200 text-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.25)]"
                 : "text-cyan-100 hover:bg-white/10 hover:text-cyan-50",

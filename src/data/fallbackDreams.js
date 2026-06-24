@@ -4,8 +4,8 @@ export const TAG_TRANSLATIONS = {
     es: "Ciudad cyberpunk",
   },
   "endless-water": {
-    zh: "無盡水域",
-    es: "Aguas infinitas",
+    zh: "水域",
+    es: "Área de agua",
   },
   "non-human": {
     zh: "非人類",
@@ -128,7 +128,7 @@ export const FALLBACK_TAGS = [
   {
     id: "10000000-0000-4000-8000-000000000002",
     category: "Environment",
-    name: "Endless Water",
+    name: "Water Area",
     slug: "endless-water",
   },
   {

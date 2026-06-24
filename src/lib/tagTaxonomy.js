@@ -67,7 +67,7 @@ export const TAG_CATEGORY_LABELS = {
 
 export const RECORD_TAGS = {
   "cyberpunk-city": tag("environment-cyberpunk-city", "Environment", "Cyberpunk City", "賽博龐克城市", "Ciudad cyberpunk"),
-  "endless-water": tag("environment-endless-water", "Environment", "Endless Water", "無盡水域", "Aguas infinitas"),
+  "endless-water": tag("environment-endless-water", "Environment", "Water Area", "水域", "Área de agua"),
   school: tag("environment-school", "Environment", "School", "學校", "Escuela"),
   ocean: tag("environment-ocean", "Environment", "Ocean", "海洋", "Océano"),
   "giant-architecture": tag("environment-giant-architecture", "Environment", "Giant Architecture", "巨大建築", "Arquitectura gigante"),
@@ -128,6 +128,7 @@ export const RECORD_TAGS = {
   "childhood-era": tag("era-childhood-era", "Eras", "Childhood era", "童年時期", "Época de infancia"),
 
   sunny: tag("weather-sunny", "Weather", "Sunny", "晴天", "Soleado"),
+  daytime: tag("weather-daytime", "Weather", "Daytime", "白天", "Día"),
   overcast: tag("weather-overcast", "Weather", "Overcast", "陰天", "Cielo cubierto"),
   cloudy: tag("weather-cloudy", "Weather", "Cloudy", "多雲", "Nublado"),
   rain: tag("weather-rain", "Weather", "Rain", "雨", "Lluvia"),
@@ -214,13 +215,13 @@ export const RECORD_TAGS = {
 };
 
 export const RECORDER_TAG_GROUPS = [
-  { category: "Environment", slugs: ["cyberpunk-city", "endless-water", "school", "ocean", "giant-architecture"] },
+  { category: "Environment", slugs: ["cyberpunk-city", "school", "ocean", "giant-architecture"] },
   { category: "Entities", slugs: ["non-human", "family"] },
   { category: "Anomalies", slugs: ["gravity-reversal", "time-stop"] },
   { category: "Emotions", slugs: ["awe", "fear", "calm", "grief", "desire", "confusion", "joy", "anxiety", "shame", "anger", "sadness", "loneliness", "nostalgia", "love", "surprise", "disgust", "relief", "wonder", "guilt", "curiosity", "dread", "peace", "excitement", "embarrassment", "helplessness"] },
   { category: "Styles", slugs: ["american-comics", "realistic", "fantasy", "cartoon", "anime", "film-noir", "surrealism", "pixel-art", "watercolor", "glitch", "horror", "documentary"] },
   { category: "Eras", slugs: ["ancient", "medieval", "early-modern", "industrial", "modern", "retro", "future", "post-apocalyptic", "timeless", "childhood-era"] },
-  { category: "Weather", slugs: ["sunny", "overcast", "cloudy", "rain", "drizzle", "storm", "thunder", "lightning", "typhoon", "snow", "fog", "haze", "mist", "hail", "wind", "humid", "heat", "cold", "night-sky", "eclipse"] },
+  { category: "Weather", slugs: ["sunny", "daytime", "overcast", "cloudy", "rain", "drizzle", "storm", "thunder", "lightning", "typhoon", "snow", "fog", "haze", "mist", "hail", "wind", "humid", "heat", "cold", "night-sky", "eclipse"] },
   { category: "Dream Types", slugs: ["lucid", "recurring", "nightmare", "false-awakening", "sleep-paralysis", "flying", "falling", "superpowers", "chase", "exam", "lost", "visitation", "prophetic-feeling", "body-transformation", "impossible-space", "disaster", "war-conflict", "romance", "sexual-dream", "daily-life"] },
   { category: "Perspective", slugs: ["first-person", "second-person", "third-person", "shifting-perspective", "observer-view", "out-of-body"] },
   { category: "Psychological Observables", slugs: ["psychology-agency", "psychology-control-loss", "psychology-vulnerability", "psychology-conflict", "psychology-intimacy", "psychology-separation", "psychology-social-judgment", "psychology-responsibility", "psychology-protection", "psychology-avoidance", "psychology-reunion", "psychology-identity-question", "psychology-boundary-crossing", "psychology-trust-mistrust", "psychology-power-difference"] },

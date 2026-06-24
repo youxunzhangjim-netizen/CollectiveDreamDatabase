@@ -48,6 +48,8 @@ const DETAIL_COPY = {
     dreamTextPlaceholder: "Edit the dream record words",
     contentRequired: "Dream records need at least a few words.",
     dreamDate: "Dream Date",
+    useTodayDate: "Use today",
+    unknownDreamDate: "Date unknown",
     ageAtDream: "Age at Dream",
     agePlaceholder: "Optional",
     markAdultContent: "Mark as adult content",
@@ -115,6 +117,8 @@ const DETAIL_COPY = {
     dreamTextPlaceholder: "修改夢境記錄文字",
     contentRequired: "夢境記錄至少需要幾個字。",
     dreamDate: "夢境日期",
+    useTodayDate: "使用今天",
+    unknownDreamDate: "日期不確定",
     ageAtDream: "做夢時年齡",
     agePlaceholder: "選填",
     markAdultContent: "標記為成人內容",
@@ -180,6 +184,8 @@ const DETAIL_COPY = {
     dreamTextPlaceholder: "Edita las palabras del registro",
     contentRequired: "Los registros necesitan al menos unas palabras.",
     dreamDate: "Fecha del Sueño",
+    useTodayDate: "Usar hoy",
+    unknownDreamDate: "Fecha desconocida",
     ageAtDream: "Edad en el Sueño",
     agePlaceholder: "Opcional",
     markAdultContent: "Marcar como contenido adulto",
@@ -242,6 +248,7 @@ export default function DreamRecordPage({
   onOpenDashboard,
 }) {
   const copy = DETAIL_COPY[language] || DETAIL_COPY.zh;
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [localRecord, setLocalRecord] = useState(record);
   const normalizedRecord = useMemo(() => normalizeDreamRecord(localRecord), [localRecord]);
   const isOwner = Boolean(
@@ -578,7 +585,7 @@ export default function DreamRecordPage({
                 <CreatorIdentity copy={copy} record={normalizedRecord} />
                 <InfoRow
                   label={copy.recordDate}
-                  value={normalizedRecord.dreamDate || normalizedRecord.date || "--"}
+                  value={normalizedRecord.dreamDate || normalizedRecord.date || copy.unknownDreamDate}
                 />
                 <InfoRow
                   label={copy.ageAtDream}
@@ -653,6 +660,32 @@ export default function DreamRecordPage({
                       onChange={(event) => setDreamDate(event.target.value)}
                       className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                     />
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDreamDate(today)}
+                        className={[
+                          "rounded-xl border px-3 py-2 font-mono text-xs font-bold transition",
+                          dreamDate === today
+                            ? "border-cyan-300/35 bg-cyan-300 text-zinc-950"
+                            : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+                        ].join(" ")}
+                      >
+                        {copy.useTodayDate}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDreamDate("")}
+                        className={[
+                          "rounded-xl border px-3 py-2 font-mono text-xs font-bold transition",
+                          !dreamDate
+                            ? "border-cyan-300/35 bg-cyan-300 text-zinc-950"
+                            : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+                        ].join(" ")}
+                      >
+                        {copy.unknownDreamDate}
+                      </button>
+                    </div>
                   </label>
                   <label className="block">
                     <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">

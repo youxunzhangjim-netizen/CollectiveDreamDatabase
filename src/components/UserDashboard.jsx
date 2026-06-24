@@ -76,6 +76,7 @@ const DASHBOARD_COPY = {
     joinedDate: "Joined",
     hiddenAge: "Hidden",
     originalLanguageLabel: "Original language",
+    unknownDate: "Date unknown",
     analysisTitle: "Personal Upload Analysis",
     analysisText:
       "A private summary of the dreams uploaded from this account for self-study and pattern tracking.",
@@ -139,6 +140,7 @@ const DASHBOARD_COPY = {
     joinedDate: "加入日期",
     hiddenAge: "已隱藏",
     originalLanguageLabel: "原始語言",
+    unknownDate: "日期不確定",
     analysisTitle: "個人上傳分析",
     analysisText: "只根據此帳戶上傳的夢境建立的私人摘要，可用於自我研究與模式追蹤。",
     analysisTotal: "已上傳",
@@ -202,6 +204,7 @@ const DASHBOARD_COPY = {
     joinedDate: "Fecha de ingreso",
     hiddenAge: "Oculta",
     originalLanguageLabel: "Idioma original",
+    unknownDate: "Fecha desconocida",
     analysisTitle: "Análisis personal",
     analysisText:
       "Resumen privado de los sueños subidos desde esta cuenta para estudio propio y seguimiento de patrones.",
@@ -909,12 +912,12 @@ function getLanguageSpecificRecordValue(record, field, language) {
 }
 
 function formatRecordDate(value) {
-  if (!value) return "2026-06-23";
+  if (!value) return "";
   if (typeof value === "string") return value.slice(0, 10);
   if (typeof value.toDate === "function") return value.toDate().toISOString().slice(0, 10);
   if (value instanceof Date) return value.toISOString().slice(0, 10);
 
-  return "2026-06-23";
+  return "";
 }
 
 function buildPersonalDreamAnalysis(items, language, copy) {
@@ -1160,7 +1163,7 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
       <div className="p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
           <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-zinc-500">
-            {item.date}
+            {item.date || copy.unknownDate}
           </span>
         </div>
         {title && <h2 className="text-xl font-semibold text-zinc-50">{title}</h2>}

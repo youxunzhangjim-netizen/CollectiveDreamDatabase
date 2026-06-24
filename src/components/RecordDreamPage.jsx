@@ -51,6 +51,8 @@ const RECORD_COPY = {
     optionalTitle: "Outline / main idea (optional)",
     titlePlaceholder: "Dreams do not need a topic; leave blank if none is clear",
     dreamDate: "Dream date",
+    useTodayDate: "Use today",
+    unknownDreamDate: "Date unknown",
     originalLanguage: "Original language",
     ageAtDream: "Age at dream",
     agePlaceholder: "Optional",
@@ -148,6 +150,8 @@ const RECORD_COPY = {
     optionalTitle: "大綱主旨（選填）",
     titlePlaceholder: "夢不一定需要主題；不清楚就留空",
     dreamDate: "夢境日期",
+    useTodayDate: "使用今天",
+    unknownDreamDate: "日期不確定",
     originalLanguage: "原始語言",
     ageAtDream: "做夢時年齡",
     agePlaceholder: "選填",
@@ -237,6 +241,8 @@ const RECORD_COPY = {
     optionalTitle: "Esquema / idea principal (opcional)",
     titlePlaceholder: "El sueño no necesita tema; déjalo vacío si no está claro",
     dreamDate: "Fecha del sueño",
+    useTodayDate: "Usar hoy",
+    unknownDreamDate: "Fecha desconocida",
     originalLanguage: "Idioma original",
     ageAtDream: "Edad en el sueño",
     agePlaceholder: "Opcional",
@@ -681,6 +687,32 @@ export default function RecordDreamPage({
                     onChange={(event) => setDreamDate(event.target.value)}
                     className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                   />
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDreamDate(today)}
+                      className={[
+                        "rounded-xl border px-3 py-2 font-mono text-xs font-bold transition",
+                        dreamDate === today
+                          ? "border-cyan-300/35 bg-cyan-300 text-zinc-950"
+                          : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+                      ].join(" ")}
+                    >
+                      {copy.useTodayDate}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDreamDate("")}
+                      className={[
+                        "rounded-xl border px-3 py-2 font-mono text-xs font-bold transition",
+                        !dreamDate
+                          ? "border-cyan-300/35 bg-cyan-300 text-zinc-950"
+                          : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+                      ].join(" ")}
+                    >
+                      {copy.unknownDreamDate}
+                    </button>
+                  </div>
                 </label>
 
                 <label className="block">

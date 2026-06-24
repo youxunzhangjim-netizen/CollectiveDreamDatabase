@@ -88,7 +88,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   const originalLanguage = normalizeLanguage(draft?.originalLanguage || "zh");
   const title = normalizeOptionalTitle(draft?.title, dreamText);
   const excerpt = createExcerpt(dreamText);
-  const dreamDate = draft?.dreamDate || new Date().toISOString().slice(0, 10);
+  const dreamDate = String(draft?.dreamDate || "").trim();
   const ageAtDream =
     draft?.ageAtDream === "" || draft?.ageAtDream == null
       ? ""
