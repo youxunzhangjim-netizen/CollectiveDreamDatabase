@@ -145,13 +145,11 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     dreamText,
     excerpt
   );
-  const translations = Object.fromEntries(
-    LANGUAGE_OPTIONS.map((option) => [
-      option.value,
-      option.value === originalLanguage
-        ? { title, excerpt, text: dreamText }
-        : { title: "", excerpt: "", text: "" },
-    ])
+  const translations = buildPendingTranslations(
+    originalLanguage,
+    title,
+    dreamText,
+    excerpt
   );
   const coreRecord = {
     id: recordRef.id,
@@ -584,6 +582,17 @@ function buildOriginalLanguageFields(language, title, text, excerpt) {
   };
 }
 
+function buildPendingTranslations(originalLanguage, title, text, excerpt) {
+  return Object.fromEntries(
+    LANGUAGE_OPTIONS.map((option) => [
+      option.value,
+      option.value === originalLanguage
+        ? { title, excerpt, text, dream_text: text }
+        : { title: "", excerpt: "", text: "", dream_text: "" },
+    ])
+  );
+}
+
 function normalizeOptionalTitle(title, dreamText) {
   const trimmedTitle = String(title || "").trim();
   const trimmedText = String(dreamText || "").trim();
@@ -744,13 +753,12 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
         title,
         dream_text: dreamText,
         excerpt,
-        translations: {
-          [originalLanguage]: {
-            title,
-            excerpt,
-            text: dreamText,
-          },
-        },
+        translations: buildPendingTranslations(
+          originalLanguage,
+          title,
+          dreamText,
+          excerpt
+        ),
       },
       buildOriginalLanguageFields(originalLanguage, title, dreamText, excerpt)
     );

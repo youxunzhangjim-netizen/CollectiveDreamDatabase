@@ -6,6 +6,7 @@ import {
 } from "../lib/recordsService.js";
 import {
   getLanguageName,
+  LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
 import {
@@ -1020,14 +1021,12 @@ function mergeRecordEdits(record, updates) {
     title: updates.title,
     dream_text: updates.dreamText,
     excerpt,
-    translations: {
-      ...(record?.translations || {}),
-      [updates.originalLanguage]: {
-        title: updates.title,
-        text: updates.dreamText,
-        excerpt,
-      },
-    },
+    translations: buildLocalPendingTranslations(
+      updates.originalLanguage,
+      updates.title,
+      updates.dreamText,
+      excerpt
+    ),
     dreamDate: updates.dreamDate || "",
     dream_date: updates.dreamDate || "",
     dreamDateStatus: updates.dreamDateStatus,
@@ -1080,6 +1079,17 @@ function buildLocalLanguageFields(language, title, text, excerpt) {
     excerptEn: excerpt,
     excerpt_en: excerpt,
   };
+}
+
+function buildLocalPendingTranslations(originalLanguage, title, text, excerpt) {
+  return Object.fromEntries(
+    LANGUAGE_OPTIONS.map((option) => [
+      option.value,
+      option.value === originalLanguage
+        ? { title, excerpt, text, dream_text: text }
+        : { title: "", excerpt: "", text: "", dream_text: "" },
+    ])
+  );
 }
 
 function createLocalExcerpt(text) {
