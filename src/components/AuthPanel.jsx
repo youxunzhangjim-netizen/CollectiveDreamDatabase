@@ -13,17 +13,17 @@ import LanguageMenu from "./LanguageMenu.jsx";
 
 const AUTH_COPY = {
   en: {
-    documentTitle: "Access Collective Dream Database",
+    documentTitle: "Access Collective Dream Observatory",
     languageLabel: "Switch interface language",
     englishLabel: "English interface",
     chineseLabel: "Traditional Chinese interface",
     spanishLabel: "Spanish interface",
-    databaseButton: "Public Database",
+    databaseButton: "Research Archive",
     recordButton: "Record Dream",
     eyebrow: "Account Entry",
-    title: "Access the Collective Dream Database",
+    title: "Access the Collective Dream Observatory",
     subtitle:
-      "Open your private observation console with email, Google, or guest access.",
+      "Open your private dream console, save preferred language, and contribute to the archive with email, Google, or guest access.",
     loginTab: "Login",
     signupTab: "Sign up",
     emailLabel: "Email",
@@ -58,21 +58,21 @@ const AUTH_COPY = {
     networkError: "The account connection is offline. Try again soon.",
     genericAuthError: "Login could not be confirmed. Try again or use guest access.",
     signalA: "Private notes",
-    signalB: "Saved records",
+    signalB: "Research archive",
     signalC: "Language memory",
   },
   zh: {
-    documentTitle: "進入集體夢境資料庫",
+    documentTitle: "進入集體夢境觀測站",
     languageLabel: "切換介面語言",
     englishLabel: "英文介面",
     chineseLabel: "繁體中文介面",
     spanishLabel: "西班牙文介面",
-    databaseButton: "公開資料庫",
+    databaseButton: "研究檔案庫",
     recordButton: "記錄夢境",
     eyebrow: "帳戶入口",
-    title: "進入集體夢境資料庫",
+    title: "進入集體夢境觀測站",
     subtitle:
-      "開啟你的私人觀測終端，可使用電子郵件、Google 或訪客模式。",
+      "開啟你的私人夢境終端、保存偏好語言，並可用電子郵件、Google 或訪客模式參與檔案庫。",
     loginTab: "登入",
     signupTab: "註冊",
     emailLabel: "電子郵件",
@@ -106,21 +106,21 @@ const AUTH_COPY = {
     networkError: "帳戶連線暫時離線，請稍後再試。",
     genericAuthError: "無法完成登入，請重試或改用訪客模式。",
     signalA: "私人筆記",
-    signalB: "已存紀錄",
+    signalB: "研究檔案",
     signalC: "語言記憶",
   },
   es: {
-    documentTitle: "Acceso a la Base de Sueños Colectivos",
+    documentTitle: "Acceso al Observatorio Colectivo de Sueños",
     languageLabel: "Cambiar idioma de la interfaz",
     englishLabel: "Interfaz en inglés",
     chineseLabel: "Interfaz en chino tradicional",
     spanishLabel: "Interfaz en español",
-    databaseButton: "Base pública",
+    databaseButton: "Archivo de investigación",
     recordButton: "Registrar sueño",
     eyebrow: "Entrada de cuenta",
-    title: "Accede a la Base de Sueños Colectivos",
+    title: "Accede al Observatorio Colectivo de Sueños",
     subtitle:
-      "Abre tu consola privada con correo, Google o acceso invitado.",
+      "Abre tu consola privada, guarda tu idioma preferido y contribuye al archivo con correo, Google o acceso invitado.",
     loginTab: "Iniciar sesión",
     signupTab: "Crear cuenta",
     emailLabel: "Correo",
@@ -155,7 +155,7 @@ const AUTH_COPY = {
     networkError: "La conexión de cuenta está desconectada. Inténtalo de nuevo pronto.",
     genericAuthError: "No se pudo completar el inicio. Intenta otra vez o entra como invitado.",
     signalA: "Notas privadas",
-    signalB: "Registros guardados",
+    signalB: "Archivo de investigación",
     signalC: "Memoria de idioma",
   },
 };
@@ -291,7 +291,7 @@ export default function AuthPanel({
 
             <span className="hidden text-left sm:block">
               <span className="block font-mono text-xs uppercase tracking-[0.36em] text-cyan-200/80">
-                CDDB
+                CDO
               </span>
               <span className="block text-sm font-semibold text-zinc-100">
                 {copy.databaseButton}

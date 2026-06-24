@@ -35,7 +35,7 @@ const DASHBOARD_COPY = {
     englishLabel: "English interface",
     chineseLabel: "Traditional Chinese interface",
     spanishLabel: "Spanish interface",
-    databaseButton: "Public Database",
+    databaseButton: "Research Archive",
     recordButton: "Record Dream",
     consoleLabel: "Account Console",
     memberSince: "Member since",
@@ -105,7 +105,7 @@ const DASHBOARD_COPY = {
     englishLabel: "英文介面",
     chineseLabel: "繁體中文介面",
     spanishLabel: "西班牙文介面",
-    databaseButton: "公開資料庫",
+    databaseButton: "研究檔案庫",
     recordButton: "記錄夢境",
     consoleLabel: "帳戶終端",
     memberSince: "會員起始日",
@@ -174,7 +174,7 @@ const DASHBOARD_COPY = {
     englishLabel: "Interfaz en inglés",
     chineseLabel: "Interfaz en chino tradicional",
     spanishLabel: "Interfaz en español",
-    databaseButton: "Base pública",
+    databaseButton: "Archivo de investigación",
     recordButton: "Registrar sueño",
     consoleLabel: "Consola de cuenta",
     memberSince: "Miembro desde",
@@ -486,7 +486,7 @@ export default function UserDashboard({
             </span>
             <span className="min-w-0">
               <span className="block font-mono text-xs uppercase tracking-[0.36em] text-cyan-200/80">
-                CDDB
+                CDO
               </span>
               <span className="block truncate text-sm font-semibold text-zinc-100">
                 {copy.databaseButton}

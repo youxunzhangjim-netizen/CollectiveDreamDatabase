@@ -78,17 +78,18 @@ const CATEGORY_DOT_STYLES = {
 const DEFAULT_TAGS = Object.values(RECORD_TAGS);
 const PAGE_SIZE = 20;
 const REPORT_SUGGESTION_MAILTO =
-  "mailto:collectivedreamdatabase@gmail.com?subject=Collective%20Dream%20Database%20Report%20or%20Suggestion";
+  "mailto:collectivedreamdatabase@gmail.com?subject=Collective%20Dream%20Observatory%20Report%20or%20Suggestion";
 
 const UI_COPY = {
   en: {
-    documentTitle: "Collective Dream Database",
-    homeLabel: "Collective Dream Database home",
-    terminalName: "Dream Observation Terminal",
-    mobileDatabase: "Database",
+    documentTitle: "Collective Dream Observatory",
+    homeLabel: "Collective Dream Observatory home",
+    terminalName: "Collective Dream Observatory",
+    mobileDatabase: "Archive",
     mobileSubmit: "Submit",
-    globalDatabase: "Global Database",
-    submitObservation: "Submit Observation",
+    mobileReportSuggestion: "Report",
+    globalDatabase: "Research Archive",
+    submitObservation: "Record Dream",
     loginButton: "Login",
     accountButton: "Account",
     reportSuggestion: "Report / Suggestion",
@@ -98,10 +99,44 @@ const UI_COPY = {
     englishLabel: "English interface",
     chineseLabel: "Traditional Chinese interface",
     spanishLabel: "Spanish interface",
-    heroKicker: "Classified Research Interface // Collective Dream Logs",
-    heroTitle: "Collective Dream Database",
+    heroKicker: "Private dream recording // Anonymous sharing // Research archive",
+    heroTitle: "Collective Dream Observatory",
     heroText:
-      "Anonymous dream observations are normalized into an ontology of environments, entities, and anomalies. The interface is built for rapid visual scanning while preserving the sober structure of a research archive.",
+      "Record your dreams. Explore the world's imagination.",
+    heroSubtext:
+      "A global platform where people can record dreams privately, share them anonymously, read unusual dreams from around the world, and contribute to collective dream statistics. Discover strange images, recurring symbols, emotional patterns, and creative visions across cultures — not as fixed meanings, but as living traces of human imagination.",
+    audienceKicker: "Two ways to enter",
+    audienceTitle: "A home for everyday dreamers and professional researchers",
+    audienceText:
+      "The Observatory is built for quick morning notes, strange public reading, personal pattern discovery, and careful cross-cultural research.",
+    dreamerAudienceTitle: "For everyday dreamers",
+    dreamerAudienceText:
+      "Record dreams fast, keep them private, share anonymously when you want, explore unusual dreams worldwide, and watch your own symbols and moods gather into a personal dream map.",
+    researcherAudienceTitle: "For researchers",
+    researcherAudienceText:
+      "Use structured data, tags, filters, aggregated statistics, sample size, methodology notes, cross-cultural comparison, and export-ready archive views.",
+    homeSections: [
+      {
+        title: "Record",
+        text: "Capture dream words quickly after waking, with optional dates, tags, privacy choices, and images.",
+      },
+      {
+        title: "Explore",
+        text: "Read strange, beautiful, unsettling, and ordinary dreams from around the world without exposing private identity.",
+      },
+      {
+        title: "Patterns",
+        text: "Follow recurring emotions, settings, symbols, perspectives, weather, eras, and dream types across the collective archive.",
+      },
+      {
+        title: "My Dream Map",
+        text: "Signed-in dreamers can review their own uploaded dreams and see personal patterns emerge over time.",
+      },
+      {
+        title: "Research Archive",
+        text: "The Collective Dream Database module supports tags, filters, aggregate statistics, methodology, sample size awareness, and future export.",
+      },
+    ],
     accessLabel: "Viewing",
     accessValue: "Anonymous",
     datasetLabel: "Dataset",
@@ -109,7 +144,7 @@ const UI_COPY = {
     anomalyFiltersLabel: "Anomaly filters",
     loadStates: {
       loading: "Connecting to live archive",
-      live: "Live archive dataset",
+      live: "Live research archive",
       fallback: "Live archive unavailable",
       empty: "No public records yet",
     },
@@ -118,7 +153,7 @@ const UI_COPY = {
     anomalySearch: "Emotion tagging",
     ontologyConsistency: "Psychological observables",
     analysisMarkerCoverage: "Analysis markers",
-    databaseNote: "Research note",
+    databaseNote: "Research archive note",
     databaseNoteText:
       "Tags help researchers compare feeling, setting, behavior, and recurring dream patterns.",
     schemaNote: ({ total, emotionCount, psychologyCount, analysisCount }) =>
@@ -141,7 +176,7 @@ const UI_COPY = {
     noMatchesText:
       "Remove a tag, switch from match all to match any, or broaden the search query to restore the signal.",
     noRecordsTitle: "No public dream records yet",
-    noRecordsText: "The global database is ready for the first real submitted record.",
+    noRecordsText: "The Collective Dream Database research archive is ready for the first real submitted record.",
     generatedImage: "Generated Image",
     generatedImageAlt: "Generated visual for dream titled",
     visualHash: "Visual hash",
@@ -158,9 +193,9 @@ const UI_COPY = {
     denyAdult: "Not now",
     imageHiddenForGuest: "Images are hidden for guests",
     wordsOnlyForGuest: "Words-only guest view",
-    researchTitle: "Collective Research Signals",
+    researchTitle: "Research Archive Signals",
     researchText:
-      "A live snapshot for collective analysis: emotion labels, language origin, maturity gates, and coherence patterns.",
+      "A live snapshot for collective analysis: structured tags, filters, language origin, maturity gates, sample shape, and recurring emotional patterns.",
     researchTotal: "Total records",
     researchVisible: "Visible now",
     researchAdultRestricted: "Mature gated",
@@ -187,13 +222,14 @@ const UI_COPY = {
     nextPage: "Next",
   },
   zh: {
-    documentTitle: "集體夢境資料庫",
-    homeLabel: "集體夢境資料庫首頁",
-    terminalName: "夢境觀測終端",
-    mobileDatabase: "資料庫",
+    documentTitle: "集體夢境觀測站",
+    homeLabel: "集體夢境觀測站首頁",
+    terminalName: "集體夢境觀測站",
+    mobileDatabase: "檔案庫",
     mobileSubmit: "提交",
-    globalDatabase: "全球資料庫",
-    submitObservation: "提交觀測",
+    mobileReportSuggestion: "回報",
+    globalDatabase: "研究檔案庫",
+    submitObservation: "記錄夢境",
     loginButton: "登入",
     accountButton: "帳戶",
     reportSuggestion: "回報／建議",
@@ -203,10 +239,44 @@ const UI_COPY = {
     englishLabel: "英文介面",
     chineseLabel: "繁體中文介面",
     spanishLabel: "西班牙文介面",
-    heroKicker: "機密研究介面 // 集體夢境紀錄",
-    heroTitle: "集體夢境資料庫",
+    heroKicker: "私人夢境記錄 // 匿名分享 // 研究檔案庫",
+    heroTitle: "集體夢境觀測站",
     heroText:
-      "匿名夢境觀測會被整理成環境、實體與異常現象的本體分類。此介面保留研究檔案的嚴謹結構，同時方便快速視覺掃描。",
+      "記錄你的夢，探索世界的想像。",
+    heroSubtext:
+      "一個全球夢境平台。人們可以在這裡私人記錄夢境、匿名分享夢境、閱讀來自世界各地的奇異夢境，並讓夢加入集體統計。探索跨文化的奇異影像、重複符號、情緒模式與創造性幻象——不是為了把夢固定成單一解釋，而是為了觀測人類想像留下的活生生痕跡。",
+    audienceKicker: "兩種進入方式",
+    audienceTitle: "同時為一般做夢者與專業研究者設計",
+    audienceText:
+      "觀測站支援醒來後快速記錄、匿名閱讀、個人模式整理，也支援可被檢視的跨文化研究流程。",
+    dreamerAudienceTitle: "給一般做夢者",
+    dreamerAudienceText:
+      "快速記錄夢境、保留私人草稿、選擇匿名分享、閱讀世界各地的奇異夢境，並逐步看見自己的符號、情緒與場景模式。",
+    researcherAudienceTitle: "給研究者",
+    researcherAudienceText:
+      "使用結構化資料、標籤、篩選、整體統計、樣本數、研究方法註記、跨文化比較與未來資料匯出視角。",
+    homeSections: [
+      {
+        title: "記錄",
+        text: "醒來後快速寫下夢境文字，並可選擇日期、標籤、公開身份、隱私與圖片。",
+      },
+      {
+        title: "探索",
+        text: "閱讀來自世界各地奇異、美麗、不安或日常的夢境，同時保護記錄者的私人身份。",
+      },
+      {
+        title: "集體模式",
+        text: "觀測情緒、場景、符號、視角、天氣、時代與夢境類型在集體檔案中的重複與差異。",
+      },
+      {
+        title: "我的夢境地圖",
+        text: "登入後可回看自己上傳的夢，讓個人的夢境模式隨時間慢慢浮現。",
+      },
+      {
+        title: "研究檔案庫",
+        text: "「集體夢境資料庫」模組支援標籤、篩選、整體統計、研究方法、樣本數意識與未來資料匯出。",
+      },
+    ],
     accessLabel: "瀏覽",
     accessValue: "匿名",
     datasetLabel: "資料集",
@@ -214,7 +284,7 @@ const UI_COPY = {
     anomalyFiltersLabel: "異常篩選",
     loadStates: {
       loading: "連線至即時檔案庫",
-      live: "即時檔案庫資料集",
+      live: "即時研究檔案庫",
       fallback: "即時檔案庫無法使用",
       empty: "尚無公開紀錄",
     },
@@ -223,7 +293,7 @@ const UI_COPY = {
     anomalySearch: "情緒標記",
     ontologyConsistency: "心理觀察項",
     analysisMarkerCoverage: "夢境分析標記",
-    databaseNote: "研究備註",
+    databaseNote: "研究檔案庫備註",
     databaseNoteText:
       "標籤可以協助比較感受、場景、行為與反覆出現的夢境模式。",
     schemaNote: ({ total, emotionCount, psychologyCount, analysisCount }) =>
@@ -245,7 +315,7 @@ const UI_COPY = {
     noMatchesTitle: "沒有相符的夢境觀測",
     noMatchesText: "移除標籤、改用任一符合，或放寬搜尋字詞以恢復訊號。",
     noRecordsTitle: "尚無公開夢境紀錄",
-    noRecordsText: "全球資料庫已準備好接收第一筆真實提交的紀錄。",
+    noRecordsText: "「集體夢境資料庫」研究檔案庫已準備好接收第一筆真實提交的紀錄。",
     generatedImage: "生成影像",
     generatedImageAlt: "夢境生成視覺，標題為",
     visualHash: "視覺雜湊",
@@ -260,8 +330,8 @@ const UI_COPY = {
     denyAdult: "暫不閱讀",
     imageHiddenForGuest: "訪客不顯示圖片",
     wordsOnlyForGuest: "訪客文字模式",
-    researchTitle: "集體研究訊號",
-    researchText: "供集體分析使用的即時概覽：情緒標籤、原始語言、成人內容門檻與一致性模式。",
+    researchTitle: "研究檔案庫訊號",
+    researchText: "供集體分析使用的即時概覽：結構化標籤、篩選、原始語言、成人內容門檻、樣本形狀與重複情緒模式。",
     researchTotal: "總紀錄",
     researchVisible: "目前可見",
     researchAdultRestricted: "成人門檻",
@@ -288,13 +358,14 @@ const UI_COPY = {
     nextPage: "下一頁",
   },
   es: {
-    documentTitle: "Base de Sueños Colectivos",
-    homeLabel: "Inicio de la Base de Sueños Colectivos",
-    terminalName: "Terminal de Observación de Sueños",
-    mobileDatabase: "Base",
+    documentTitle: "Observatorio Colectivo de Sueños",
+    homeLabel: "Inicio del Observatorio Colectivo de Sueños",
+    terminalName: "Observatorio Colectivo de Sueños",
+    mobileDatabase: "Archivo",
     mobileSubmit: "Enviar",
-    globalDatabase: "Base global",
-    submitObservation: "Enviar observación",
+    mobileReportSuggestion: "Reporte",
+    globalDatabase: "Archivo de investigación",
+    submitObservation: "Registrar sueño",
     loginButton: "Iniciar sesión",
     accountButton: "Cuenta",
     reportSuggestion: "Reporte / sugerencia",
@@ -304,10 +375,44 @@ const UI_COPY = {
     englishLabel: "Interfaz en inglés",
     chineseLabel: "Interfaz en chino tradicional",
     spanishLabel: "Interfaz en español",
-    heroKicker: "Interfaz de investigación clasificada // Registros colectivos",
-    heroTitle: "Base de Sueños Colectivos",
+    heroKicker: "Registro privado // Intercambio anónimo // Archivo de investigación",
+    heroTitle: "Observatorio Colectivo de Sueños",
     heroText:
-      "Las observaciones anónimas de sueños se organizan en una ontología de entornos, entidades y anomalías. La interfaz permite una lectura visual rápida sin perder la estructura sobria de un archivo de investigación.",
+      "Registra tus sueños. Explora la imaginación del mundo.",
+    heroSubtext:
+      "Una plataforma global donde las personas pueden registrar sueños en privado, compartirlos de forma anónima, leer sueños inusuales de todo el mundo y contribuir a estadísticas colectivas. Descubre imágenes extrañas, símbolos recurrentes, patrones emocionales y visiones creativas entre culturas — no como significados fijos, sino como huellas vivas de la imaginación humana.",
+    audienceKicker: "Dos formas de entrar",
+    audienceTitle: "Diseñado para soñadores cotidianos e investigadores profesionales",
+    audienceText:
+      "El Observatorio sirve para notas rápidas al despertar, lectura anónima, patrones personales y análisis intercultural con metodología clara.",
+    dreamerAudienceTitle: "Para soñadores cotidianos",
+    dreamerAudienceText:
+      "Registra sueños con facilidad, mantenlos privados, compártelos de forma anónima, lee sueños extraños del mundo y observa cómo aparecen tus propios símbolos y estados de ánimo.",
+    researcherAudienceTitle: "Para investigadores",
+    researcherAudienceText:
+      "Trabaja con datos estructurados, etiquetas, filtros, estadísticas agregadas, tamaño de muestra, notas metodológicas, análisis intercultural y vistas preparadas para exportación.",
+    homeSections: [
+      {
+        title: "Registrar",
+        text: "Captura las palabras del sueño al despertar, con fechas, etiquetas, privacidad, identidad pública e imágenes opcionales.",
+      },
+      {
+        title: "Explorar",
+        text: "Lee sueños extraños, bellos, inquietantes u ordinarios de todo el mundo sin exponer identidades privadas.",
+      },
+      {
+        title: "Patrones",
+        text: "Observa emociones, escenarios, símbolos, perspectivas, clima, épocas y tipos de sueño en el archivo colectivo.",
+      },
+      {
+        title: "Mi mapa de sueños",
+        text: "Con una cuenta, revisa tus propios sueños subidos y descubre patrones personales a lo largo del tiempo.",
+      },
+      {
+        title: "Archivo de investigación",
+        text: "El módulo Base de Datos Colectiva de Sueños admite etiquetas, filtros, estadísticas, metodología, tamaño de muestra y futura exportación.",
+      },
+    ],
     accessLabel: "Vista",
     accessValue: "Anónimo",
     datasetLabel: "Datos",
@@ -315,7 +420,7 @@ const UI_COPY = {
     anomalyFiltersLabel: "Filtros de anomalía",
     loadStates: {
       loading: "Conectando con el archivo activo",
-      live: "Archivo activo",
+      live: "Archivo de investigación activo",
       fallback: "Archivo activo no disponible",
       empty: "Aún no hay registros públicos",
     },
@@ -325,7 +430,7 @@ const UI_COPY = {
     anomalySearch: "Etiquetado emocional",
     ontologyConsistency: "Observables psicológicos",
     analysisMarkerCoverage: "Marcadores de análisis",
-    databaseNote: "Nota de investigación",
+    databaseNote: "Nota del archivo de investigación",
     databaseNoteText:
       "Las etiquetas ayudan a comparar sentimientos, escenas, conductas y patrones recurrentes.",
     schemaNote: ({ total, emotionCount, psychologyCount, analysisCount }) =>
@@ -348,7 +453,7 @@ const UI_COPY = {
     noMatchesText:
       "Quita una etiqueta, cambia a cualquiera o amplía la búsqueda para recuperar la señal.",
     noRecordsTitle: "Aún no hay registros públicos",
-    noRecordsText: "La base global está lista para el primer registro real enviado.",
+    noRecordsText: "La Base de Datos Colectiva de Sueños está lista para el primer registro real enviado.",
     generatedImage: "Imagen generada",
     generatedImageAlt: "Visual generado para el sueño titulado",
     visualHash: "Hash visual",
@@ -365,9 +470,9 @@ const UI_COPY = {
     denyAdult: "Ahora no",
     imageHiddenForGuest: "Las imágenes están ocultas para invitados",
     wordsOnlyForGuest: "Vista de invitado solo texto",
-    researchTitle: "Señales de Investigación Colectiva",
+    researchTitle: "Señales del archivo de investigación",
     researchText:
-      "Una vista para análisis colectivo: emociones, idioma original, límites de madurez y patrones de coherencia.",
+      "Una vista para análisis colectivo: etiquetas estructuradas, filtros, idioma original, límites de madurez, forma de muestra y patrones emocionales recurrentes.",
     researchTotal: "Registros",
     researchVisible: "Visibles ahora",
     researchAdultRestricted: "Madurez filtrada",
@@ -721,6 +826,8 @@ export default function CollectiveDreamDashboard({
           schemaStats={schemaStats}
           copy={copy}
         />
+
+        <HomePathways copy={copy} />
 
         <ResearchPanel stats={researchStats} copy={copy} />
 
@@ -1158,7 +1265,7 @@ function TopNav({
 
             <span className="min-w-0">
               <span className="block font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/80 sm:tracking-[0.38em]">
-                CDDB
+                CDO
               </span>
               <span className="hidden truncate text-sm font-semibold text-zinc-100 min-[420px]:block">
                 {copy.terminalName}
@@ -1180,7 +1287,7 @@ function TopNav({
             {accountLabel}
           </NavButton>
           <NavButton onClick={openReportSuggestion}>
-            {copy.reportSuggestion}
+            {copy.mobileReportSuggestion}
           </NavButton>
         </div>
 
@@ -1250,6 +1357,11 @@ function HeroPanel({
           <p className="mt-5 max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">
             {copy.heroText}
           </p>
+          {copy.heroSubtext && (
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-400">
+              {copy.heroSubtext}
+            </p>
+          )}
 
           <div className="mt-8 flex flex-wrap gap-3">
             <StatusPill label={copy.accessLabel} value={copy.accessValue} />
@@ -1296,6 +1408,69 @@ function HeroPanel({
         </aside>
       </div>
     </header>
+  );
+}
+
+function HomePathways({ copy }) {
+  const sections = copy.homeSections || [];
+
+  return (
+    <section className="mb-6 rounded-3xl border border-cyan-300/15 bg-zinc-950/65 p-4 shadow-[0_12px_50px_rgba(0,0,0,.28)] backdrop-blur sm:p-6">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
+            {copy.audienceKicker}
+          </p>
+          <h2 className="mt-3 max-w-3xl text-2xl font-semibold text-zinc-50 sm:text-3xl">
+            {copy.audienceTitle}
+          </h2>
+        </div>
+        <p className="max-w-2xl text-sm leading-6 text-zinc-400">
+          {copy.audienceText}
+        </p>
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <AudienceCard
+          title={copy.dreamerAudienceTitle}
+          text={copy.dreamerAudienceText}
+          accent="cyan"
+        />
+        <AudienceCard
+          title={copy.researcherAudienceTitle}
+          text={copy.researcherAudienceText}
+          accent="fuchsia"
+        />
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {sections.map((section) => (
+          <div
+            key={section.title}
+            className="rounded-2xl border border-white/10 bg-black/30 p-4 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-200/70">
+              {section.title}
+            </p>
+            <p className="mt-3 text-sm leading-6 text-zinc-400">{section.text}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AudienceCard({ title, text, accent }) {
+  const accentClass =
+    accent === "fuchsia"
+      ? "border-fuchsia-300/20 bg-fuchsia-300/5"
+      : "border-cyan-300/20 bg-cyan-300/5";
+
+  return (
+    <article className={`rounded-2xl border p-5 ${accentClass}`}>
+      <h3 className="text-lg font-semibold text-zinc-50">{title}</h3>
+      <p className="mt-3 text-sm leading-7 text-zinc-300">{text}</p>
+    </article>
   );
 }
 

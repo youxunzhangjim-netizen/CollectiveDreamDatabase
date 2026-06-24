@@ -1,7 +1,7 @@
 {
-  "name": "Collective Dream Database",
-  "short_name": "CDDB",
-  "description": "A fast dream recording and collective research archive.",
+  "name": "Collective Dream Observatory",
+  "short_name": "CDO",
+  "description": "A private dream recorder, anonymous sharing space, and collective research archive.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

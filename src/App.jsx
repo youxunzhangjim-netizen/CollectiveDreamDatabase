@@ -231,10 +231,16 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
       : language === "es"
         ? { label: "Cambiar apariencia", morning: "Día", night: "Noche" }
         : { label: "Switch appearance", morning: "Day", night: "Night" };
+  const morningMode = appearance === "morning";
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-50 flex items-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-1 shadow-[0_0_24px_rgba(34,211,238,.16)] backdrop-blur"
+      className={[
+        "fixed bottom-3 left-3 z-50 flex items-center overflow-hidden rounded-xl border p-1 shadow-[0_0_24px_rgba(34,211,238,.16)] backdrop-blur sm:bottom-4 sm:left-4",
+        morningMode
+          ? "border-cyan-700/20 bg-white/75"
+          : "border-cyan-300/30 bg-cyan-300/10",
+      ].join(" ")}
       role="group"
       aria-label={copy.label}
     >
@@ -249,10 +255,14 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
             title={option === "morning" ? copy.morning : copy.night}
             onClick={() => setAppearance(option)}
             className={[
-              "min-h-8 min-w-14 rounded-lg px-3 font-mono text-xs font-bold transition",
+              "min-h-8 min-w-14 rounded-lg px-3 font-mono text-xs font-bold transition sm:min-w-16",
               active
-                ? "bg-cyan-200 text-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.25)]"
-                : "text-cyan-100 hover:bg-white/10 hover:text-cyan-50",
+                ? option === "night"
+                  ? "bg-zinc-950 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,.22)]"
+                  : "bg-cyan-200 text-sky-950 shadow-[0_0_18px_rgba(34,211,238,.25)]"
+                : morningMode
+                  ? "text-slate-600 hover:bg-cyan-100/70 hover:text-sky-800"
+                  : "text-cyan-100 hover:bg-white/10 hover:text-cyan-50",
             ].join(" ")}
           >
             {option === "morning" ? copy.morning : copy.night}

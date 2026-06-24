@@ -3,29 +3,29 @@ import { useState } from "react";
 const FOOTER_COPY = {
   en: {
     license:
-      "All dream records are shared under the Creative Commons Attribution-NonCommercial (CC BY-NC) License unless otherwise specified by the author.",
+      "Collective Dream Observatory hosts the Collective Dream Database research archive. Dream records are shared under the Creative Commons Attribution-NonCommercial (CC BY-NC) License unless otherwise specified by the author.",
     terms: "Terms & Disclaimer",
     modalTitle: "Terms & Disclaimer",
     modalText:
-      "Collective Dream Database stores user-generated dream records for public reading and research context. The platform is not responsible for user-generated content, private information submitted by users, or interpretations made from the records.",
+      "Collective Dream Observatory stores user-generated dream records for private reflection, anonymous public reading, and research context. The platform is not responsible for user-generated content, private information submitted by users, or interpretations made from the records.",
     close: "Close",
   },
   zh: {
     license:
-      "除非作者另有指定，所有夢境紀錄皆以 Creative Commons Attribution-NonCommercial (CC BY-NC) 授權分享。",
+      "集體夢境觀測站承載「集體夢境資料庫」研究檔案模組。除非作者另有指定，所有夢境紀錄皆以 Creative Commons Attribution-NonCommercial (CC BY-NC) 授權分享。",
     terms: "條款與免責聲明",
     modalTitle: "條款與免責聲明",
     modalText:
-      "集體夢境資料庫儲存使用者產生的夢境紀錄，供公開閱讀與研究脈絡使用。本平台不對使用者產生內容、使用者提交的私人資訊，或他人對紀錄做出的詮釋負責。",
+      "集體夢境觀測站儲存使用者產生的夢境紀錄，供私人回顧、匿名公開閱讀與研究脈絡使用。本平台不對使用者產生內容、使用者提交的私人資訊，或他人對紀錄做出的詮釋負責。",
     close: "關閉",
   },
   es: {
     license:
-      "Todos los registros de sueños se comparten bajo la licencia Creative Commons Attribution-NonCommercial (CC BY-NC), salvo que el autor especifique lo contrario.",
+      "El Observatorio Colectivo de Sueños aloja la Base de Datos Colectiva de Sueños como archivo de investigación. Los registros se comparten bajo la licencia Creative Commons Attribution-NonCommercial (CC BY-NC), salvo que el autor especifique lo contrario.",
     terms: "Términos y descargo",
     modalTitle: "Términos y descargo",
     modalText:
-      "Collective Dream Database almacena registros de sueños generados por usuarios para lectura pública y contexto de investigación. La plataforma no se responsabiliza por contenido generado por usuarios, información privada enviada por usuarios ni interpretaciones realizadas a partir de los registros.",
+      "El Observatorio Colectivo de Sueños almacena registros generados por usuarios para reflexión privada, lectura pública anónima y contexto de investigación. La plataforma no se responsabiliza por contenido generado por usuarios, información privada enviada por usuarios ni interpretaciones realizadas a partir de los registros.",
     close: "Cerrar",
   },
 };

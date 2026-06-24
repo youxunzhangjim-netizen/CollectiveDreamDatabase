@@ -37,7 +37,7 @@ const RECORD_COPY = {
     englishLabel: "English interface",
     chineseLabel: "Traditional Chinese interface",
     spanishLabel: "Spanish interface",
-    database: "Database",
+    database: "Research Archive",
     account: "Account",
     guest: "Guest",
     accountLinked: "Linked account",
@@ -141,7 +141,7 @@ const RECORD_COPY = {
     englishLabel: "英文介面",
     chineseLabel: "繁體中文介面",
     spanishLabel: "西班牙文介面",
-    database: "資料庫",
+    database: "研究檔案庫",
     account: "帳戶",
     guest: "訪客",
     accountLinked: "已連結帳戶",
@@ -236,7 +236,7 @@ const RECORD_COPY = {
     englishLabel: "Interfaz en inglés",
     chineseLabel: "Interfaz en chino tradicional",
     spanishLabel: "Interfaz en español",
-    database: "Base",
+    database: "Archivo",
     account: "Cuenta",
     guest: "Invitado",
     accountLinked: "Cuenta vinculada",
@@ -660,7 +660,7 @@ export default function RecordDreamPage({
             </span>
             <span className="min-w-0">
               <span className="block font-mono text-xs uppercase tracking-[0.36em] text-cyan-200/80">
-                CDDB
+                CDO
               </span>
               <span className="block truncate text-sm font-semibold text-zinc-100">
                 {copy.database}
