@@ -954,17 +954,17 @@ function getLanguageSpecificValue(record, field, language) {
   const normalizedLanguage = normalizeLanguage(language);
   const fieldMap = {
     title: {
-      en: ["title", "title_en", "titleEn"],
+      en: ["title_en", "titleEn", "title"],
       zh: ["title_zh", "titleZh"],
       es: ["title_es", "titleEs"],
     },
     excerpt: {
-      en: ["excerpt", "excerpt_en", "excerptEn"],
+      en: ["excerpt_en", "excerptEn", "excerpt"],
       zh: ["excerpt_zh", "excerptZh"],
       es: ["excerpt_es", "excerptEs"],
     },
     dream_text: {
-      en: ["dream_text", "dreamText", "text", "text_en", "textEn"],
+      en: ["dream_text_en", "text_en", "textEn", "dream_text", "dreamText", "text"],
       zh: ["dream_text_zh", "dreamTextZh", "textZh", "text_zh"],
       es: ["dream_text_es", "dreamTextEs", "textEs", "text_es"],
     },

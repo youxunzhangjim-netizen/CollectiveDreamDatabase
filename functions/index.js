@@ -23,6 +23,19 @@ const GOOGLE_LANGUAGE_CODES = {
   es: "es",
 };
 const TRANSLATION_PROVIDER = "google-cloud-translate-v2";
+const TRANSLATION_ENGINE_VERSION = 2;
+const TRANSLATION_GLOSSARY_VERSION = 1;
+const TRANSLATION_PLACEHOLDER_REPAIR_VERSION = 1;
+const TRANSLATION_GLOSSARY = [
+  {
+    sourceLanguage: "zh",
+    source: "佛地魔",
+    targets: {
+      en: "Voldemort",
+      es: "Voldemort",
+    },
+  },
+];
 const CUSTOM_TAG_CATEGORIES = new Set([
   "Environment",
   "Entities",
@@ -264,8 +277,14 @@ async function translateRecordData({ recordId, record, ref, force = false }) {
   await ref.set(
     {
       translations,
+      ...buildTranslatedLanguageFields(translations),
+      translationState: "ready",
       translationMeta: {
         provider: TRANSLATION_PROVIDER,
+        status: "ready",
+        engineVersion: TRANSLATION_ENGINE_VERSION,
+        glossaryVersion: TRANSLATION_GLOSSARY_VERSION,
+        placeholderRepairVersion: TRANSLATION_PLACEHOLDER_REPAIR_VERSION,
         sourceHash,
         sourceLanguage: original.language,
         languages: SUPPORTED_LANGUAGES,
@@ -395,12 +414,12 @@ function getFirstPresentString(record, keys) {
 function getLanguageFieldKeys(field, language) {
   const fields = {
     title: {
-      en: ["title", "title_en", "titleEn"],
+      en: ["title_en", "titleEn", "title"],
       zh: ["title_zh", "titleZh"],
       es: ["title_es", "titleEs"],
     },
     text: {
-      en: ["dream_text", "text", "text_en", "textEn"],
+      en: ["dream_text_en", "text_en", "textEn", "dream_text", "text"],
       zh: ["dream_text_zh", "textZh", "text_zh"],
       es: ["dream_text_es", "textEs", "text_es"],
     },
@@ -450,6 +469,8 @@ function makeSourceHash(original) {
     .update(
       JSON.stringify({
         provider: TRANSLATION_PROVIDER,
+        engineVersion: TRANSLATION_ENGINE_VERSION,
+        glossaryVersion: TRANSLATION_GLOSSARY_VERSION,
         languages: SUPPORTED_LANGUAGES,
         language: original.language,
         title: original.title,
@@ -460,14 +481,89 @@ function makeSourceHash(original) {
 }
 
 function needsTranslation(record, sourceHash, existingTranslations) {
+  if (record.translationState === "queued" || record.translationMeta?.status === "queued") {
+    return true;
+  }
+
   if (record.translationMeta?.sourceHash !== sourceHash) {
     return true;
   }
 
+  const original = getOriginalDreamFields(record);
+
   return SUPPORTED_LANGUAGES.some((language) => {
     const translation = existingTranslations[language] || {};
-    return !translation.text && !translation.dream_text;
+    const translatedText = translation.text || translation.dream_text || "";
+
+    if (!translatedText) return true;
+
+    return (
+      record.translationMeta?.placeholderRepairVersion !==
+        TRANSLATION_PLACEHOLDER_REPAIR_VERSION &&
+      language !== original.language &&
+      isSameMeaninglessPlaceholder(translatedText, original.text)
+    );
   });
+}
+
+function isSameMeaninglessPlaceholder(translatedText, sourceText) {
+  return normalizeComparableText(translatedText) === normalizeComparableText(sourceText);
+}
+
+function normalizeComparableText(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function buildTranslatedLanguageFields(translations) {
+  const fields = {};
+
+  SUPPORTED_LANGUAGES.forEach((language) => {
+    const translation = translations[language] || {};
+    const title = translation.title || "";
+    const text = translation.text || translation.dream_text || "";
+    const excerpt = translation.excerpt || createExcerpt(text);
+
+    if (language === "zh") {
+      Object.assign(fields, {
+        titleZh: title,
+        title_zh: title,
+        textZh: text,
+        text_zh: text,
+        dream_text_zh: text,
+        excerptZh: excerpt,
+        excerpt_zh: excerpt,
+      });
+      return;
+    }
+
+    if (language === "es") {
+      Object.assign(fields, {
+        titleEs: title,
+        title_es: title,
+        textEs: text,
+        text_es: text,
+        dream_text_es: text,
+        excerptEs: excerpt,
+        excerpt_es: excerpt,
+      });
+      return;
+    }
+
+    Object.assign(fields, {
+      titleEn: title,
+      title_en: title,
+      textEn: text,
+      text_en: text,
+      dream_text_en: text,
+      excerptEn: excerpt,
+      excerpt_en: excerpt,
+    });
+  });
+
+  return fields;
 }
 
 async function translateDreamFields(original, targetLanguage) {
@@ -478,11 +574,11 @@ async function translateDreamFields(original, targetLanguage) {
 
   if (original.title) {
     keys.push("title");
-    values.push(original.title);
+    values.push(applyTranslationGlossary(original.title, original.language, targetLanguage));
   }
 
   keys.push("text");
-  values.push(original.text);
+  values.push(applyTranslationGlossary(original.text, original.language, targetLanguage));
 
   const [translatedValues] = await translate.translate(values, {
     from: sourceCode,
@@ -506,6 +602,17 @@ async function translateDreamFields(original, targetLanguage) {
     text,
     dream_text: text,
   };
+}
+
+function applyTranslationGlossary(value, sourceLanguage, targetLanguage) {
+  return TRANSLATION_GLOSSARY.reduce((current, entry) => {
+    if (entry.sourceLanguage !== sourceLanguage) return current;
+
+    const replacement = entry.targets[targetLanguage];
+    if (!replacement) return current;
+
+    return current.split(entry.source).join(replacement);
+  }, String(value || ""));
 }
 
 function createExcerpt(value) {

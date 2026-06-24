@@ -864,9 +864,11 @@ function normalizeRecordItem(item, index) {
     item.originalLanguage || item.original_language || "en"
   );
   const title = item.title || "";
+  const titleEn = item.titleEn || item.title_en || "";
   const titleZh = item.titleZh || item.title_zh || "";
   const titleEs = item.titleEs || item.title_es || "";
   const text = item.dream_text || item.text || item.excerpt || "";
+  const textEn = item.dream_text_en || item.textEn || item.text_en || item.excerpt_en || "";
   const textZh = item.dream_text_zh || item.textZh || item.excerpt_zh || item.excerpt || "";
   const textEs = item.dream_text_es || item.textEs || item.excerpt_es || item.excerpt || "";
   const images = normalizeDreamImages(item);
@@ -883,16 +885,26 @@ function normalizeRecordItem(item, index) {
     originalTitle:
       item.originalTitle ||
       item.original_title ||
-      getLanguageSpecificRecordValue({ title, titleZh, titleEs }, "title", originalLanguage),
+      getLanguageSpecificRecordValue(
+        { title, titleEn, titleZh, titleEs },
+        "title",
+        originalLanguage
+      ),
     originalText:
       item.originalText ||
       item.original_text ||
-      getLanguageSpecificRecordValue({ text, textZh, textEs }, "text", originalLanguage),
+      getLanguageSpecificRecordValue(
+        { text, textEn, textZh, textEs },
+        "text",
+        originalLanguage
+      ),
     translations: item.translations || {},
     title,
+    titleEn,
     titleZh,
     titleEs,
     text,
+    textEn,
     textZh,
     textEs,
     images,
@@ -951,12 +963,12 @@ function getLanguageSpecificRecordValue(record, field, language) {
   if (field === "title") {
     if (normalizedLanguage === "zh") return record.titleZh || record.title_zh || "";
     if (normalizedLanguage === "es") return record.titleEs || record.title_es || "";
-    return record.title || record.titleEn || record.title_en || "";
+    return record.titleEn || record.title_en || record.title || "";
   }
 
   if (normalizedLanguage === "zh") return record.textZh || record.text_zh || "";
   if (normalizedLanguage === "es") return record.textEs || record.text_es || "";
-  return record.text || record.textEn || record.text_en || "";
+  return record.textEn || record.text_en || record.dream_text_en || record.text || "";
 }
 
 function formatRecordDate(value) {
@@ -1202,11 +1214,8 @@ function TabButton({ active, children, onClick }) {
 function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locked = false }) {
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const style = ACCENT_STYLES[item.accent] || ACCENT_STYLES.cyan;
-  const title =
-    normalizeLanguage(language) === item.originalLanguage
-      ? item.originalTitle || item.title
-      : item.translations?.[language]?.title ||
-        (language === "zh" ? item.titleZh : language === "es" ? item.titleEs : item.title);
+  const title = getLocalizedItemTitle(item, language);
+  const body = getLocalizedItemText(item, language);
   const showThumbnail = Boolean(item.thumbnailUrl && !thumbnailFailed);
 
   return (
@@ -1242,6 +1251,11 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
           </span>
         </div>
         {title && <h2 className="text-xl font-semibold text-zinc-50">{title}</h2>}
+        {body && (
+          <p className="mt-3 line-clamp-3 text-sm leading-6 text-zinc-400">
+            {body}
+          </p>
+        )}
         <p className="mt-3 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
           {copy.originalLanguageLabel}: {getLanguageName(item.originalLanguage, language)}
         </p>
@@ -1265,6 +1279,39 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
         </button>
       </div>
     </article>
+  );
+}
+
+function getLocalizedItemTitle(item, language) {
+  const normalizedLanguage = normalizeLanguage(language);
+
+  if (normalizedLanguage === item.originalLanguage) {
+    return item.originalTitle || getLanguageSpecificRecordValue(item, "title", normalizedLanguage);
+  }
+
+  return (
+    item.translations?.[normalizedLanguage]?.title ||
+    getLanguageSpecificRecordValue(item, "title", normalizedLanguage) ||
+    item.originalTitle ||
+    item.title ||
+    ""
+  );
+}
+
+function getLocalizedItemText(item, language) {
+  const normalizedLanguage = normalizeLanguage(language);
+
+  if (normalizedLanguage === item.originalLanguage) {
+    return item.originalText || getLanguageSpecificRecordValue(item, "text", normalizedLanguage);
+  }
+
+  return (
+    item.translations?.[normalizedLanguage]?.text ||
+    item.translations?.[normalizedLanguage]?.dream_text ||
+    getLanguageSpecificRecordValue(item, "text", normalizedLanguage) ||
+    item.originalText ||
+    item.text ||
+    ""
   );
 }
 

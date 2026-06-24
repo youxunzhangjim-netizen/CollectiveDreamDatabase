@@ -47,6 +47,8 @@ const AUTH_COPY = {
     emailRequired: "Enter an email address before continuing.",
     passwordRequired: "Enter a password before continuing.",
     authUnavailable: "This sign-in option is not available yet. Try another option.",
+    emailPasswordUnavailable:
+      "Email and password login is not available yet. Use Google or guest mode for now.",
     invalidLogin: "The email or password does not match an active profile.",
     emailInUse: "This email already has a profile. Return to login instead.",
     weakPassword: "Use a stronger password with at least 6 characters.",
@@ -92,6 +94,7 @@ const AUTH_COPY = {
     emailRequired: "請先輸入電子郵件地址。",
     passwordRequired: "請先輸入密碼。",
     authUnavailable: "此登入方式尚未開放，請改用其他選項。",
+    emailPasswordUnavailable: "電子郵件與密碼登入目前尚未開放。請先使用 Google 或訪客模式。",
     invalidLogin: "電子郵件或密碼與現有檔案不相符。",
     emailInUse: "此電子郵件已建立檔案，請返回登入。",
     weakPassword: "請使用至少 6 個字元的更安全密碼。",
@@ -137,6 +140,8 @@ const AUTH_COPY = {
     emailRequired: "Introduce un correo antes de continuar.",
     passwordRequired: "Introduce una contraseña antes de continuar.",
     authUnavailable: "Este método de inicio aún no está disponible. Prueba otra opción.",
+    emailPasswordUnavailable:
+      "El inicio con correo y contraseña aún no está disponible. Usa Google o modo invitado por ahora.",
     invalidLogin: "El correo o la contraseña no coincide con un perfil activo.",
     emailInUse: "Este correo ya tiene un perfil. Vuelve al inicio de sesión.",
     weakPassword: "Usa una contraseña más fuerte de al menos 6 caracteres.",
@@ -170,11 +175,19 @@ export default function AuthPanel({
     document.title = copy.documentTitle;
   }, [copy.documentTitle]);
 
-  function getAuthErrorMessage(error) {
+  function getAuthErrorMessage(error, action) {
     if (!error?.code) return copy.genericAuthError;
 
     const knownMessage = getKnownAuthErrorMessage(error, language);
     if (knownMessage) return knownMessage;
+
+    if (
+      (action === "login" || action === "signup") &&
+      (error.code === "auth/operation-not-allowed" ||
+        error.code === "auth/admin-restricted-operation")
+    ) {
+      return copy.emailPasswordUnavailable;
+    }
 
     const errorMessages = {
       "auth/operation-not-allowed": copy.authUnavailable,
@@ -222,7 +235,7 @@ export default function AuthPanel({
       }
     } catch (error) {
       reportAuthError("main access", error);
-      setError(getAuthErrorMessage(error));
+      setError(getAuthErrorMessage(error, action));
     } finally {
       setLoading("");
     }

@@ -853,10 +853,13 @@ function normalizeDreamRecord(record) {
   const originalLanguage = normalizeLanguage(
     record?.originalLanguage || record?.original_language || "en"
   );
-  const title = record?.title || record?.title_en || record?.titleEn || "";
+  const title = record?.title || "";
+  const titleEn = record?.titleEn || record?.title_en || "";
   const titleZh = record?.titleZh || record?.title_zh || "";
   const titleEs = record?.titleEs || record?.title_es || "";
   const text = record?.dream_text || record?.text || record?.excerpt || "";
+  const textEn =
+    record?.dream_text_en || record?.textEn || record?.text_en || record?.excerpt_en || "";
   const textZh = record?.dream_text_zh || record?.textZh || record?.excerpt_zh || record?.excerpt || "";
   const textEs = record?.dream_text_es || record?.textEs || record?.excerpt_es || record?.excerpt || "";
   const images = normalizeDreamImages(record);
@@ -871,16 +874,26 @@ function normalizeDreamRecord(record) {
     originalTitle:
       record?.originalTitle ||
       record?.original_title ||
-      getLanguageSpecificRecordValue({ title, titleZh, titleEs }, "title", originalLanguage),
+      getLanguageSpecificRecordValue(
+        { title, titleEn, titleZh, titleEs },
+        "title",
+        originalLanguage
+      ),
     originalText:
       record?.originalText ||
       record?.original_text ||
-      getLanguageSpecificRecordValue({ text, textZh, textEs }, "text", originalLanguage),
+      getLanguageSpecificRecordValue(
+        { text, textEn, textZh, textEs },
+        "text",
+        originalLanguage
+      ),
     translations: record?.translations || {},
     title,
+    titleEn,
     titleZh,
     titleEs,
     text,
+    textEn,
     textZh,
     textEs,
     images,
@@ -984,7 +997,7 @@ function getLanguageSpecificRecordValue(record, field, language) {
   if (field === "title") {
     if (normalizedLanguage === "zh") return record.titleZh || record.title_zh || "";
     if (normalizedLanguage === "es") return record.titleEs || record.title_es || "";
-    return record.title || record.titleEn || record.title_en || "";
+    return record.titleEn || record.title_en || record.title || "";
   }
 
   if (normalizedLanguage === "zh") {
@@ -995,7 +1008,7 @@ function getLanguageSpecificRecordValue(record, field, language) {
     return record.textEs || record.text_es || record.dream_text_es || "";
   }
 
-  return record.text || record.textEn || record.text_en || record.dream_text || "";
+  return record.textEn || record.text_en || record.dream_text_en || record.text || record.dream_text || "";
 }
 
 function getEditableSelectedTagSlugs(record) {

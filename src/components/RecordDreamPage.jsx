@@ -117,6 +117,8 @@ const RECORD_COPY = {
     emailRequired: "Enter an email address.",
     passwordRequired: "Enter a password.",
     authError: "The account state could not be confirmed. The draft is still here.",
+    emailPasswordUnavailable:
+      "Email and password login is not available yet. Use Google or guest mode for now.",
     rulesTitle: "Recording standards",
     rules: [
       "Dream records need written words; images are optional.",
@@ -209,6 +211,7 @@ const RECORD_COPY = {
     emailRequired: "請輸入電子郵件。",
     passwordRequired: "請輸入密碼。",
     authError: "無法確認帳戶狀態；草稿仍然保留在這裡。",
+    emailPasswordUnavailable: "電子郵件與密碼登入目前尚未開放。請先使用 Google 或訪客模式。",
     rulesTitle: "記錄標準",
     rules: [
       "夢境記錄必須有文字；圖片可以有，但不是必要。",
@@ -309,6 +312,8 @@ const RECORD_COPY = {
     emailRequired: "Introduce un correo.",
     passwordRequired: "Introduce una contraseña.",
     authError: "No se pudo confirmar la cuenta. El borrador sigue aquí.",
+    emailPasswordUnavailable:
+      "El inicio con correo y contraseña aún no está disponible. Usa Google o modo invitado por ahora.",
     rulesTitle: "Reglas de registro",
     rules: [
       "Los registros necesitan texto escrito; las imágenes son opcionales.",
@@ -491,11 +496,19 @@ export default function RecordDreamPage({
     setImageFiles((current) => current.filter((_, fileIndex) => fileIndex !== index));
   }
 
-  function getAuthErrorMessage(error) {
+  function getAuthErrorMessage(error, action) {
     if (!error?.code) return copy.authError;
 
     const knownMessage = getKnownAuthErrorMessage(error, language);
     if (knownMessage) return knownMessage;
+
+    if (
+      (action === "login" || action === "signup") &&
+      (error.code === "auth/operation-not-allowed" ||
+        error.code === "auth/admin-restricted-operation")
+    ) {
+      return copy.emailPasswordUnavailable;
+    }
 
     if (
       [
@@ -551,7 +564,7 @@ export default function RecordDreamPage({
       setAuthNotice(copy.linkedNotice);
     } catch (error) {
       reportAuthError("recorder account link", error);
-      setAuthError(getAuthErrorMessage(error));
+      setAuthError(getAuthErrorMessage(error, action));
     } finally {
       setAuthLoading("");
     }

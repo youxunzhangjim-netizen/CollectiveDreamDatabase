@@ -170,6 +170,12 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     excerpt,
     ...languageFields,
     translations,
+    translationState: "queued",
+    translationRequestedAt: serverTimestamp(),
+    translationMeta: {
+      status: "queued",
+      sourceLanguage: originalLanguage,
+    },
     dreamDate,
     dream_date: dreamDate,
     dreamDateStatus,
@@ -431,9 +437,12 @@ function normalizeRecordReference(record) {
   return {
     recordId,
     title: record?.title || "",
+    titleEn: record?.titleEn || record?.title_en || "",
     titleZh: record?.titleZh || record?.title_zh || "",
     titleEs: record?.titleEs || record?.title_es || "",
     text: record?.dream_text || record?.text || record?.excerpt || "",
+    textEn:
+      record?.dream_text_en || record?.textEn || record?.text_en || record?.excerpt_en || "",
     textZh: record?.dream_text_zh || record?.textZh || record?.excerpt_zh || "",
     textEs: record?.dream_text_es || record?.textEs || record?.excerpt_es || "",
     originalLanguage,
@@ -539,17 +548,17 @@ function getLanguageSpecificValue(record, field, language) {
   const normalizedLanguage = normalizeLanguage(language);
   const fields = {
     title: {
-      en: ["title", "title_en", "titleEn"],
+      en: ["titleEn", "title_en", "title"],
       zh: ["titleZh", "title_zh"],
       es: ["titleEs", "title_es"],
     },
     text: {
-      en: ["dream_text", "text", "text_en", "textEn"],
+      en: ["dream_text_en", "textEn", "text_en", "dream_text", "text"],
       zh: ["dream_text_zh", "textZh", "text_zh"],
       es: ["dream_text_es", "textEs", "text_es"],
     },
     excerpt: {
-      en: ["excerpt", "excerpt_en", "excerptEn"],
+      en: ["excerptEn", "excerpt_en", "excerpt"],
       zh: ["excerpt_zh", "excerptZh"],
       es: ["excerpt_es", "excerptEs"],
     },
@@ -772,6 +781,12 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
           dreamText,
           excerpt
         ),
+        translationState: "queued",
+        translationRequestedAt: serverTimestamp(),
+        translationMeta: {
+          status: "queued",
+          sourceLanguage: originalLanguage,
+        },
       },
       buildOriginalLanguageFields(originalLanguage, title, dreamText, excerpt)
     );
