@@ -16,7 +16,11 @@ import {
   normalizeDreamImages,
 } from "../lib/dreamImageService.js";
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient.js";
-import { collectRecordForUser, saveRecordForUser } from "../lib/recordsService.js";
+import {
+  collectRecordForUser,
+  fetchPublicRecords,
+  saveRecordForUser,
+} from "../lib/recordsService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import {
   getCategoryLabel as getTaxonomyCategoryLabel,
@@ -309,7 +313,7 @@ const UI_COPY = {
   },
 };
 
-const INITIAL_LOAD_STATE = isSupabaseConfigured ? "loading" : "fallback";
+const INITIAL_LOAD_STATE = "loading";
 
 export default function CollectiveDreamDashboard({
   language: selectedLanguage,
@@ -328,12 +332,15 @@ export default function CollectiveDreamDashboard({
   const [selectedTagSlugs, setSelectedTagSlugs] = useState([]);
   const [matchMode, setMatchMode] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [sortMode, setSortMode] = useState("coherence");
+  const [sortMode, setSortMode] = useState("newest");
   const [loadState, setLoadState] = useState(INITIAL_LOAD_STATE);
   const [loadError, setLoadError] = useState(null);
   const [viewerProfile, setViewerProfile] = useState(null);
   const [adultConfirmations, setAdultConfirmations] = useState({});
   const copy = UI_COPY[language] || UI_COPY.zh;
+  const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
+  const isAgeVerifiedAdult = Number(viewerProfile?.age || 0) >= 18;
+  const canLoadAdultRecords = Boolean(canSeeImages && isAgeVerifiedAdult);
 
   useEffect(() => {
     document.documentElement.lang = getHtmlLang(language);
@@ -341,37 +348,72 @@ export default function CollectiveDreamDashboard({
   }, [copy.documentTitle, language]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return;
-
     let ignore = false;
 
     async function loadDatabase() {
       setLoadState("loading");
       setLoadError(null);
 
-      const [dreamResponse, tagResponse] = await Promise.all([
-        supabase
-          .from("v_dream_cards")
-          .select("*")
-          .order("dream_date", { ascending: false })
-          .limit(100),
-        supabase
-          .from("tags")
-          .select("id, category, name, slug")
-          .order("category", { ascending: true })
-          .order("name", { ascending: true }),
-      ]);
+      const loadErrors = [];
+      let firestoreDreams = [];
+      let supabaseDreams = [];
+      let supabaseTags = [];
+
+      try {
+        firestoreDreams = await fetchPublicRecords({
+          includeAdult: canLoadAdultRecords,
+        });
+      } catch (error) {
+        loadErrors.push(error.message);
+      }
+
+      if (isSupabaseConfigured && supabase) {
+        const [dreamResponse, tagResponse] = await Promise.all([
+          supabase
+            .from("v_dream_cards")
+            .select("*")
+            .order("dream_date", { ascending: false })
+            .limit(100),
+          supabase
+            .from("tags")
+            .select("id, category, name, slug")
+            .order("category", { ascending: true })
+            .order("name", { ascending: true }),
+        ]);
+
+        if (dreamResponse.error || tagResponse.error) {
+          loadErrors.push(dreamResponse.error?.message || tagResponse.error?.message);
+        } else {
+          supabaseDreams = dreamResponse.data || [];
+          supabaseTags = tagResponse.data || [];
+        }
+      }
 
       if (ignore) return;
 
-      if (dreamResponse.error || tagResponse.error) {
+      const liveDreams = mergeDreamSets(
+        firestoreDreams.map(normalizeDreamCard),
+        supabaseDreams.map(normalizeDreamCard)
+      );
+
+      if (liveDreams.length === 0) {
         setLoadState("fallback");
-        setLoadError(dreamResponse.error?.message || tagResponse.error?.message);
+        setLoadError(loadErrors[0] || null);
+        setDreams(FALLBACK_DREAMS);
+        setTags(mergeTagSets(DEFAULT_TAGS, FALLBACK_TAGS));
         return;
       }
 
-      setDreams(dreamResponse.data.map(normalizeDreamCard));
-      setTags(mergeTagSets(DEFAULT_TAGS, tagResponse.data));
+      setDreams(liveDreams);
+      setTags(
+        mergeTagSets(
+          DEFAULT_TAGS,
+          FALLBACK_TAGS,
+          supabaseTags,
+          liveDreams.flatMap((dream) => dream.tags)
+        )
+      );
+      setLoadError(loadErrors[0] || null);
       setLoadState("live");
     }
 
@@ -380,7 +422,7 @@ export default function CollectiveDreamDashboard({
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [canLoadAdultRecords]);
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -410,9 +452,6 @@ export default function CollectiveDreamDashboard({
     if (categoryFilter === "All") return tags;
     return tags.filter((tag) => tag.category === categoryFilter);
   }, [tags, categoryFilter]);
-  const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
-  const isAgeVerifiedAdult = Number(viewerProfile?.age || 0) >= 18;
-
   function canAccessAdultDream(dream) {
     if (!isAdultDream(dream)) return true;
     if (isAgeVerifiedAdult) return true;
@@ -609,6 +648,16 @@ function normalizeDreamCard(row) {
 
   return {
     dream_id: row.dream_id || row.id,
+    id: row.id || row.dream_id,
+    ownerId: row.ownerId || row.creatorId || "",
+    creatorId: row.creatorId || row.ownerId || "",
+    anonymousLocked: Boolean(row.anonymousLocked),
+    recordIdentityMode:
+      row.recordIdentityMode === "account" || row.attributionMode === "account"
+        ? "account"
+        : "anonymous",
+    creatorDisplayName: row.creatorDisplayName || "",
+    creatorAvatarUrl: row.creatorAvatarUrl || "",
     originalLanguage,
     originalTitle,
     originalText,
@@ -624,10 +673,11 @@ function normalizeDreamCard(row) {
     excerpt,
     excerpt_zh: row.excerpt_zh || row.excerptZh,
     excerpt_es: row.excerpt_es || row.excerptEs,
-    dream_text: row.dream_text,
+    dream_text: row.dream_text || row.dreamText || row.text || row.originalText,
     dream_text_zh: row.dream_text_zh || row.dreamTextZh,
     dream_text_es: row.dream_text_es || row.dreamTextEs,
-    dream_date: row.dream_date,
+    dream_date: row.dream_date || row.dreamDate || row.date || "",
+    dreamDate: row.dreamDate || row.dream_date || row.date || "",
     adultContent,
     minimumViewerAge: row.minimumViewerAge || row.minimum_viewer_age || (adultContent ? 18 : 0),
     images,
@@ -637,7 +687,8 @@ function normalizeDreamCard(row) {
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,
-    pseudo_id: row.pseudo_id,
+    pseudo_id: row.pseudo_id || row.pseudoId || "",
+    pseudoId: row.pseudoId || row.pseudo_id || "",
     signal_coherence: row.signal_coherence || 50,
     tags,
     anomaly_tag_slugs: row.anomaly_tag_slugs || tags.filter((tag) => tag.category === "Anomalies").map((tag) => tag.slug),
@@ -805,6 +856,22 @@ function mergeTagSets(...tagSets) {
     merged.set(tag.slug, {
       ...merged.get(tag.slug),
       ...tag,
+    });
+  });
+
+  return [...merged.values()];
+}
+
+function mergeDreamSets(...dreamSets) {
+  const merged = new Map();
+
+  dreamSets.flat().forEach((dream) => {
+    const id = dream?.dream_id || dream?.id;
+    if (!id) return;
+
+    merged.set(id, {
+      ...merged.get(id),
+      ...dream,
     });
   });
 

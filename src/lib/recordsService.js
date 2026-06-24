@@ -34,6 +34,14 @@ function mapRecordSnapshot(snapshot) {
   }));
 }
 
+function getTimestampMillis(value) {
+  if (!value) return 0;
+  if (typeof value.toMillis === "function") return value.toMillis();
+
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export async function fetchOwnedRecords(currentUser) {
   if (!currentUser?.uid) return [];
 
@@ -44,6 +52,24 @@ export async function fetchOwnedRecords(currentUser) {
 
   const snapshot = await getDocs(recordsQuery);
   return mapRecordSnapshot(snapshot);
+}
+
+export async function fetchPublicRecords({ includeAdult = false } = {}) {
+  const recordsCollection = collection(requireFirestore(), "Records");
+  const publicRecordsQuery = includeAdult
+    ? query(recordsCollection, where("isPublic", "==", true))
+    : query(
+        recordsCollection,
+        where("isPublic", "==", true),
+        where("adultContent", "==", false),
+        where("minimumViewerAge", "==", 0)
+      );
+
+  const snapshot = await getDocs(publicRecordsQuery);
+
+  return mapRecordSnapshot(snapshot).sort(
+    (a, b) => getTimestampMillis(b.createdAt) - getTimestampMillis(a.createdAt)
+  );
 }
 
 export async function createDreamRecord(currentUser, draft, profile = null) {
