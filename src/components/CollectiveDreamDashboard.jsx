@@ -169,6 +169,8 @@ const UI_COPY = {
     noResearchData: "Not enough signal yet",
     collectDream: "Collect",
     collectedDream: "Collected",
+    showTags: "Show tags",
+    hideTags: "Hide tags",
     signInToCollect: "Sign in to collect",
     followRecorder: "Follow recorder",
     followingRecorder: "Following",
@@ -266,6 +268,8 @@ const UI_COPY = {
     noResearchData: "訊號尚不足",
     collectDream: "收藏",
     collectedDream: "已收藏",
+    showTags: "展開標籤",
+    hideTags: "收合標籤",
     signInToCollect: "登入後可收藏",
     followRecorder: "追蹤記錄者",
     followingRecorder: "追蹤中",
@@ -368,6 +372,8 @@ const UI_COPY = {
     noResearchData: "Señal insuficiente",
     collectDream: "Coleccionar",
     collectedDream: "Coleccionado",
+    showTags: "Ver etiquetas",
+    hideTags: "Ocultar etiquetas",
     signInToCollect: "Inicia sesión para coleccionar",
     followRecorder: "Seguir registrador",
     followingRecorder: "Siguiendo",
@@ -1655,6 +1661,7 @@ function ObservationCard({
 }) {
   const [collectStatus, setCollectStatus] = useState("");
   const [followStatus, setFollowStatus] = useState("");
+  const [tagsExpanded, setTagsExpanded] = useState(false);
   const adultDream = isAdultDream(dream);
   const adultAccessible = canAccessAdultDream(dream);
   const guestAdultGate = adultDream && !adultAccessible && !isAgeVerifiedAdult;
@@ -1671,6 +1678,7 @@ function ObservationCard({
   const isFollowingRecorder = Boolean(
     recorderId && followingRecorderIds?.has(recorderId)
   );
+  const canToggleTags = dream.tags.length > 3;
 
   async function handleCollect(event) {
     event.stopPropagation();
@@ -1832,11 +1840,33 @@ function ObservationCard({
           </div>
         )}
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          {dream.tags.map((tag) => (
-            <TagBadge key={`${dream.dream_id}-${tag.slug}`} tag={tag} language={language} />
-          ))}
-        </div>
+        {dream.tags.length > 0 && (
+          <div className="mt-5">
+            <div
+              className={[
+                "flex flex-wrap gap-2 overflow-hidden transition-[max-height] duration-300",
+                tagsExpanded ? "max-h-64 overflow-y-auto pr-1" : "max-h-8",
+              ].join(" ")}
+            >
+              {dream.tags.map((tag) => (
+                <TagBadge key={`${dream.dream_id}-${tag.slug}`} tag={tag} language={language} />
+              ))}
+            </div>
+
+            {canToggleTags && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setTagsExpanded((current) => !current);
+                }}
+                className="mt-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400 transition hover:border-cyan-300/35 hover:text-cyan-100"
+              >
+                {tagsExpanded ? copy.hideTags : `${copy.showTags} (${dream.tags.length})`}
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="mt-5 border-t border-white/10 pt-4">
           <div className="mb-2 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.18em]">
