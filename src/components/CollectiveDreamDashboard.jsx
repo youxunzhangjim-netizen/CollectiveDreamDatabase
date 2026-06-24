@@ -120,6 +120,10 @@ const UI_COPY = {
     databaseNote: "Database note",
     databaseNoteText:
       "Tags help researchers locate related dream signals quickly while keeping identity exposure low.",
+    schemaNote: ({ total, anomalyCount, ontologyCount, exposedCount }) =>
+      total === 0
+        ? "No public dream records are loaded yet, so these analysis values are zero."
+        : `Computed from ${total} loaded dream records: ${anomalyCount} include anomaly tags, ${ontologyCount} have complete core schema fields, and ${exposedCount} expose account identity.`,
     filterTitle: "Advanced Tag Filtering",
     filterText:
       "Filter by ontology category or combine specific tags. Match all is best for narrow anomaly research; match any is best for discovery.",
@@ -216,6 +220,10 @@ const UI_COPY = {
     databaseNote: "資料庫備註",
     databaseNoteText:
       "標籤能協助研究者快速定位相關夢境訊號，同時降低身分暴露。",
+    schemaNote: ({ total, anomalyCount, ontologyCount, exposedCount }) =>
+      total === 0
+        ? "尚未載入公開夢境紀錄，因此分析值為 0。"
+        : `根據目前載入的 ${total} 筆夢境紀錄計算：${anomalyCount} 筆含異常標籤，${ontologyCount} 筆具有完整核心欄位，${exposedCount} 筆公開帳戶身分。`,
     filterTitle: "進階標籤篩選",
     filterText:
       "可依本體類別篩選，或組合特定標籤。全部符合適合精準的異常研究；任一符合適合探索。",
@@ -309,6 +317,10 @@ const UI_COPY = {
     databaseNote: "Nota de base de datos",
     databaseNoteText:
       "Las etiquetas ayudan a localizar señales relacionadas con rapidez y reducen la exposición de identidad.",
+    schemaNote: ({ total, anomalyCount, ontologyCount, exposedCount }) =>
+      total === 0
+        ? "Aún no hay registros públicos cargados, así que estos valores son cero."
+        : `Calculado desde ${total} registros cargados: ${anomalyCount} incluyen etiquetas de anomalía, ${ontologyCount} tienen campos centrales completos y ${exposedCount} exponen identidad de cuenta.`,
     filterTitle: "Filtrado Avanzado",
     filterText:
       "Filtra por categoría ontológica o combina etiquetas específicas. Coincidir todo sirve para investigación precisa; coincidir cualquiera sirve para exploración.",
@@ -609,6 +621,7 @@ export default function CollectiveDreamDashboard({
     () => buildResearchStats(dreams, filteredDreams, language),
     [dreams, filteredDreams, language]
   );
+  const schemaStats = useMemo(() => buildSchemaStats(dreams), [dreams]);
   const tagCounts = useMemo(() => buildTagCounts(dreams), [dreams]);
   const followingRecorderIds = useMemo(
     () => new Set(followingRecorders.map((item) => item.recorderId || item.id)),
@@ -672,6 +685,7 @@ export default function CollectiveDreamDashboard({
           setLanguage={setLanguage}
           copy={copy}
           currentUser={currentUser}
+          viewerProfile={viewerProfile}
           onOpenAuth={onOpenAuth}
           onOpenRecorder={onOpenRecorder}
         />
@@ -683,6 +697,7 @@ export default function CollectiveDreamDashboard({
           loadState={loadState}
           loadError={loadError}
           activeAnomalyCount={activeAnomalyCount}
+          schemaStats={schemaStats}
           copy={copy}
         />
 
@@ -1026,6 +1041,60 @@ function buildResearchStats(dreams, visibleDreams, language) {
   };
 }
 
+function buildSchemaStats(dreams) {
+  const total = dreams.length;
+  const anomalyCount = dreams.filter(hasAnomalyTags).length;
+  const ontologyCount = dreams.filter(hasCompleteCoreSchema).length;
+  const exposedCount = dreams.filter(exposesAccountIdentity).length;
+
+  return {
+    total,
+    anomalyCount,
+    ontologyCount,
+    exposedCount,
+    anomalySearch: toPercent(anomalyCount, total),
+    ontologyConsistency: toPercent(ontologyCount, total),
+    identityExposure: toPercent(exposedCount, total),
+  };
+}
+
+function hasAnomalyTags(dream) {
+  return dream.tags?.some((tag) => tag.category === "Anomalies") || false;
+}
+
+function hasCompleteCoreSchema(dream) {
+  const hasKnownTag = dream.tags?.some((tag) =>
+    TAG_CATEGORY_ORDER.includes(tag.category)
+  );
+  const hasDreamText = Boolean(
+    dream.originalText ||
+      dream.original_text ||
+      dream.dream_text ||
+      dream.dreamText ||
+      dream.text
+  );
+
+  return Boolean(
+    dream.dream_id &&
+      dream.originalLanguage &&
+      hasDreamText &&
+      (dream.dreamDate || dream.dream_date) &&
+      hasKnownTag
+  );
+}
+
+function exposesAccountIdentity(dream) {
+  return Boolean(
+    dream.recordIdentityMode === "account" &&
+      (dream.creatorDisplayName || dream.creatorEmail)
+  );
+}
+
+function toPercent(value, total) {
+  if (total <= 0) return 0;
+  return Math.round((value / total) * 100);
+}
+
 function buildTagCounts(dreams) {
   const counts = new Map();
 
@@ -1041,6 +1110,24 @@ function buildTagCounts(dreams) {
 
 function getRecorderId(dream) {
   return dream?.creatorId || dream?.ownerId || "";
+}
+
+function getAccountNavLabel(currentUser, viewerProfile, copy) {
+  if (!currentUser?.uid) return copy.accountButton;
+
+  const displayName = String(
+    viewerProfile?.displayName || currentUser.displayName || ""
+  ).trim();
+
+  if (displayName) return displayName;
+  if (currentUser.isAnonymous) return copy.accountButton;
+
+  const uidSeed = currentUser.uid
+    .slice(0, 6)
+    .toUpperCase()
+    .padEnd(6, "0");
+
+  return `DREAMER-${uidSeed}`;
 }
 
 function getTopMapEntry(map) {
@@ -1075,10 +1162,11 @@ function TopNav({
   setLanguage,
   copy,
   currentUser,
+  viewerProfile,
   onOpenAuth,
   onOpenRecorder,
 }) {
-  const accountLabel = currentUser?.uid ? copy.accountButton : copy.loginButton;
+  const accountLabel = getAccountNavLabel(currentUser, viewerProfile, copy);
 
   function openReportSuggestion() {
     window.location.href = REPORT_SUGGESTION_MAILTO;
@@ -1109,7 +1197,9 @@ function TopNav({
             <NavButton onClick={onOpenRecorder || onOpenAuth}>
               {copy.mobileSubmit}
             </NavButton>
-            <NavButton onClick={onOpenAuth}>{accountLabel}</NavButton>
+            <NavButton onClick={onOpenAuth} fixed>
+              {accountLabel}
+            </NavButton>
           </div>
         </div>
 
@@ -1118,7 +1208,9 @@ function TopNav({
           <NavButton onClick={onOpenRecorder || onOpenAuth}>
             {copy.submitObservation}
           </NavButton>
-          <NavButton onClick={onOpenAuth}>{accountLabel}</NavButton>
+          <NavButton onClick={onOpenAuth} fixed>
+            {accountLabel}
+          </NavButton>
           <NavButton onClick={openReportSuggestion}>
             {copy.reportSuggestion}
           </NavButton>
@@ -1154,7 +1246,15 @@ function LanguageToggle({ language, setLanguage, copy }) {
   return <LanguageMenu language={language} setLanguage={setLanguage} copy={copy} />;
 }
 
-function HeroPanel({ total, visible, loadState, loadError, activeAnomalyCount, copy }) {
+function HeroPanel({
+  total,
+  visible,
+  loadState,
+  loadError,
+  activeAnomalyCount,
+  schemaStats,
+  copy,
+}) {
   const loadCopy = copy.loadStates[loadState];
 
   return (
@@ -1196,9 +1296,16 @@ function HeroPanel({ total, visible, loadState, loadError, activeAnomalyCount, c
             </p>
 
             <div className="mt-5 space-y-5">
-              <SignalRow label={copy.anomalySearch} value={94} />
-              <SignalRow label={copy.ontologyConsistency} value={88} />
-              <SignalRow label={copy.identityExposure} value={9} inverse />
+              <SignalRow label={copy.anomalySearch} value={schemaStats.anomalySearch} />
+              <SignalRow
+                label={copy.ontologyConsistency}
+                value={schemaStats.ontologyConsistency}
+              />
+              <SignalRow
+                label={copy.identityExposure}
+                value={schemaStats.identityExposure}
+                inverse
+              />
             </div>
 
             <div className="mt-6 rounded-xl border border-white/10 bg-black/30 p-4">
@@ -1206,7 +1313,7 @@ function HeroPanel({ total, visible, loadState, loadError, activeAnomalyCount, c
                 {copy.databaseNote}
               </p>
               <p className="mt-2 text-sm leading-6 text-zinc-300">
-                {copy.databaseNoteText}
+                {copy.schemaNote?.(schemaStats) || copy.databaseNoteText}
               </p>
             </div>
           </div>
@@ -1815,19 +1922,20 @@ function ObservationThumbnail({ dream, language, copy, canSeeImages }) {
   );
 }
 
-function NavButton({ children, active = false, onClick }) {
+function NavButton({ children, active = false, onClick, fixed = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={[
         "rounded-full px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] transition",
+        fixed ? "w-28 overflow-hidden sm:w-36" : "",
         active
           ? "border border-cyan-300/30 bg-cyan-300/10 text-cyan-50 shadow-[0_0_18px_rgba(34,211,238,.12)]"
           : "border border-white/10 bg-white/[0.03] text-zinc-400 hover:border-fuchsia-300/30 hover:text-fuchsia-100",
       ].join(" ")}
     >
-      {children}
+      <span className={fixed ? "block truncate" : ""}>{children}</span>
     </button>
   );
 }

@@ -1115,12 +1115,14 @@ function TabButton({ active, children, onClick }) {
 }
 
 function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locked = false }) {
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const style = ACCENT_STYLES[item.accent] || ACCENT_STYLES.cyan;
   const title =
     normalizeLanguage(language) === item.originalLanguage
       ? item.originalTitle || item.title
       : item.translations?.[language]?.title ||
         (language === "zh" ? item.titleZh : language === "es" ? item.titleEs : item.title);
+  const showThumbnail = Boolean(item.thumbnailUrl && !thumbnailFailed);
 
   return (
     <article
@@ -1131,24 +1133,22 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
         style.glow,
       ].join(" ")}
     >
-      <div className="relative h-44 border-b border-white/10" style={{ background: style.gradient }}>
-        {item.thumbnailUrl && (
+      {showThumbnail && (
+        <div className="relative h-44 border-b border-white/10 bg-black">
           <img
             src={item.thumbnailUrl}
             alt={title}
             className="absolute inset-0 h-full w-full object-cover opacity-90"
-            onError={(event) => {
-              event.currentTarget.style.display = "none";
-            }}
+            onError={() => setThumbnailFailed(true)}
           />
-        )}
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px)] bg-[size:28px_28px] opacity-20" />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-zinc-950/90 to-transparent" />
-        <div className="absolute bottom-4 left-4 rounded-xl border border-white/10 bg-black/45 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-cyan-100 backdrop-blur">
-          {item.hash}
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px)] bg-[size:28px_28px] opacity-20" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-zinc-950/90 to-transparent" />
+          <div className="absolute bottom-4 left-4 rounded-xl border border-white/10 bg-black/45 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-cyan-100 backdrop-blur">
+            {item.hash}
+          </div>
+          <span className={`absolute right-4 top-4 h-3 w-3 rounded-full ${style.dot}`} />
         </div>
-        <span className={`absolute right-4 top-4 h-3 w-3 rounded-full ${style.dot}`} />
-      </div>
+      )}
 
       <div className="p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
