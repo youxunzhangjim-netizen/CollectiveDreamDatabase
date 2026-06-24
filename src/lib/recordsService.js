@@ -265,7 +265,7 @@ export async function fetchSavedRecords(currentUser) {
   );
 
   const snapshot = await getDocs(savedQuery);
-  return mapRecordSnapshot(snapshot);
+  return hydrateRecordReferences(mapRecordSnapshot(snapshot));
 }
 
 export async function fetchCollectionRecords(currentUser, collectionId = "liked-dreams") {
@@ -284,7 +284,33 @@ export async function fetchCollectionRecords(currentUser, collectionId = "liked-
   );
 
   const snapshot = await getDocs(collectionQuery);
-  return mapRecordSnapshot(snapshot);
+  return hydrateRecordReferences(mapRecordSnapshot(snapshot));
+}
+
+async function hydrateRecordReferences(records) {
+  return Promise.all(
+    records.map(async (record) => {
+      const recordId = record?.recordId || record?.id || record?.dream_id;
+
+      if (!recordId) return record;
+
+      try {
+        const liveRecord = await fetchRecordById(recordId);
+        if (!liveRecord) return record;
+
+        return {
+          ...record,
+          ...liveRecord,
+          recordId,
+          savedAt: record.savedAt,
+          collectedAt: record.collectedAt,
+          collectionId: record.collectionId,
+        };
+      } catch {
+        return record;
+      }
+    })
+  );
 }
 
 export async function fetchFollowingRecorders(currentUser) {
