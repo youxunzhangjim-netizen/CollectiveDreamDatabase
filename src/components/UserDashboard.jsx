@@ -467,32 +467,32 @@ export default function UserDashboard({
     <main className="relative min-h-screen overflow-hidden bg-[#030407] text-zinc-100 selection:bg-cyan-300/30 selection:text-cyan-50">
       <DashboardBackground />
 
-      <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <header className="mb-6 flex flex-col gap-4 border-b border-white/10 pb-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="relative mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <header className="mb-5 flex flex-col gap-3 border-b border-white/10 pb-4 lg:mb-6 lg:flex-row lg:items-center lg:justify-between lg:pb-5">
           <button
             type="button"
             onClick={onOpenDatabase}
-            className="group flex items-center gap-3 self-start"
+            className="group flex min-w-0 items-center gap-3 self-start"
           >
-            <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)]">
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)] sm:h-10 sm:w-10">
               <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
               <span className="relative font-mono text-sm font-bold text-cyan-100">C∴</span>
             </span>
-            <span>
+            <span className="min-w-0">
               <span className="block font-mono text-xs uppercase tracking-[0.36em] text-cyan-200/80">
                 CDDB
               </span>
-              <span className="block text-sm font-semibold text-zinc-100">
+              <span className="block truncate text-sm font-semibold text-zinc-100">
                 {copy.databaseButton}
               </span>
             </span>
           </button>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-3">
             <button
               type="button"
               onClick={onOpenRecorder}
-              className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15"
+              className="min-w-0 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
             >
               {copy.recordButton}
             </button>
@@ -500,7 +500,7 @@ export default function UserDashboard({
             <button
               type="button"
               onClick={onSignOut}
-              className="rounded-xl border border-red-300/25 bg-red-400/5 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-red-100 transition hover:border-red-300/45 hover:bg-red-400/10"
+              className="col-span-2 min-w-0 rounded-xl border border-red-300/25 bg-red-400/5 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-100 transition hover:border-red-300/45 hover:bg-red-400/10 sm:col-span-1 sm:px-4 sm:text-xs sm:tracking-[0.2em]"
             >
               {copy.signOut}
             </button>

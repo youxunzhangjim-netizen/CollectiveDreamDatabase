@@ -1197,34 +1197,41 @@ function TopNav({
   }
 
   return (
-    <nav className="sticky top-0 z-40 border-b border-cyan-300/10 bg-black/70 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-        <div className="flex items-center justify-between gap-4">
-          <a href="#" className="group flex items-center gap-3" aria-label={copy.homeLabel}>
-            <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)]">
+    <nav className="sticky top-0 z-40 border-b border-cyan-300/10 bg-black/80 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2 px-3 py-2 sm:px-5 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-4">
+        <div className="flex items-center justify-between gap-3 lg:block">
+          <a href="#" className="group flex min-w-0 items-center gap-3" aria-label={copy.homeLabel}>
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)] sm:h-10 sm:w-10">
               <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
               <span className="relative font-mono text-sm font-bold text-cyan-100">C∴</span>
             </span>
 
-            <span>
-              <span className="block font-mono text-xs uppercase tracking-[0.38em] text-cyan-200/80">
+            <span className="min-w-0">
+              <span className="block font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/80 sm:tracking-[0.38em]">
                 CDDB
               </span>
-              <span className="block text-sm font-semibold text-zinc-100">
+              <span className="hidden truncate text-sm font-semibold text-zinc-100 min-[420px]:block">
                 {copy.terminalName}
               </span>
             </span>
           </a>
 
-          <div className="flex gap-2 lg:hidden">
-            <NavButton active>{copy.mobileDatabase}</NavButton>
-            <NavButton onClick={onOpenRecorder || onOpenAuth}>
-              {copy.mobileSubmit}
-            </NavButton>
-            <NavButton onClick={onOpenAuth} fixed>
-              {accountLabel}
-            </NavButton>
+          <div className="lg:hidden">
+            <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
           </div>
+        </div>
+
+        <div className="grid w-full grid-cols-4 gap-1.5 lg:hidden">
+          <NavButton active>{copy.mobileDatabase}</NavButton>
+          <NavButton onClick={onOpenRecorder || onOpenAuth}>
+            {copy.mobileSubmit}
+          </NavButton>
+          <NavButton onClick={onOpenAuth} fixed>
+            {accountLabel}
+          </NavButton>
+          <NavButton onClick={openReportSuggestion}>
+            {copy.reportSuggestion}
+          </NavButton>
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
@@ -1240,7 +1247,7 @@ function TopNav({
           </NavButton>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:w-[34rem]">
+        <div className="grid gap-2 lg:w-[34rem] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <label className="relative block flex-1">
             <span className="sr-only">{copy.searchLabel}</span>
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200/60" />
@@ -1248,18 +1255,13 @@ function TopNav({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={copy.searchPlaceholder}
-              className="w-full rounded-2xl border border-cyan-300/15 bg-zinc-950/80 py-3 pl-10 pr-4 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-500 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+              className="w-full rounded-xl border border-cyan-300/15 bg-zinc-950/80 py-2.5 pl-10 pr-4 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-500 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20 sm:rounded-2xl lg:py-3"
             />
           </label>
 
-          <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
-          <button
-            type="button"
-            onClick={openReportSuggestion}
-            className="rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15 lg:hidden"
-          >
-            {copy.reportSuggestion}
-          </button>
+          <div className="hidden lg:block">
+            <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
+          </div>
         </div>
       </div>
     </nav>
@@ -1291,7 +1293,7 @@ function HeroPanel({
             {copy.heroKicker}
           </p>
 
-          <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.04em] text-zinc-50 sm:text-5xl lg:text-6xl">
+          <h1 className="max-w-4xl break-words text-3xl font-semibold text-zinc-50 sm:text-5xl lg:text-6xl">
             {copy.heroTitle}
           </h1>
 
@@ -1440,7 +1442,7 @@ function FilterPanel({
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <SegmentButton active={matchMode === "all"} onClick={() => setMatchMode("all")}>
             {copy.matchAll}
           </SegmentButton>
@@ -1451,7 +1453,7 @@ function FilterPanel({
           <select
             value={sortMode}
             onChange={(event) => setSortMode(event.target.value)}
-            className="rounded-full border border-white/10 bg-black/40 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-200 outline-none transition focus:border-cyan-300/40 focus:ring-2 focus:ring-cyan-300/20"
+            className="col-span-2 rounded-xl border border-white/10 bg-black/40 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-200 outline-none transition focus:border-cyan-300/40 focus:ring-2 focus:ring-cyan-300/20 sm:col-span-1 sm:rounded-full"
             aria-label={copy.sortSelectLabel}
           >
             <option value="coherence">{copy.sortCoherence}</option>
@@ -1501,8 +1503,8 @@ function FilterPanel({
               </button>
 
               {expanded && (
-                <div className="max-h-52 overflow-y-auto border-t border-white/10 p-3">
-                  <div className="flex flex-wrap gap-2">
+                <div className="overflow-x-auto border-t border-white/10 p-3">
+                  <div className="flex flex-nowrap gap-2 pb-1">
                     {categoryTags.map((tag) => {
                       const active = selectedTagSlugs.includes(tag.slug);
                       const tagName = getTagName(tag, language);
@@ -1515,7 +1517,7 @@ function FilterPanel({
                           aria-pressed={active}
                           onClick={() => toggleTag(tag.slug)}
                           className={[
-                            "rounded-full border px-3 py-2 font-mono text-xs uppercase tracking-[0.18em] transition",
+                            "max-w-[12rem] shrink-0 truncate whitespace-nowrap rounded-full border px-3 py-2 font-mono text-xs uppercase tracking-[0.18em] transition sm:max-w-[16rem]",
                             active
                               ? CATEGORY_STYLES[tag.category]
                               : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
@@ -1850,8 +1852,10 @@ function ObservationCard({
           <div className="mt-5">
             <div
               className={[
-                "flex flex-wrap gap-2 overflow-hidden transition-[max-height] duration-300",
-                tagsExpanded ? "max-h-64 overflow-y-auto pr-1" : "max-h-8",
+                "flex gap-2 overflow-hidden transition-[max-height] duration-300",
+                tagsExpanded
+                  ? "max-h-64 flex-wrap overflow-y-auto pr-1"
+                  : "max-h-9 flex-nowrap overflow-x-auto overflow-y-hidden pb-1",
               ].join(" ")}
             >
               {dream.tags.map((tag) => (
@@ -1983,14 +1987,14 @@ function NavButton({ children, active = false, onClick, fixed = false }) {
       type="button"
       onClick={onClick}
       className={[
-        "rounded-full px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] transition",
-        fixed ? "w-28 overflow-hidden sm:w-36" : "",
+        "min-h-9 min-w-0 rounded-xl px-1.5 py-1.5 font-mono text-[9px] uppercase tracking-[0.1em] transition sm:min-h-10 sm:rounded-full sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.18em]",
+        fixed ? "overflow-hidden sm:w-36" : "",
         active
           ? "border border-cyan-300/30 bg-cyan-300/10 text-cyan-50 shadow-[0_0_18px_rgba(34,211,238,.12)]"
           : "border border-white/10 bg-white/[0.03] text-zinc-400 hover:border-fuchsia-300/30 hover:text-fuchsia-100",
       ].join(" ")}
     >
-      <span className={fixed ? "block truncate" : ""}>{children}</span>
+      <span className="block truncate">{children}</span>
     </button>
   );
 }
@@ -2060,7 +2064,7 @@ function TagBadge({ tag, language }) {
   return (
     <span
       className={[
-        "rounded-full border px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.16em]",
+        "inline-flex max-w-[11rem] shrink-0 truncate whitespace-nowrap rounded-full border px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.16em] sm:max-w-[14rem]",
         CATEGORY_STYLES[tag.category] || "border-white/10 bg-white/[0.03] text-zinc-300",
       ].join(" ")}
     >

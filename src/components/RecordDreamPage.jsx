@@ -641,33 +641,33 @@ export default function RecordDreamPage({
     <main className="relative min-h-screen overflow-hidden bg-[#030407] text-zinc-100 selection:bg-cyan-300/30 selection:text-cyan-50">
       <RecorderBackground />
 
-      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
-        <header className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
+        <header className="mb-5 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={onOpenDatabase}
-            className="group flex items-center gap-3"
+            className="group flex min-w-0 items-center gap-3 self-start"
           >
-            <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)]">
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)] sm:h-10 sm:w-10">
               <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
               <span className="relative font-mono text-sm font-bold text-cyan-100">C∴</span>
             </span>
-            <span>
+            <span className="min-w-0">
               <span className="block font-mono text-xs uppercase tracking-[0.36em] text-cyan-200/80">
                 CDDB
               </span>
-              <span className="block text-sm font-semibold text-zinc-100">
+              <span className="block truncate text-sm font-semibold text-zinc-100">
                 {copy.database}
               </span>
             </span>
           </button>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             {currentUser?.uid && (
               <button
                 type="button"
                 onClick={onOpenDashboard}
-                className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-100 transition hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10"
+                className="min-w-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-100 transition hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
               >
                 {accountBacked ? copy.account : copy.guest}
               </button>

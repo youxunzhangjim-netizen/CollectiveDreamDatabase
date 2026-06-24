@@ -21,14 +21,14 @@ export default function LanguageMenu({ language, setLanguage, copy }) {
   }, []);
 
   return (
-    <div ref={menuRef} className="relative shrink-0">
+    <div ref={menuRef} className="relative min-w-0 shrink-0">
       <button
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={copy.languageLabel}
         onClick={() => setOpen((current) => !current)}
-        className="relative flex h-11 min-w-20 items-center justify-center gap-2 overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 font-mono text-xs font-bold text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,.16)] transition hover:border-cyan-300/50 hover:bg-cyan-300/15"
+        className="relative flex h-9 w-full min-w-16 items-center justify-center gap-2 overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-2.5 font-mono text-[10px] font-bold text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,.16)] transition hover:border-cyan-300/50 hover:bg-cyan-300/15 sm:h-11 sm:w-auto sm:min-w-20 sm:px-3 sm:text-xs"
       >
         <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
         <GlobeGridIcon className="relative h-4 w-4" />

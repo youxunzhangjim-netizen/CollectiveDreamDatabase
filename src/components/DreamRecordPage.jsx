@@ -504,22 +504,22 @@ export default function DreamRecordPage({
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.025)_1px,transparent_1px)] bg-[size:44px_44px]" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="relative mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <header className="mb-5 grid gap-2 sm:mb-6 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={onBack}
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-cyan-100 transition hover:border-cyan-300/35 hover:bg-cyan-300/10"
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/35 hover:bg-cyan-300/10 sm:text-xs sm:tracking-[0.2em]"
           >
             {copy.back}
           </button>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
             <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
             <button
               type="button"
               onClick={onOpenDashboard}
-              className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-100 transition hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10"
+              className="min-w-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-100 transition hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10 sm:px-4 sm:text-xs sm:tracking-[0.2em]"
             >
               {copy.dashboard}
             </button>
@@ -527,7 +527,7 @@ export default function DreamRecordPage({
               type="button"
               onClick={handleCollect}
               disabled={collecting}
-              className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70"
+              className="col-span-2 rounded-xl border border-cyan-300/35 bg-cyan-300 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70 sm:col-span-1 sm:px-4 sm:text-xs sm:tracking-[0.2em]"
             >
               {collecting ? "..." : copy.collect}
             </button>
@@ -541,7 +541,7 @@ export default function DreamRecordPage({
                 {copy.recordText}
               </p>
               {pageTitle && (
-                <h1 className="text-4xl font-semibold text-zinc-50 sm:text-5xl">
+                <h1 className="break-words text-3xl font-semibold text-zinc-50 sm:text-5xl">
                   {pageTitle}
                 </h1>
               )}
