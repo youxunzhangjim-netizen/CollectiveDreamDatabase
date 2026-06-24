@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AuthPanel from "./components/AuthPanel.jsx";
 import CollectiveDreamDashboard from "./components/CollectiveDreamDashboard.jsx";
 import DreamRecordPage from "./components/DreamRecordPage.jsx";
+import Footer from "./components/Footer.jsx";
 import RecordDreamPage from "./components/RecordDreamPage.jsx";
 import UserDashboard from "./components/UserDashboard.jsx";
 import { useAuth } from "./hooks/useAuth.js";
@@ -141,7 +142,7 @@ export default function App() {
     }
   }
 
-  if (authLoading) {
+  function renderShell(content) {
     return (
       <>
         <AppearanceToggle
@@ -149,20 +150,19 @@ export default function App() {
           appearance={appearance}
           setAppearance={handleAppearanceChange}
         />
-        <AuthLoadingScreen language={language} />
+        {content}
+        <Footer language={language} />
       </>
     );
   }
 
+  if (authLoading) {
+    return renderShell(<AuthLoadingScreen language={language} />);
+  }
+
   if (activeView === "database") {
-    return (
-      <>
-        <AppearanceToggle
-          language={language}
-          appearance={appearance}
-          setAppearance={handleAppearanceChange}
-        />
-        <CollectiveDreamDashboard
+    return renderShell(
+      <CollectiveDreamDashboard
           language={language}
           setLanguage={handleLanguageChange}
           currentUser={currentUser}
@@ -170,19 +170,12 @@ export default function App() {
           onOpenRecorder={() => setActiveView("record")}
           onOpenRecord={(record) => openDreamRecord(record, "database")}
         />
-      </>
     );
   }
 
   if (activeView === "record") {
-    return (
-      <>
-        <AppearanceToggle
-          language={language}
-          appearance={appearance}
-          setAppearance={handleAppearanceChange}
-        />
-        <RecordDreamPage
+    return renderShell(
+      <RecordDreamPage
           language={language}
           setLanguage={handleLanguageChange}
           currentUser={currentUser}
@@ -190,19 +183,12 @@ export default function App() {
           onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
           onSubmitted={(record) => openDreamRecord(record, "record")}
         />
-      </>
     );
   }
 
   if (selectedRecord && activeView === "dream") {
-    return (
-      <>
-        <AppearanceToggle
-          language={language}
-          appearance={appearance}
-          setAppearance={handleAppearanceChange}
-        />
-        <DreamRecordPage
+    return renderShell(
+      <DreamRecordPage
           record={selectedRecord}
           currentUser={currentUser}
           language={language}
@@ -210,19 +196,12 @@ export default function App() {
           onBack={() => setActiveView(lastListView)}
           onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
         />
-      </>
     );
   }
 
   if (currentUser && activeView === "dashboard") {
-    return (
-      <>
-        <AppearanceToggle
-          language={language}
-          appearance={appearance}
-          setAppearance={handleAppearanceChange}
-        />
-        <UserDashboard
+    return renderShell(
+      <UserDashboard
           language={language}
           setLanguage={handleLanguageChange}
           user={currentUser}
@@ -231,25 +210,17 @@ export default function App() {
           onOpenRecorder={() => setActiveView("record")}
           onOpenRecord={(record) => openDreamRecord(record, "dashboard")}
         />
-      </>
     );
   }
 
-  return (
-    <>
-      <AppearanceToggle
-        language={language}
-        appearance={appearance}
-        setAppearance={handleAppearanceChange}
-      />
-      <AuthPanel
+  return renderShell(
+    <AuthPanel
         language={language}
         setLanguage={handleLanguageChange}
         onAuthenticated={handleAuthenticated}
         onOpenDatabase={() => setActiveView("database")}
         onOpenRecorder={() => setActiveView("record")}
       />
-    </>
   );
 }
 

@@ -84,6 +84,8 @@ const RECORD_COPY = {
     submitAccount: "Publish to My Account",
     submitAnonymous: "Publish Anonymously",
     submitting: "Publishing record",
+    consentText:
+      "By proceeding, you retain full copyright of your text but grant this database the right to permanently store and publicly display your records.",
     textRequired: "Write at least a few words before publishing.",
     publishError: "The record could not be published. Check your connection and try again.",
     publishPermissionDenied:
@@ -184,6 +186,8 @@ const RECORD_COPY = {
     submitAccount: "發布到我的帳戶",
     submitAnonymous: "匿名發布",
     submitting: "正在發布記錄",
+    consentText:
+      "繼續後，你仍保留文字的完整著作權，但授權此資料庫永久儲存並公開顯示你的紀錄。",
     textRequired: "發布前請至少寫下幾個字。",
     publishError: "記錄無法發布。請檢查連線後再試一次。",
     publishPermissionDenied: "紀錄目前無法送出。請檢查必填內容後再試一次。",
@@ -279,6 +283,8 @@ const RECORD_COPY = {
     submitAccount: "Publicar en mi cuenta",
     submitAnonymous: "Publicar anónimo",
     submitting: "Publicando registro",
+    consentText:
+      "Al continuar, conservas todos los derechos de autor sobre tu texto, pero concedes a esta base de datos el derecho de almacenar y mostrar públicamente tus registros de forma permanente.",
     textRequired: "Escribe al menos unas palabras antes de publicar.",
     publishError: "No se pudo publicar el registro. Revisa la conexión e inténtalo otra vez.",
     publishPermissionDenied:
@@ -980,6 +986,9 @@ export default function RecordDreamPage({
                     ? copy.submitAccount
                     : copy.submitAnonymous}
               </button>
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                {copy.consentText}
+              </p>
             </div>
           </form>
 
@@ -1079,6 +1088,11 @@ export default function RecordDreamPage({
                           ? copy.loginButton
                           : copy.signupButton}
                   </button>
+                  {authMode === "signup" && (
+                    <p className="text-xs leading-5 text-slate-500">
+                      {copy.consentText}
+                    </p>
+                  )}
 
                   <button
                     type="button"

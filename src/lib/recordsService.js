@@ -23,7 +23,7 @@ import {
   getVisibleDreamDate,
   normalizeDreamDateStatus,
 } from "./dreamDate.js";
-import { LANGUAGE_OPTIONS, normalizeLanguage } from "./language.js";
+import { normalizeLanguage } from "./language.js";
 import { buildRecordTags, getTagSlugsByCategory } from "./tagTaxonomy.js";
 
 function requireFirestore() {
@@ -147,12 +147,6 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     dreamText,
     excerpt
   );
-  const translations = buildPendingTranslations(
-    originalLanguage,
-    title,
-    dreamText,
-    excerpt
-  );
   const coreRecord = {
     id: recordRef.id,
     dream_id: recordRef.id,
@@ -169,13 +163,6 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     dream_text: dreamText,
     excerpt,
     ...languageFields,
-    translations,
-    translationState: "queued",
-    translationRequestedAt: serverTimestamp(),
-    translationMeta: {
-      status: "queued",
-      sourceLanguage: originalLanguage,
-    },
     dreamDate,
     dream_date: dreamDate,
     dreamDateStatus,
@@ -417,7 +404,6 @@ function normalizeRecordReference(record) {
   const originalLanguage = normalizeLanguage(
     record?.originalLanguage || record?.original_language || "en"
   );
-  const translations = normalizeRecordTranslations(record, originalLanguage);
   const recordIdentityMode =
     record?.recordIdentityMode === "account" || record?.attributionMode === "account"
       ? "account"
@@ -461,12 +447,12 @@ function normalizeRecordReference(record) {
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,
-    translations,
     date: dreamDate,
     dreamDate,
     dreamDateStatus,
     dream_date_status: dreamDateStatus,
     creatorId: record?.ownerId || record?.creatorId || "",
+    authorName: record?.authorName || record?.creatorDisplayName || "",
     recordIdentityMode,
     creatorDisplayName:
       recordIdentityMode === "account"
@@ -506,42 +492,6 @@ function normalizeRecordReference(record) {
       : [],
     customTags: Array.isArray(record?.customTags) ? record.customTags : [],
   };
-}
-
-function normalizeRecordTranslations(record, originalLanguage) {
-  const existingTranslations =
-    record?.translations && typeof record.translations === "object"
-      ? record.translations
-      : {};
-
-  return Object.fromEntries(
-    LANGUAGE_OPTIONS.map((option) => {
-      const language = option.value;
-      const existingTranslation = existingTranslations[language] || {};
-
-      return [
-        language,
-        {
-          title:
-            existingTranslation.title ||
-            getLanguageSpecificValue(record, "title", language) ||
-            (language === originalLanguage
-              ? record?.originalTitle || record?.original_title || ""
-              : ""),
-          text:
-            existingTranslation.text ||
-            existingTranslation.dream_text ||
-            getLanguageSpecificValue(record, "text", language) ||
-            (language === originalLanguage
-              ? record?.originalText || record?.original_text || ""
-              : ""),
-          excerpt:
-            existingTranslation.excerpt ||
-            getLanguageSpecificValue(record, "excerpt", language),
-        },
-      ];
-    })
-  );
 }
 
 function getLanguageSpecificValue(record, field, language) {
@@ -602,17 +552,6 @@ function buildOriginalLanguageFields(language, title, text, excerpt) {
     excerptEn: excerpt,
     excerpt_en: excerpt,
   };
-}
-
-function buildPendingTranslations(originalLanguage, title, text, excerpt) {
-  return Object.fromEntries(
-    LANGUAGE_OPTIONS.map((option) => [
-      option.value,
-      option.value === originalLanguage
-        ? { title, excerpt, text, dream_text: text }
-        : { title: "", excerpt: "", text: "", dream_text: "" },
-    ])
-  );
 }
 
 function normalizeOptionalTitle(title, dreamText) {
@@ -775,18 +714,6 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
         title,
         dream_text: dreamText,
         excerpt,
-        translations: buildPendingTranslations(
-          originalLanguage,
-          title,
-          dreamText,
-          excerpt
-        ),
-        translationState: "queued",
-        translationRequestedAt: serverTimestamp(),
-        translationMeta: {
-          status: "queued",
-          sourceLanguage: originalLanguage,
-        },
       },
       buildOriginalLanguageFields(originalLanguage, title, dreamText, excerpt)
     );

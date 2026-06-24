@@ -82,6 +82,8 @@ const DASHBOARD_COPY = {
     joinedDate: "Joined",
     hiddenAge: "Hidden",
     originalLanguageLabel: "Original language",
+    recordedBy: "Recorded by",
+    anonymousObserver: "Anonymous Observer",
     unknownDate: "Date unknown",
     hiddenDate: "Date hidden",
     analysisTitle: "Personal Upload Analysis",
@@ -150,6 +152,8 @@ const DASHBOARD_COPY = {
     joinedDate: "加入日期",
     hiddenAge: "已隱藏",
     originalLanguageLabel: "原始語言",
+    recordedBy: "記錄者",
+    anonymousObserver: "匿名觀察者",
     unknownDate: "日期不確定",
     hiddenDate: "日期已隱藏",
     analysisTitle: "個人上傳分析",
@@ -217,6 +221,8 @@ const DASHBOARD_COPY = {
     joinedDate: "Fecha de ingreso",
     hiddenAge: "Oculta",
     originalLanguageLabel: "Idioma original",
+    recordedBy: "Registrado por",
+    anonymousObserver: "Observador anónimo",
     unknownDate: "Fecha desconocida",
     hiddenDate: "Fecha oculta",
     analysisTitle: "Análisis personal",
@@ -898,7 +904,6 @@ function normalizeRecordItem(item, index) {
         "text",
         originalLanguage
       ),
-    translations: item.translations || {},
     title,
     titleEn,
     titleZh,
@@ -926,6 +931,7 @@ function normalizeRecordItem(item, index) {
         ? "account"
         : "anonymous",
     creatorDisplayName: item.creatorDisplayName || "",
+    authorName: item.authorName || item.creatorDisplayName || "",
     pseudoId: item.pseudoId || item.pseudo_id || "",
     visibility: item.visibility || (item.isPublic === false ? "private" : "public"),
     tags: Array.isArray(item.tags) ? item.tags : [],
@@ -1214,8 +1220,8 @@ function TabButton({ active, children, onClick }) {
 function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locked = false }) {
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const style = ACCENT_STYLES[item.accent] || ACCENT_STYLES.cyan;
-  const title = getLocalizedItemTitle(item, language);
-  const body = getLocalizedItemText(item, language);
+  const title = getOriginalItemTitle(item);
+  const body = getOriginalItemText(item);
   const showThumbnail = Boolean(item.thumbnailUrl && !thumbnailFailed);
 
   return (
@@ -1251,6 +1257,9 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
           </span>
         </div>
         {title && <h2 className="text-xl font-semibold text-zinc-50">{title}</h2>}
+        <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
+          {copy.recordedBy} @{getItemAuthorName(item, copy)}
+        </p>
         {body && (
           <p className="mt-3 line-clamp-3 text-sm leading-6 text-zinc-400">
             {body}
@@ -1282,36 +1291,34 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
   );
 }
 
-function getLocalizedItemTitle(item, language) {
-  const normalizedLanguage = normalizeLanguage(language);
-
-  if (normalizedLanguage === item.originalLanguage) {
-    return item.originalTitle || getLanguageSpecificRecordValue(item, "title", normalizedLanguage);
-  }
+function getOriginalItemTitle(item) {
+  const originalLanguage = normalizeLanguage(item.originalLanguage);
 
   return (
-    item.translations?.[normalizedLanguage]?.title ||
-    getLanguageSpecificRecordValue(item, "title", normalizedLanguage) ||
     item.originalTitle ||
+    getLanguageSpecificRecordValue(item, "title", originalLanguage) ||
     item.title ||
     ""
   );
 }
 
-function getLocalizedItemText(item, language) {
-  const normalizedLanguage = normalizeLanguage(language);
-
-  if (normalizedLanguage === item.originalLanguage) {
-    return item.originalText || getLanguageSpecificRecordValue(item, "text", normalizedLanguage);
-  }
+function getOriginalItemText(item) {
+  const originalLanguage = normalizeLanguage(item.originalLanguage);
 
   return (
-    item.translations?.[normalizedLanguage]?.text ||
-    item.translations?.[normalizedLanguage]?.dream_text ||
-    getLanguageSpecificRecordValue(item, "text", normalizedLanguage) ||
     item.originalText ||
+    getLanguageSpecificRecordValue(item, "text", originalLanguage) ||
     item.text ||
     ""
+  );
+}
+
+function getItemAuthorName(item, copy) {
+  return (
+    item.authorName ||
+    item.creatorDisplayName ||
+    item.displayName ||
+    copy.anonymousObserver
   );
 }
 

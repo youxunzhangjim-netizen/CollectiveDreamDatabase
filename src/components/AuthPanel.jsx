@@ -39,6 +39,8 @@ const AUTH_COPY = {
     loadingSignup: "Creating profile",
     loadingGoogle: "Opening Google",
     loadingGuest: "Opening guest mode",
+    consentText:
+      "By proceeding, you retain full copyright of your text but grant this database the right to permanently store and publicly display your records.",
     switchToSignup: "Need an account profile?",
     switchToLogin: "Already have an account?",
     switchSignupAction: "Create account",
@@ -86,6 +88,8 @@ const AUTH_COPY = {
     loadingSignup: "正在建立個人資料",
     loadingGoogle: "正在開啟 Google",
     loadingGuest: "正在開啟訪客通道",
+    consentText:
+      "繼續後，你仍保留文字的完整著作權，但授權此資料庫永久儲存並公開顯示你的紀錄。",
     switchToSignup: "需要建立帳戶？",
     switchToLogin: "已經有帳戶？",
     switchSignupAction: "建立帳戶",
@@ -132,6 +136,8 @@ const AUTH_COPY = {
     loadingSignup: "Creando perfil",
     loadingGoogle: "Abriendo Google",
     loadingGuest: "Abriendo modo invitado",
+    consentText:
+      "Al continuar, conservas todos los derechos de autor sobre tu texto, pero concedes a esta base de datos el derecho de almacenar y mostrar públicamente tus registros de forma permanente.",
     switchToSignup: "¿Necesitas un perfil?",
     switchToLogin: "¿Ya tienes cuenta?",
     switchSignupAction: "Crear cuenta",
@@ -397,6 +403,11 @@ export default function AuthPanel({
                     ? copy.loadingSignup
                     : primaryLabel}
               </button>
+              {!isLogin && (
+                <p className="text-xs leading-5 text-slate-500">
+                  {copy.consentText}
+                </p>
+              )}
 
               <button
                 type="button"

@@ -6,7 +6,6 @@ import {
 } from "../lib/recordsService.js";
 import {
   getLanguageName,
-  LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
 import {
@@ -81,8 +80,8 @@ const DETAIL_COPY = {
     imageHiddenForGuest: "Pictures are hidden for guests. Sign in to view dream images.",
     emptyRecordBody: "No dream text has been archived for this record yet.",
     originalLanguage: "Original Language",
-    originalSource: "Original Source Text",
-    translatedView: "Translated View",
+    recordedBy: "Recorded by",
+    anonymousObserver: "Anonymous Observer",
     adultContentLabel: "Adult content",
     adultRestrictedTitle: "Age-restricted dream",
     adultGuestPrompt:
@@ -152,8 +151,8 @@ const DETAIL_COPY = {
     imageHiddenForGuest: "訪客不顯示圖片。登入後可查看夢境影像。",
     emptyRecordBody: "此紀錄尚未歸檔夢境內文。",
     originalLanguage: "原始語言",
-    originalSource: "原文紀錄",
-    translatedView: "翻譯版本",
+    recordedBy: "記錄者",
+    anonymousObserver: "匿名觀察者",
     adultContentLabel: "成人內容",
     adultRestrictedTitle: "年齡限制夢境",
     adultGuestPrompt: "此紀錄可能包含成人內容。請確認你已滿 18 歲，才能閱讀此紀錄。",
@@ -222,8 +221,8 @@ const DETAIL_COPY = {
       "Las imágenes están ocultas para invitados. Inicia sesión para verlas.",
     emptyRecordBody: "Este registro aún no tiene texto de sueño archivado.",
     originalLanguage: "Idioma Original",
-    originalSource: "Texto Original",
-    translatedView: "Vista Traducida",
+    recordedBy: "Registrado por",
+    anonymousObserver: "Observador anónimo",
     adultContentLabel: "Contenido adulto",
     adultRestrictedTitle: "Sueño con restricción de edad",
     adultGuestPrompt:
@@ -298,10 +297,9 @@ export default function DreamRecordPage({
   const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [status, setStatus] = useState("");
   const [collecting, setCollecting] = useState(false);
-  const title = getLocalizedRecordTitle(normalizedRecord, language);
-  const body = getLocalizedRecordText(normalizedRecord, language);
+  const title = getOriginalRecordTitle(normalizedRecord);
+  const body = getOriginalRecordText(normalizedRecord);
   const originalLanguage = normalizeLanguage(normalizedRecord.originalLanguage);
-  const isTranslatedView = normalizeLanguage(language) !== originalLanguage;
   const adultRecord = isAdultRecord(normalizedRecord);
   const ageVerifiedAdult = Number(profile?.age || 0) >= 18;
   const adultAllowed = !adultRecord || ageVerifiedAdult || adultConfirmed;
@@ -545,15 +543,15 @@ export default function DreamRecordPage({
                   {pageTitle}
                 </h1>
               )}
+              {adultAllowed && (
+                <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
+                  {copy.recordedBy} @{getRecordAuthorName(normalizedRecord, copy)}
+                </p>
+              )}
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
                   {copy.originalLanguage}: {getLanguageName(originalLanguage, language)}
                 </span>
-                {isTranslatedView && (
-                  <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-fuchsia-100">
-                    {copy.translatedView}
-                  </span>
-                )}
                 {adultRecord && (
                   <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100">
                     {copy.adultContentLabel} 18+
@@ -600,26 +598,6 @@ export default function DreamRecordPage({
                   </p>
                 </>
               )}
-
-              {adultAllowed &&
-                isTranslatedView &&
-                (normalizedRecord.originalTitle || normalizedRecord.originalText) && (
-                  <section className="mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                    <p className="font-mono text-xs uppercase tracking-[0.24em] text-cyan-200/70">
-                      {copy.originalSource} / {getLanguageName(originalLanguage, language)}
-                    </p>
-                    {normalizedRecord.originalTitle && (
-                      <h2 className="mt-4 text-2xl font-semibold text-zinc-50">
-                        {normalizedRecord.originalTitle}
-                      </h2>
-                    )}
-                    {normalizedRecord.originalText && (
-                      <p className="mt-4 text-sm leading-7 text-zinc-300">
-                        {normalizedRecord.originalText}
-                      </p>
-                    )}
-                  </section>
-                )}
 
               {status && (
                 <p className="mt-6 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4 font-mono text-xs uppercase tracking-[0.16em] text-cyan-100">
@@ -887,7 +865,6 @@ function normalizeDreamRecord(record) {
         "text",
         originalLanguage
       ),
-    translations: record?.translations || {},
     title,
     titleEn,
     titleZh,
@@ -915,6 +892,7 @@ function normalizeDreamRecord(record) {
         ? "account"
         : "anonymous",
     creatorDisplayName: record?.creatorDisplayName || "",
+    authorName: record?.authorName || record?.creatorDisplayName || "",
     creatorEmail: record?.creatorEmail || "",
     pseudoId: record?.pseudo_id || record?.pseudoId || record?.creatorId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
@@ -960,34 +938,34 @@ function getDreamDateDisplay(record, copy) {
   return record.dreamDate || copy.unknownDreamDate;
 }
 
-function getLocalizedRecordTitle(record, language) {
-  const normalizedLanguage = normalizeLanguage(language);
-
-  if (record.originalLanguage === normalizedLanguage) {
-    return record.originalTitle || getLanguageSpecificRecordValue(record, "title", normalizedLanguage);
-  }
+function getOriginalRecordTitle(record) {
+  const originalLanguage = normalizeLanguage(record.originalLanguage);
 
   return (
-    record.translations?.[normalizedLanguage]?.title ||
-    getLanguageSpecificRecordValue(record, "title", normalizedLanguage) ||
     record.originalTitle ||
-    record.title
+    getLanguageSpecificRecordValue(record, "title", originalLanguage) ||
+    record.title ||
+    ""
   );
 }
 
-function getLocalizedRecordText(record, language) {
-  const normalizedLanguage = normalizeLanguage(language);
-
-  if (record.originalLanguage === normalizedLanguage) {
-    return record.originalText || getLanguageSpecificRecordValue(record, "text", normalizedLanguage);
-  }
+function getOriginalRecordText(record) {
+  const originalLanguage = normalizeLanguage(record.originalLanguage);
 
   return (
-    record.translations?.[normalizedLanguage]?.text ||
-    record.translations?.[normalizedLanguage]?.dream_text ||
-    getLanguageSpecificRecordValue(record, "text", normalizedLanguage) ||
     record.originalText ||
-    record.text
+    getLanguageSpecificRecordValue(record, "text", originalLanguage) ||
+    record.text ||
+    ""
+  );
+}
+
+function getRecordAuthorName(record, copy) {
+  return (
+    record.authorName ||
+    record.creatorDisplayName ||
+    record.displayName ||
+    copy.anonymousObserver
   );
 }
 
@@ -1066,12 +1044,6 @@ function mergeRecordEdits(record, updates) {
     title: updates.title,
     dream_text: updates.dreamText,
     excerpt,
-    translations: buildLocalPendingTranslations(
-      updates.originalLanguage,
-      updates.title,
-      updates.dreamText,
-      excerpt
-    ),
     dreamDate: updates.dreamDate || "",
     dream_date: updates.dreamDate || "",
     dreamDateStatus: updates.dreamDateStatus,
@@ -1124,17 +1096,6 @@ function buildLocalLanguageFields(language, title, text, excerpt) {
     excerptEn: excerpt,
     excerpt_en: excerpt,
   };
-}
-
-function buildLocalPendingTranslations(originalLanguage, title, text, excerpt) {
-  return Object.fromEntries(
-    LANGUAGE_OPTIONS.map((option) => [
-      option.value,
-      option.value === originalLanguage
-        ? { title, excerpt, text, dream_text: text }
-        : { title: "", excerpt: "", text: "", dream_text: "" },
-    ])
-  );
 }
 
 function createLocalExcerpt(text) {
