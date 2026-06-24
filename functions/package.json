@@ -1,0 +1,17 @@
+{
+  "name": "collective-dream-database-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "@google-cloud/translate": "^8.5.1",
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.1"
+  }
+}
