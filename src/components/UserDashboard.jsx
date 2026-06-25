@@ -92,7 +92,7 @@ const DASHBOARD_COPY = {
     hiddenDate: "Date hidden",
     analysisTitle: "My Dream Map",
     analysisText:
-      "A private pattern dashboard for self-reflection. It highlights recurring places, entities, symbols, emotions, lucid/nightmare frequency, similar dreams, and gentle questions without diagnosis.",
+      "A private pattern dashboard for self-reflection. It highlights recurring places, entities, symbols, emotions, lucid/nightmare frequency, similar dreams, and gentle questions generated locally from your tags and counts, not AI diagnosis.",
     analysisTotal: "Uploaded",
     analysisAdult: "Mature tagged",
     analysisFrequency: "Dream frequency",
@@ -171,7 +171,7 @@ const DASHBOARD_COPY = {
     unknownDate: "日期不確定",
     hiddenDate: "日期已隱藏",
     analysisTitle: "我的夢境地圖",
-    analysisText: "只根據此帳戶夢境建立的私人模式儀表板，用於自我反思。它會整理重複場景、人物／實體、符號、情緒、清醒夢／惡夢、相似夢境與溫和反思問題，但不做診斷。",
+    analysisText: "只根據此帳戶夢境建立的私人模式儀表板，用於自我反思。它會整理重複場景、人物／實體、符號、情緒、清醒夢／惡夢、相似夢境與反思問題；這些問題由標籤與次數在本機規則生成，不是 AI 診斷。",
     analysisTotal: "已上傳",
     analysisAdult: "成人標記",
     analysisFrequency: "夢境頻率",
@@ -251,7 +251,7 @@ const DASHBOARD_COPY = {
     hiddenDate: "Fecha oculta",
     analysisTitle: "Mi mapa de sueños",
     analysisText:
-      "Panel privado de patrones para autorreflexión. Destaca lugares, entidades, símbolos, emociones, frecuencia de sueños lúcidos/pesadillas, sueños similares y preguntas suaves sin diagnóstico.",
+      "Panel privado de patrones para autorreflexión. Destaca lugares, entidades, símbolos, emociones, sueños lúcidos/pesadillas, sueños similares y preguntas generadas localmente desde etiquetas y conteos, no como diagnóstico de IA.",
     analysisTotal: "Subidos",
     analysisAdult: "Madurez marcada",
     analysisFrequency: "Frecuencia",

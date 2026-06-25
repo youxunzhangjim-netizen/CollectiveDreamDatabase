@@ -246,6 +246,8 @@ const UI_COPY = {
     noResearchData: "Not enough signal yet",
     collectDream: "Collect",
     collectedDream: "Collected",
+    expandPanel: "Expand",
+    collapsePanel: "Collapse",
     showTags: "Show tags",
     hideTags: "Hide tags",
     signInToCollect: "Sign in to collect",
@@ -415,6 +417,8 @@ const UI_COPY = {
     noResearchData: "訊號尚不足",
     collectDream: "收藏",
     collectedDream: "已收藏",
+    expandPanel: "展開",
+    collapsePanel: "收合",
     showTags: "展開標籤",
     hideTags: "收合標籤",
     signInToCollect: "登入後可收藏",
@@ -589,6 +593,8 @@ const UI_COPY = {
     noResearchData: "Señal insuficiente",
     collectDream: "Coleccionar",
     collectedDream: "Coleccionado",
+    expandPanel: "Expandir",
+    collapsePanel: "Contraer",
     showTags: "Ver etiquetas",
     hideTags: "Ocultar etiquetas",
     signInToCollect: "Inicia sesión para coleccionar",
@@ -629,6 +635,12 @@ export default function CollectiveDreamDashboard({
   const [matchMode, setMatchMode] = useState("all");
   const [sortMode, setSortMode] = useState("newest");
   const [activeSection, setActiveSection] = useState("explore");
+  const [expandedPanels, setExpandedPanels] = useState({
+    pathways: false,
+    patterns: false,
+    research: false,
+    filters: false,
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [loadState, setLoadState] = useState(INITIAL_LOAD_STATE);
   const [loadError, setLoadError] = useState(null);
@@ -892,6 +904,13 @@ export default function CollectiveDreamDashboard({
     }, 0);
   }
 
+  function togglePanel(panelKey) {
+    setExpandedPanels((current) => ({
+      ...current,
+      [panelKey]: !current[panelKey],
+    }));
+  }
+
   function handleHomeSection(section, index) {
     const mode = ["record", "explore", "patterns", "dream-map", "research"][index];
 
@@ -907,8 +926,14 @@ export default function CollectiveDreamDashboard({
 
     setActiveSection(mode);
 
-    if (mode === "patterns") scrollToSection("collective-patterns");
-    if (mode === "research") scrollToSection("research-archive");
+    if (mode === "patterns") {
+      setExpandedPanels((current) => ({ ...current, patterns: true }));
+      scrollToSection("collective-patterns");
+    }
+    if (mode === "research") {
+      setExpandedPanels((current) => ({ ...current, research: true }));
+      scrollToSection("research-archive");
+    }
     if (mode === "explore") scrollToSection("dream-explore");
   }
 
@@ -981,10 +1006,17 @@ export default function CollectiveDreamDashboard({
         <HomePathways
           copy={copy}
           activeSection={activeSection}
+          expanded={expandedPanels.pathways}
+          onToggle={() => togglePanel("pathways")}
           onSelectSection={handleHomeSection}
         />
 
-        <CollectivePatternsPanel stats={collectivePatternStats} copy={copy} />
+        <CollectivePatternsPanel
+          stats={collectivePatternStats}
+          copy={copy}
+          expanded={expandedPanels.patterns}
+          onToggle={() => togglePanel("patterns")}
+        />
 
         <ResearchPanel
           stats={researchStats}
@@ -993,6 +1025,8 @@ export default function CollectiveDreamDashboard({
           patternStats={collectivePatternStats}
           tags={tags}
           language={language}
+          expanded={expandedPanels.research}
+          onToggle={() => togglePanel("research")}
           exportFilters={{
             query,
             selectedTagSlugs,
@@ -1013,6 +1047,8 @@ export default function CollectiveDreamDashboard({
           setSortMode={setSortMode}
           language={language}
           copy={copy}
+          expanded={expandedPanels.filters}
+          onToggle={() => togglePanel("filters")}
         />
 
         <ObservationGrid
@@ -1747,67 +1783,72 @@ function HeroPanel({
   );
 }
 
-function HomePathways({ copy, activeSection, onSelectSection }) {
+function HomePathways({ copy, activeSection, expanded, onToggle, onSelectSection }) {
   const sections = copy.homeSections || [];
   const sectionModes = ["record", "explore", "patterns", "dream-map", "research"];
 
   return (
     <section className="mb-6 rounded-3xl border border-cyan-300/15 bg-zinc-950/65 p-4 shadow-[0_12px_50px_rgba(0,0,0,.28)] backdrop-blur sm:p-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
             {copy.audienceKicker}
           </p>
           <h2 className="mt-3 max-w-3xl text-2xl font-semibold text-zinc-50 sm:text-3xl">
             {copy.audienceTitle}
           </h2>
+          <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-zinc-400">
+            {copy.audienceText}
+          </p>
         </div>
-        <p className="max-w-2xl text-sm leading-6 text-zinc-400">
-          {copy.audienceText}
-        </p>
+        <CollapseToggle expanded={expanded} copy={copy} onClick={onToggle} />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <AudienceCard
-          title={copy.dreamerAudienceTitle}
-          text={copy.dreamerAudienceText}
-          accent="cyan"
-        />
-        <AudienceCard
-          title={copy.researcherAudienceTitle}
-          text={copy.researcherAudienceText}
-          accent="fuchsia"
-        />
-      </div>
+      {expanded && (
+        <>
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <AudienceCard
+              title={copy.dreamerAudienceTitle}
+              text={copy.dreamerAudienceText}
+              accent="cyan"
+            />
+            <AudienceCard
+              title={copy.researcherAudienceTitle}
+              text={copy.researcherAudienceText}
+              accent="fuchsia"
+            />
+          </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {sections.map((section, index) => {
-          const mode = sectionModes[index];
-          const active = activeSection === mode;
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {sections.map((section, index) => {
+              const mode = sectionModes[index];
+              const active = activeSection === mode;
 
-          return (
-            <button
-              key={section.title}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onSelectSection?.(section, index)}
-              className={[
-                "min-w-0 rounded-2xl border p-4 text-left transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]",
-                active
-                  ? "border-cyan-300/35 bg-cyan-300/10 shadow-[0_0_28px_rgba(34,211,238,.08)]"
-                  : "border-white/10 bg-black/30",
-              ].join(" ")}
-            >
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70 sm:tracking-[0.2em]">
-                {section.title}
-              </p>
-              <p className="cdo-mobile-readable-text mt-3 text-sm leading-6 text-zinc-400">
-                {section.text}
-              </p>
-            </button>
-          );
-        })}
-      </div>
+              return (
+                <button
+                  key={section.title}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onSelectSection?.(section, index)}
+                  className={[
+                    "min-w-0 rounded-2xl border p-4 text-left transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]",
+                    active
+                      ? "border-cyan-300/35 bg-cyan-300/10 shadow-[0_0_28px_rgba(34,211,238,.08)]"
+                      : "border-white/10 bg-black/30",
+                  ].join(" ")}
+                >
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70 sm:tracking-[0.2em]">
+                    {section.title}
+                  </p>
+                  <p className="cdo-mobile-readable-text mt-3 text-sm leading-6 text-zinc-400">
+                    {section.text}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </section>
   );
 }
@@ -1826,20 +1867,38 @@ function AudienceCard({ title, text, accent }) {
   );
 }
 
-function ResearchPanel({ stats, copy, records = [], patternStats, tags = [], language, exportFilters }) {
+function ResearchPanel({
+  stats,
+  copy,
+  records = [],
+  patternStats,
+  tags = [],
+  language,
+  exportFilters,
+  expanded,
+  onToggle,
+}) {
   return (
     <section id="research-archive" className="mb-6 scroll-mt-28 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
             {copy.researchTitle}
           </p>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
+          <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-zinc-400">
             {copy.researchText}
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <CompactSummaryPill label={copy.researchTotal} value={String(stats.total)} />
+            <CompactSummaryPill label={copy.researchVisible} value={String(stats.visible)} />
+            <CompactSummaryPill label={copy.exportTitle} value={`N=${records.length}`} />
+          </div>
         </div>
+        <CollapseToggle expanded={expanded} copy={copy} onClick={onToggle} />
       </div>
 
+      {expanded && (
+        <>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <ResearchMetric label={copy.researchTotal} value={String(stats.total)} />
         <ResearchMetric label={copy.researchVisible} value={String(stats.visible)} />
@@ -1879,6 +1938,8 @@ function ResearchPanel({ stats, copy, records = [], patternStats, tags = [], lan
           <ExportButton onClick={() => exportMethodologyMarkdown({ stats: patternStats, filters: exportFilters, language })}>{copy.exportMethodology}</ExportButton>
         </div>
       </div>
+        </>
+      )}
     </section>
   );
 }
@@ -1896,6 +1957,28 @@ function ExportButton({ children, onClick, disabled = false }) {
   );
 }
 
+function CollapseToggle({ expanded, copy, onClick }) {
+  return (
+    <button
+      type="button"
+      aria-expanded={expanded}
+      onClick={onClick}
+      className="shrink-0 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/15"
+    >
+      {expanded ? copy.collapsePanel : copy.expandPanel}
+    </button>
+  );
+}
+
+function CompactSummaryPill({ label, value }) {
+  return (
+    <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400">
+      <span className="shrink-0 text-zinc-500">{label}</span>
+      <span className="truncate text-cyan-100">{value}</span>
+    </span>
+  );
+}
+
 function ResearchMetric({ label, value }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
@@ -1909,22 +1992,33 @@ function ResearchMetric({ label, value }) {
   );
 }
 
-function CollectivePatternsPanel({ stats, copy }) {
+function CollectivePatternsPanel({ stats, copy, expanded, onToggle }) {
   const sampleTooSmall = stats.sampleSize > 0 && stats.sampleSize < 10;
 
   return (
     <section id="collective-patterns" className="mb-6 scroll-mt-28 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
             {copy.patternDashboardTitle}
           </p>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
+          <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-zinc-400">
             {copy.patternDashboardText}
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <CompactSummaryPill label={copy.patternSampleSize} value={`N=${stats.sampleSize}`} />
+            <CompactSummaryPill label={copy.patternDateRange} value={stats.dateRange || copy.patternNoData} />
+            <CompactSummaryPill
+              label={copy.patternFilters}
+              value={stats.filtersActive ? copy.patternFiltered : copy.patternAllLoaded}
+            />
+          </div>
         </div>
+        <CollapseToggle expanded={expanded} copy={copy} onClick={onToggle} />
       </div>
 
+      {expanded && (
+        <>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ResearchMetric label={copy.patternSampleSize} value={`N=${stats.sampleSize}`} />
         <ResearchMetric label={copy.patternDateRange} value={stats.dateRange || copy.patternNoData} />
@@ -1992,6 +2086,8 @@ function CollectivePatternsPanel({ stats, copy }) {
           empty={copy.patternNoData}
         />
       </div>
+        </>
+      )}
     </section>
   );
 }
@@ -2046,6 +2142,8 @@ function FilterPanel({
   setSortMode,
   language,
   copy,
+  expanded,
+  onToggle,
 }) {
   const [expandedCategories, setExpandedCategories] = useState({});
   const tagGroups = useMemo(
@@ -2064,19 +2162,54 @@ function FilterPanel({
     }));
   }
 
+  const activeTagCount = selectedTagSlugs.length;
+  const sortLabel =
+    sortMode === "title"
+      ? copy.sortTitle
+      : sortMode === "coherence"
+        ? copy.sortCoherence
+        : copy.sortNewest;
+
   return (
     <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="font-mono text-xs uppercase tracking-[0.32em] text-fuchsia-200/70">
             {copy.filterTitle}
           </p>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+          <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-6 text-zinc-400">
             {copy.filterText}
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <CompactSummaryPill
+              label={copy.selectedLabel}
+              value={String(activeTagCount)}
+            />
+            <CompactSummaryPill
+              label={copy.patternFilters}
+              value={matchMode === "all" ? copy.matchAll : copy.matchAny}
+            />
+            <CompactSummaryPill label={copy.sortSelectLabel} value={sortLabel} />
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+          {activeTagCount > 0 && (
+            <button
+              type="button"
+              onClick={clearTags}
+              className="rounded-full border border-red-300/20 bg-red-400/5 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-red-100 transition hover:border-red-300/40 hover:bg-red-400/10"
+            >
+              {copy.clearFilters}
+            </button>
+          )}
+          <CollapseToggle expanded={expanded} copy={copy} onClick={onToggle} />
+        </div>
+      </div>
+
+      {expanded && (
+        <>
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <SegmentButton active={matchMode === "all"} onClick={() => setMatchMode("all")}>
             {copy.matchAll}
           </SegmentButton>
@@ -2095,7 +2228,6 @@ function FilterPanel({
             <option value="title">{copy.sortTitle}</option>
           </select>
         </div>
-      </div>
 
       <div className="mt-5 grid gap-3 lg:grid-cols-2">
         {tagGroups.map(({ category, tags: categoryTags }) => {
@@ -2181,6 +2313,8 @@ function FilterPanel({
         >
           {copy.clearFilters}
         </button>
+      )}
+        </>
       )}
     </section>
   );
