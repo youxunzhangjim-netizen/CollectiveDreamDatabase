@@ -414,12 +414,14 @@ service cloud.firestore {
         && optionalNumber(data, "draftCount", 0, 250)
         && optionalNumber(data, "approvedDraftCount", 0, 250)
         && optionalNumber(data, "importedCount", 0, 250)
+        && optionalNumber(data, "linkedTranslationCount", 0, 250)
+        && optionalNumber(data, "skippedCount", 0, 250)
         && optionalNumber(data, "failedCount", 0, 250)
         && optionalNumber(data, "importedRecordCount", 0, 250);
     }
 
     function validDraftStatus(status) {
-      return status in ["draft", "review_ready", "importing", "imported", "failed"];
+      return status in ["draft", "review_ready", "importing", "imported", "skipped", "failed"];
     }
 
     function validImportDraftData(data, batchId) {
@@ -444,6 +446,7 @@ service cloud.firestore {
         && optionalNumber(data, "titleConfidence", 0, 1)
         && validOptionalLanguageField(data, "originalLanguage")
         && optionalList(data, "selectedTagSlugs", 120)
+        && optionalList(data, "customTagLabels", 80)
         && optionalList(data, "suggestedTags", 120)
         && optionalString(data, "tagsSource", 80)
         && optionalBool(data, "tagsReviewedByUser")
@@ -458,6 +461,7 @@ service cloud.firestore {
         && (!data.keys().hasAny(["status"]) || validDraftStatus(data.status))
         && optionalString(data, "importedRecordId", 128)
         && optionalBool(data, "importedAsTranslation")
+        && optionalString(data, "skippedReason", 120)
         && optionalString(data, "importError", 1000);
     }
 

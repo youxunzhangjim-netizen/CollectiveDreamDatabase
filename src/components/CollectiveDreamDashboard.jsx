@@ -28,6 +28,7 @@ import {
   exportResearchRecordsCsv,
   exportResearchRecordsJson,
   exportTagCodebookCsv,
+  EXPORT_DETAIL_LEVELS,
 } from "../lib/researchExportService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import {
@@ -101,7 +102,7 @@ const UI_COPY = {
     importDiary: "Import Diary",
     loginButton: "Login",
     accountButton: "Account",
-    reportSuggestion: "Report / Suggestion",
+    reportSuggestion: "Report",
     searchLabel: "Search dream observations",
     searchPlaceholder: "Search dreams, pseudo-IDs, emotions, anomalies...",
     languageLabel: "Switch interface language",
@@ -219,6 +220,10 @@ const UI_COPY = {
     exportCodebook: "Tag codebook",
     exportMethodology: "Method notes",
     exportPrivacyNote: "Private and stats-only dreams are not exported from the browser; they require server-side aggregation with consent checks.",
+    exportScopeLabel: "Export content",
+    exportScopeDreams: "Dreams only",
+    exportScopeCoded: "Dreams + tags",
+    exportScopeAnalysis: "Full research",
     patternDashboardTitle: "Collective Patterns",
     patternDashboardText:
       "Aggregated dream statistics for public, readable records. Private and stats-only records need a server-side aggregation pipeline before they can appear here safely.",
@@ -276,7 +281,7 @@ const UI_COPY = {
     importDiary: "匯入日記",
     loginButton: "登入",
     accountButton: "帳戶",
-    reportSuggestion: "回報／建議",
+    reportSuggestion: "回報",
     searchLabel: "搜尋夢境觀測",
     searchPlaceholder: "搜尋夢境、匿名 ID、情緒、異常現象...",
     languageLabel: "切換介面語言",
@@ -390,6 +395,10 @@ const UI_COPY = {
     exportCodebook: "標籤碼本",
     exportMethodology: "方法說明",
     exportPrivacyNote: "私人夢境與僅統計夢境不會從瀏覽器匯出；它們需要具同意檢查的伺服器端聚合。",
+    exportScopeLabel: "匯出內容",
+    exportScopeDreams: "只匯出夢",
+    exportScopeCoded: "夢與標籤",
+    exportScopeAnalysis: "完整研究欄位",
     patternDashboardTitle: "集體模式",
     patternDashboardText:
       "根據公開且可讀取的夢境紀錄建立整體統計。私人與只加入統計的紀錄，需要伺服器端聚合流程才能安全顯示於此。",
@@ -447,7 +456,7 @@ const UI_COPY = {
     importDiary: "Importar diario",
     loginButton: "Iniciar sesión",
     accountButton: "Cuenta",
-    reportSuggestion: "Reporte / sugerencia",
+    reportSuggestion: "Reporte",
     searchLabel: "Buscar observaciones de sueños",
     searchPlaceholder: "Buscar sueños, pseudo-ID, emociones, anomalías...",
     languageLabel: "Cambiar idioma de la interfaz",
@@ -566,6 +575,10 @@ const UI_COPY = {
     exportCodebook: "Codebook de etiquetas",
     exportMethodology: "Notas metodológicas",
     exportPrivacyNote: "Los sueños privados y solo-estadísticos no se exportan desde el navegador; requieren agregación del servidor con verificación de consentimiento.",
+    exportScopeLabel: "Contenido exportado",
+    exportScopeDreams: "Solo sueños",
+    exportScopeCoded: "Sueños + etiquetas",
+    exportScopeAnalysis: "Investigación completa",
     patternDashboardTitle: "Patrones colectivos",
     patternDashboardText:
       "Estadísticas agregadas basadas en registros públicos y legibles. Los registros privados o solo estadísticos necesitan agregación del servidor para aparecer aquí con seguridad.",
@@ -1705,7 +1718,7 @@ function TopNav({
 
   return (
     <nav className="sticky top-0 z-40 border-b border-cyan-300/10 bg-black/80 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl flex-col gap-2 px-3 py-2 sm:px-5 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-4">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-2 px-3 py-2 sm:px-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center lg:px-8 lg:py-3 xl:grid-cols-[auto_minmax(0,1fr)_minmax(18rem,32rem)]">
         <div className="flex items-center justify-between gap-3 lg:block">
           <a href="#" className="group flex min-w-0 items-center gap-3" aria-label={copy.homeLabel}>
             <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)] sm:h-10 sm:w-10">
@@ -1744,7 +1757,7 @@ function TopNav({
           </NavButton>
         </div>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden min-w-0 flex-wrap items-center justify-start gap-2 lg:flex xl:flex-nowrap xl:justify-center">
           <NavButton active>{copy.globalDatabase}</NavButton>
           <NavButton onClick={onOpenRecorder || onOpenAuth}>
             {copy.submitObservation}
@@ -1760,7 +1773,7 @@ function TopNav({
           </NavButton>
         </div>
 
-        <div className="grid gap-2 lg:w-[34rem] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="grid gap-2 lg:col-span-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center xl:col-span-1">
           <label className="relative block flex-1">
             <span className="sr-only">{copy.searchLabel}</span>
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-200/60" />
@@ -1957,6 +1970,13 @@ function ResearchPanel({
   expanded,
   onToggle,
 }) {
+  const [exportDetail, setExportDetail] = useState(EXPORT_DETAIL_LEVELS.ANALYSIS);
+  const exportDetailOptions = [
+    { value: EXPORT_DETAIL_LEVELS.DREAMS, label: copy.exportScopeDreams },
+    { value: EXPORT_DETAIL_LEVELS.CODED, label: copy.exportScopeCoded },
+    { value: EXPORT_DETAIL_LEVELS.ANALYSIS, label: copy.exportScopeAnalysis },
+  ];
+
   return (
     <section id="research-archive" className="mb-6 scroll-mt-28 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -2009,12 +2029,35 @@ function ResearchPanel({
           <span className="rounded-full border border-cyan-300/20 bg-black/30 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">N={records.length}</span>
         </div>
 
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-3">
+          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+            {copy.exportScopeLabel}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {exportDetailOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setExportDetail(option.value)}
+                className={[
+                  "min-w-0 rounded-xl border px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] transition",
+                  exportDetail === option.value
+                    ? "border-cyan-300/35 bg-cyan-300/10 text-cyan-100"
+                    : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-fuchsia-300/30 hover:text-fuchsia-100",
+                ].join(" ")}
+              >
+                <span className="block truncate">{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <ExportButton disabled={records.length === 0} onClick={() => exportResearchRecordsCsv(records, { language, filters: exportFilters })}>{copy.exportCsv}</ExportButton>
-          <ExportButton disabled={records.length === 0} onClick={() => exportResearchRecordsJson(records, { language, filters: exportFilters })}>{copy.exportJson}</ExportButton>
+          <ExportButton disabled={records.length === 0} onClick={() => exportResearchRecordsCsv(records, { language, filters: exportFilters, detailLevel: exportDetail })}>{copy.exportCsv}</ExportButton>
+          <ExportButton disabled={records.length === 0} onClick={() => exportResearchRecordsJson(records, { language, filters: exportFilters, detailLevel: exportDetail })}>{copy.exportJson}</ExportButton>
           <ExportButton disabled={!patternStats} onClick={() => exportPatternSummaryJson(patternStats, { language, filters: exportFilters })}>{copy.exportPatterns}</ExportButton>
           <ExportButton onClick={() => exportTagCodebookCsv(tags, { language, filters: exportFilters })}>{copy.exportCodebook}</ExportButton>
-          <ExportButton onClick={() => exportMethodologyMarkdown({ stats: patternStats, filters: exportFilters, language })}>{copy.exportMethodology}</ExportButton>
+          <ExportButton onClick={() => exportMethodologyMarkdown({ stats: patternStats, filters: exportFilters, language, detailLevel: exportDetail })}>{copy.exportMethodology}</ExportButton>
         </div>
       </div>
         </>
@@ -2831,14 +2874,14 @@ function NavButton({ children, active = false, onClick, fixed = false }) {
       type="button"
       onClick={onClick}
       className={[
-        "cdo-mobile-label min-h-10 min-w-0 rounded-xl px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] transition sm:min-h-10 sm:rounded-full sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.18em] lg:min-w-[5.6rem]",
-        fixed ? "overflow-hidden sm:w-36" : "",
+        "cdo-mobile-label min-h-10 min-w-0 rounded-xl px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] transition sm:min-h-10 sm:rounded-full sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.16em] lg:min-w-[4.8rem] lg:px-3 xl:px-4",
+        fixed ? "overflow-hidden sm:w-36 lg:w-32 xl:w-36" : "",
         active
           ? "border border-cyan-300/30 bg-cyan-300/10 text-cyan-50 shadow-[0_0_18px_rgba(34,211,238,.12)]"
           : "border border-white/10 bg-white/[0.03] text-zinc-400 hover:border-fuchsia-300/30 hover:text-fuchsia-100",
       ].join(" ")}
     >
-      <span className="block max-w-full truncate sm:max-w-[9rem] lg:max-w-none">{children}</span>
+      <span className="block max-w-full truncate sm:max-w-[9rem] lg:max-w-[7rem] xl:max-w-none">{children}</span>
     </button>
   );
 }

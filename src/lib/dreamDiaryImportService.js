@@ -13,7 +13,12 @@ import {
   DREAM_PERIODS,
   fetchOwnedRecords,
 } from "./recordsService.js";
-import { getTagLabel, RECORD_TAGS } from "./tagTaxonomy.js";
+import {
+  getTagLabel,
+  makeSharedTagSlug,
+  normalizeCustomTagLabel,
+  RECORD_TAGS,
+} from "./tagTaxonomy.js";
 
 export const DIARY_FILE_ACCEPT = ".txt,.md,.markdown,.csv,.json,text/plain,text/markdown,text/csv,application/json";
 export const MAX_DIARY_FILE_BYTES = 5 * 1024 * 1024;
@@ -40,8 +45,92 @@ const DIRECT_TAG_CATEGORIES = new Set([
   "Weather",
   "Dream Types",
   "Perspective",
+  "Psychological Observables",
+  "Dream Analysis",
   "Content",
 ]);
+
+const CSV_TAG_SEPARATOR = /[;；,，、|\n]+/u;
+
+const IMPORT_TAG_ALIASES = new Map(
+  Object.entries({
+    古代: "ancient",
+    中世紀: "medieval",
+    現代: "modern",
+    未來: "future",
+    死亡: "death",
+    家人: "family",
+    朋友: "friend",
+    陌生人: "stranger",
+    動物: "animal",
+    蛇: "snake",
+    獅子: "lion",
+    老虎: "tiger",
+    學校: "school",
+    醫院: "hospital",
+    海洋: "ocean",
+    巨大建築: "giant-architecture",
+    逃亡: "chase",
+    追逐: "chase",
+    超能力: "superpowers",
+    災難: "disaster",
+    戰爭: "war-conflict",
+    戀愛: "romance",
+    性夢: "sexual-dream",
+    日常生活: "daily-life",
+    清醒夢: "lucid",
+    惡夢: "nightmare",
+    迷路: "lost",
+    飛行: "flying",
+    墜落: "falling",
+    第一人稱: "first-person",
+    第二人稱: "second-person",
+    第三人稱: "third-person",
+    旁觀者: "observer-view",
+    晴天: "sunny",
+    白天: "daytime",
+    陰天: "overcast",
+    多雲: "cloudy",
+    下雨: "rain",
+    雨: "rain",
+    颱風: "typhoon",
+    霧: "fog",
+    夜晚: "night-sky",
+    恐懼: "fear",
+    害怕: "fear",
+    悲傷: "sadness",
+    無助: "helplessness",
+    焦慮: "anxiety",
+    困惑: "confusion",
+    憤怒: "anger",
+    快樂: "joy",
+    喜悅: "joy",
+    愛: "love",
+    孤獨: "loneliness",
+    自由: "freedom",
+    失控感: "psychology-control-loss",
+    脆弱感: "psychology-vulnerability",
+    衝突: "psychology-conflict",
+    親密: "psychology-intimacy",
+    分離: "psychology-separation",
+    被評價: "psychology-social-judgment",
+    責任: "psychology-responsibility",
+    保護: "psychology-protection",
+    逃避: "psychology-avoidance",
+    身分疑問: "psychology-identity-question",
+    監視: "psychology-surveillance",
+    熟悉場所變形: "analysis-familiar-place-changed",
+    場景轉換: "analysis-scene-shift",
+    時間扭曲: "analysis-time-distortion",
+    不可能邏輯: "analysis-impossible-logic",
+    重複符號: "analysis-repeated-symbol",
+    情緒轉換: "analysis-emotional-shift",
+    未解結尾: "analysis-unresolved-ending",
+    隱藏房間: "analysis-hidden-room",
+  })
+);
+
+const IMPORTED_TAG_INDEX = buildImportedTagIndex();
 
 const EXTRA_KEYWORDS = {
   home: ["house", "room", "rooms", "my place", "old home", "childhood home", "家", "房子", "房間", "老家", "casa", "hogar", "habitación"],
@@ -248,6 +337,7 @@ export async function createDreamDiaryImport({
 
   const importedRecords = [];
   const linkedTranslationRecords = [];
+  const skippedDrafts = [];
   const failedDrafts = [];
   const ownedRecords = await fetchOwnedRecords(currentUser).catch(() => []);
   const matchableRecords = [...ownedRecords];
@@ -262,6 +352,7 @@ export async function createDreamDiaryImport({
     const dreamTime = normalizeDreamTime(draft.detectedTime || draft.dreamTime || "");
     const dreamPeriod = normalizeDreamPeriod(draft.dreamPeriod || draft.dream_period);
     const dreamSequence = normalizeDreamSequence(draft.dreamSequence || draft.dream_sequence);
+    const selectedCustomTags = getSelectedCustomTags(draft);
 
     await setDoc(draftRef, {
       id: draftRef.id,
@@ -284,6 +375,7 @@ export async function createDreamDiaryImport({
       titleConfidence: Number(draft.titleConfidence || 0),
       originalLanguage: draftLanguage,
       selectedTagSlugs,
+      customTagLabels: selectedCustomTags,
       suggestedTags,
       tagsSource: draft.tagsSource || "rule_suggestions",
       tagsReviewedByUser: Boolean(draft.tagsReviewedByUser),
@@ -297,6 +389,36 @@ export async function createDreamDiaryImport({
     });
 
     try {
+      const duplicateRecord = findDuplicateRecord(matchableRecords, {
+        ownerId: currentUser.uid,
+        dreamDate,
+        dreamTime,
+        dreamPeriod,
+        dreamSequence,
+        language: draftLanguage,
+        title,
+        text: String(draft.rawText || "").trim(),
+      });
+
+      if (duplicateRecord) {
+        skippedDrafts.push({
+          draft,
+          record: duplicateRecord,
+          reason: "duplicate_record",
+        });
+        await setDoc(
+          draftRef,
+          {
+            status: "skipped",
+            skippedReason: "duplicate_record",
+            importedRecordId: duplicateRecord.id || duplicateRecord.dream_id,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        continue;
+      }
+
       const translationTarget = findTranslationTarget(matchableRecords, {
         ownerId: currentUser.uid,
         dreamDate,
@@ -353,7 +475,7 @@ export async function createDreamDiaryImport({
           ageAtDream: draft.ageAtDream || "",
           adultContent: Boolean(draft.adultContent),
           selectedTagSlugs,
-          customTagLabels: [],
+          customTagLabels: selectedCustomTags,
           sharedTags: draft.sharedTags || [],
           recordIdentityMode: "anonymous",
           sharingMode: "private",
@@ -408,6 +530,7 @@ export async function createDreamDiaryImport({
       status: failedDrafts.length > 0 ? "completed_with_errors" : "imported",
       importedCount: importedRecords.length,
       linkedTranslationCount: linkedTranslationRecords.length,
+      skippedCount: skippedDrafts.length,
       failedCount: failedDrafts.length,
       completedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -419,9 +542,44 @@ export async function createDreamDiaryImport({
     batchId: batchRef.id,
     importedRecords,
     linkedTranslationRecords,
+    skippedDrafts,
     failedDrafts,
     storageUploadError,
   };
+}
+
+function findDuplicateRecord(records, draft) {
+  const draftText = normalizeDuplicateText(draft.text);
+  const draftTitle = normalizeDuplicateText(draft.title);
+  if (!draft.ownerId || !draftText) return null;
+
+  return records.find((record) => {
+    if ((record?.ownerId || record?.creatorId || "") !== draft.ownerId) return false;
+
+    const recordLanguage = normalizeLanguage(record?.originalLanguage || "en");
+    if (recordLanguage !== draft.language) return false;
+
+    const recordText = normalizeDuplicateText(
+      record?.originalText || record?.dreamText || record?.dream_text || record?.text || ""
+    );
+    if (!recordText || recordText !== draftText) return false;
+
+    const recordDate = normalizeRecordDate(record?.dreamDate || record?.dream_date);
+    const recordTime = normalizeDreamTime(record?.dreamTime || record?.dream_time);
+    const recordPeriod = normalizeDreamPeriod(record?.dreamPeriod || record?.dream_period);
+    const recordSequence = normalizeDreamSequence(record?.dreamSequence || record?.dream_sequence);
+    const recordTitle = normalizeDuplicateText(record?.originalTitle || record?.title || "");
+
+    if (draft.dreamDate && recordDate && recordDate !== draft.dreamDate) return false;
+    if (draft.dreamTime && recordTime && recordTime !== draft.dreamTime) return false;
+    if (!draft.dreamTime && draft.dreamPeriod && recordPeriod && recordPeriod !== draft.dreamPeriod) {
+      return false;
+    }
+    if (recordSequence !== normalizeDreamSequence(draft.dreamSequence)) return false;
+    if (draftTitle && recordTitle && draftTitle !== recordTitle) return false;
+
+    return true;
+  }) || null;
 }
 
 function findTranslationTarget(records, draft) {
@@ -539,6 +697,7 @@ function parseJsonDiary(text, language) {
         entry?.order_in_period ||
         1,
       language: normalizeLanguage(entry?.originalLanguage || entry?.language || language),
+      tags: entry?.tags || entry?.tagLabels || entry?.tag_labels || entry?.selectedTags || [],
       adultContent: Boolean(entry?.adultContent || entry?.adult_content),
       boundaryConfidence: 0.95,
       boundaryReason: "json_entry",
@@ -571,6 +730,7 @@ function parseCsvDiary(text, language) {
     const period = getByHeader(row, ["period", "dreamperiod", "dream_period", "timeofday", "time_of_day"], -1);
     const sequence = getByHeader(row, ["sequence", "dreamsequence", "dream_sequence", "order", "orderinperiod", "order_in_period"], -1);
     const entryLanguage = getByHeader(row, ["language", "originallanguage", "original_language"], -1);
+    const tags = getByHeader(row, ["tags", "tag", "taglabels", "tag_labels", "selectedtags", "selected_tags"], -1);
     const adult = getByHeader(row, ["adult", "adultcontent", "adult_content", "isadult"], -1);
 
     return makeDraftFromParts({
@@ -581,6 +741,7 @@ function parseCsvDiary(text, language) {
       period,
       sequence,
       language: normalizeLanguage(entryLanguage || language),
+      tags,
       adultContent: ["true", "1", "yes", "y"].includes(String(adult || "").trim().toLowerCase()),
       boundaryConfidence: 0.9,
       boundaryReason: "csv_row",
@@ -701,6 +862,7 @@ function makeDraftFromParts({
   period = "",
   sequence = 1,
   language = "en",
+  tags = [],
   adultContent = false,
   boundaryConfidence = 0.5,
   boundaryReason = "",
@@ -713,6 +875,16 @@ function makeDraftFromParts({
   const dreamPeriod = normalizeDreamPeriod(period);
   const dreamSequence = normalizeDreamSequence(sequence);
   const detectedTitle = normalizeImportedTitle(title);
+  const parsedTags = parseImportedTags(tags, normalizeLanguage(language));
+  const importedTagFields = parsedTags.selectedTagSlugs.length > 0
+    ? {
+        importedTags: parsedTags.suggestions,
+        importedCustomTags: parsedTags.customTags,
+        selectedTagSlugs: parsedTags.selectedTagSlugs,
+        tagsSource: "csv_tags",
+        tagsReviewedByUser: true,
+      }
+    : {};
 
   return {
     rawText,
@@ -725,6 +897,7 @@ function makeDraftFromParts({
     dreamDateStatus: detectedDate ? "known" : "unknown",
     originalLanguage: normalizeLanguage(language),
     adultContent,
+    ...importedTagFields,
     boundaryConfidence,
     boundaryReason,
     sourceLineStart,
@@ -736,15 +909,21 @@ function enhanceDraft(draft, index, language, sourceFormat) {
   const rawText = String(draft.rawText || draft.dreamText || "").trim();
   const originalLanguage = normalizeLanguage(draft.originalLanguage || language);
   const tagSuggestions = suggestTagsForDream(rawText, originalLanguage);
+  const importedTagSuggestions = normalizeSuggestedTags(draft.importedTags || []);
+  const combinedTagSuggestions = mergeSuggestedTags(importedTagSuggestions, tagSuggestions);
   const highConfidenceDirectSlugs = tagSuggestions
     .filter((tag) => tag.confidence >= 0.85 && tag.tagType !== "interpretive_suggestion")
     .map((tag) => tag.slug)
     .slice(0, 16);
+  const importedTagSlugs = importedTagSuggestions.map((tag) => tag.slug);
+  const selectedTagSlugs = Array.isArray(draft.selectedTagSlugs)
+    ? draft.selectedTagSlugs
+    : [...importedTagSlugs, ...highConfidenceDirectSlugs];
   const suggestedTitleData = suggestNeutralTitle({
     text: rawText,
     language: originalLanguage,
     detectedTitle: draft.detectedTitle || draft.title,
-    tagSuggestions,
+    tagSuggestions: combinedTagSuggestions,
     index,
   });
 
@@ -772,10 +951,10 @@ function enhanceDraft(draft, index, language, sourceFormat) {
     sourceLineStart: draft.sourceLineStart || null,
     sourceLineEnd: draft.sourceLineEnd || null,
     sourceFormat,
-    suggestedTags: tagSuggestions,
-    selectedTagSlugs: Array.isArray(draft.selectedTagSlugs)
-      ? draft.selectedTagSlugs
-      : highConfidenceDirectSlugs,
+    importedTags: importedTagSuggestions,
+    importedCustomTags: Array.isArray(draft.importedCustomTags) ? draft.importedCustomTags : [],
+    suggestedTags: combinedTagSuggestions,
+    selectedTagSlugs: [...new Set(selectedTagSlugs)].filter(Boolean).slice(0, 80),
     tagsSource: draft.tagsSource || "rule_suggestions",
     tagsReviewedByUser: Boolean(draft.tagsReviewedByUser),
   };
@@ -822,6 +1001,158 @@ function getSelectedTagSlugs(draft) {
     .map((tag) => tag.slug);
 }
 
+function getSelectedCustomTags(draft) {
+  const selectedSlugs = new Set(getSelectedTagSlugs(draft));
+  return (draft.importedCustomTags || draft.customTagLabels || [])
+    .map((entry) => normalizeImportedCustomTag(entry))
+    .filter((entry) => entry.label && selectedSlugs.has(entry.slug))
+    .map(({ label, category }) => ({ label, category }));
+}
+
+function parseImportedTags(value, language = "en") {
+  const labels = normalizeImportedTagValues(value);
+  const selectedTagSlugs = [];
+  const suggestions = [];
+  const customTags = [];
+  const seen = new Set();
+
+  labels.forEach((label) => {
+    const matchedSlug = findImportedTagSlug(label);
+    const tagData = matchedSlug ? RECORD_TAGS[matchedSlug] : null;
+    const slug = tagData?.slug || makeSharedTagSlug("Custom", label);
+    const normalizedSlug = String(slug || "").trim();
+    if (!normalizedSlug || seen.has(normalizedSlug)) return;
+
+    seen.add(normalizedSlug);
+    selectedTagSlugs.push(normalizedSlug);
+
+    if (tagData) {
+      suggestions.push({
+        slug: normalizedSlug,
+        label: getTagLabel(tagData, language),
+        category: tagData.category,
+        confidence: 1,
+        evidence: label,
+        tagType: "recorder_supplied",
+        source: "csv_tags",
+      });
+      return;
+    }
+
+    customTags.push({
+      slug: normalizedSlug,
+      label,
+      category: "Custom",
+    });
+    suggestions.push({
+      slug: normalizedSlug,
+      label,
+      category: "Custom",
+      confidence: 1,
+      evidence: label,
+      tagType: "recorder_supplied",
+      source: "csv_tags",
+    });
+  });
+
+  return {
+    selectedTagSlugs,
+    suggestions,
+    customTags,
+  };
+}
+
+function normalizeImportedTagValues(value) {
+  const rawValues = Array.isArray(value)
+    ? value
+    : String(value || "").split(CSV_TAG_SEPARATOR);
+
+  return [...new Set(
+    rawValues
+      .map((item) => normalizeCustomTagLabel(
+        typeof item === "string"
+          ? item
+          : item?.label || item?.name || item?.name_zh || item?.name_es || item?.slug || ""
+      ))
+      .filter(Boolean)
+  )].slice(0, 80);
+}
+
+function findImportedTagSlug(label) {
+  const key = normalizeTagLookupKey(label);
+  const aliasSlug = IMPORT_TAG_ALIASES.get(label) || IMPORT_TAG_ALIASES.get(key);
+  if (aliasSlug && RECORD_TAGS[aliasSlug]) return aliasSlug;
+
+  return IMPORTED_TAG_INDEX.get(key) || "";
+}
+
+function buildImportedTagIndex() {
+  const index = new Map();
+
+  Object.entries(RECORD_TAGS).forEach(([key, tagData]) => {
+    [
+      key,
+      tagData.id,
+      tagData.slug,
+      tagData.name,
+      tagData.name_zh,
+      tagData.name_es,
+      String(tagData.slug || "").replace(/-/g, " "),
+      String(tagData.id || "").replace(/^(emotion|style|era|weather|dream-type|perspective|environment|entity|anomaly|content)-/, ""),
+    ].forEach((value) => addImportedTagIndexValue(index, value, key));
+  });
+
+  IMPORT_TAG_ALIASES.forEach((slug, label) => {
+    if (RECORD_TAGS[slug]) addImportedTagIndexValue(index, label, slug);
+  });
+
+  return index;
+}
+
+function addImportedTagIndexValue(index, value, slug) {
+  const key = normalizeTagLookupKey(value);
+  if (key && !index.has(key)) index.set(key, slug);
+}
+
+function normalizeTagLookupKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(/^#+/u, "")
+    .replace(/[_\s]+/gu, "-")
+    .replace(/[，、；;]/gu, "-")
+    .replace(/^-+|-+$/gu, "");
+}
+
+function normalizeImportedCustomTag(entry) {
+  const label = normalizeCustomTagLabel(entry?.label || entry?.name || entry);
+  const category = String(entry?.category || "Custom").trim() || "Custom";
+  return {
+    label,
+    category,
+    slug: entry?.slug || makeSharedTagSlug(category, label),
+  };
+}
+
+function mergeSuggestedTags(...groups) {
+  const bySlug = new Map();
+
+  groups.flat().forEach((tag) => {
+    const normalizedTag = normalizeSuggestedTags([tag])[0];
+    if (!normalizedTag) return;
+
+    const existing = bySlug.get(normalizedTag.slug);
+    if (!existing || normalizedTag.confidence > existing.confidence) {
+      bySlug.set(normalizedTag.slug, normalizedTag);
+    }
+  });
+
+  return [...bySlug.values()]
+    .sort((a, b) => b.confidence - a.confidence || a.label.localeCompare(b.label))
+    .slice(0, 36);
+}
+
 function normalizeSuggestedTags(tags) {
   return (tags || [])
     .map((tag) => ({
@@ -834,6 +1165,14 @@ function normalizeSuggestedTags(tags) {
       source: tag?.source || "rule_keyword",
     }))
     .filter((tag) => tag.slug);
+}
+
+function normalizeDuplicateText(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function suggestNeutralTitle({ text, language, detectedTitle, tagSuggestions, index }) {

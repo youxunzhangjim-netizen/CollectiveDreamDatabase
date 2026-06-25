@@ -8,6 +8,11 @@ import {
 } from "./tagTaxonomy.js";
 
 export const RESEARCH_EXPORT_VERSION = "research-export-2026-06-24";
+export const EXPORT_DETAIL_LEVELS = {
+  DREAMS: "dreams",
+  CODED: "coded",
+  ANALYSIS: "analysis",
+};
 
 const EXPORT_COPY = {
   en: {
@@ -207,15 +212,16 @@ export function downloadResearchCodebook(language = "en") {
 
 function buildResearchRecordsPayload(records = [], options = {}) {
   const language = normalizeLanguage(options.language || "en");
+  const detailLevel = normalizeExportDetailLevel(options.detailLevel || options.exportDetail);
   const exportableRecords = records
     .filter((record) => record && isResearchReadable(record))
-    .map((record, index) => sanitizeRecordForResearch(record, index, language));
+    .map((record, index) => sanitizeRecordForResearch(record, index, language, detailLevel));
 
   return {
     metadata: buildMetadata({
       type: "public_research_records",
       sampleSize: exportableRecords.length,
-      options: { ...options, language },
+      options: { ...options, language, detailLevel },
     }),
     filters: sanitizeFilters(options.filters || {}),
     records: exportableRecords,
@@ -224,15 +230,16 @@ function buildResearchRecordsPayload(records = [], options = {}) {
 
 function buildPersonalRecordsPayload(records = [], options = {}) {
   const language = normalizeLanguage(options.language || "en");
+  const detailLevel = normalizeExportDetailLevel(options.detailLevel || options.exportDetail);
   const sanitizedRecords = records
     .filter(Boolean)
-    .map((record, index) => sanitizeRecordForPersonalExport(record, index, language));
+    .map((record, index) => sanitizeRecordForPersonalExport(record, index, language, detailLevel));
 
   return {
     metadata: buildMetadata({
       type: "private_personal_records",
       sampleSize: sanitizedRecords.length,
-      options: { ...options, language },
+      options: { ...options, language, detailLevel },
     }),
     records: sanitizedRecords,
   };
@@ -247,10 +254,18 @@ function buildMetadata({ type, sampleSize, options = {} }) {
     exportedAt: new Date().toISOString(),
     sampleSize,
     language,
+    detailLevel: normalizeExportDetailLevel(options.detailLevel || options.exportDetail),
     filtersActive: hasActiveFilters(options.filters),
     privacyNote: copy.privacyNote,
     diagnosisWarning: copy.diagnosisWarning,
   };
+}
+
+function normalizeExportDetailLevel(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return Object.values(EXPORT_DETAIL_LEVELS).includes(normalized)
+    ? normalized
+    : EXPORT_DETAIL_LEVELS.ANALYSIS;
 }
 
 
@@ -263,20 +278,18 @@ function isPublicResearchExportable(record) {
   );
 }
 
-function sanitizeRecordForResearch(record, index, language) {
+function sanitizeRecordForResearch(record, index, language, detailLevel = EXPORT_DETAIL_LEVELS.ANALYSIS) {
   const dreamText = getRecordText(record);
   const tags = normalizeTags(record.tags);
   const tagSlugs = tags.map((tag) => tag.slug).filter(Boolean);
   const tagLabels = tags.map((tag) => getTagLabel(tag, language)).filter(Boolean);
   const dateStatus = getRecordDateStatus(record);
   const dreamDate = dateStatus === "hidden" ? "" : getRecordDate(record);
-
-  return {
+  const baseRecord = {
     export_row: index + 1,
     research_record_id: createResearchRecordId(record, index),
     title: getRecordTitle(record),
     dream_text: dreamText,
-    excerpt: createExcerpt(dreamText),
     original_language: normalizeLanguage(record.originalLanguage || record.original_language || "en"),
     original_language_label: getLanguageName(
       normalizeLanguage(record.originalLanguage || record.original_language || "en"),
@@ -284,27 +297,44 @@ function sanitizeRecordForResearch(record, index, language) {
     ),
     dream_date: dreamDate,
     dream_date_status: dateStatus,
+    word_count: countWords(dreamText),
+    character_count: dreamText.length,
+  };
+
+  if (detailLevel === EXPORT_DETAIL_LEVELS.DREAMS) {
+    return baseRecord;
+  }
+
+  const codedRecord = {
+    ...baseRecord,
+    excerpt: createExcerpt(dreamText),
     age_group_at_dream: getAgeGroup(record.ageAtDream || record.age_at_dream),
     adult_content: Boolean(
       record.adultContent ||
         record.adult_content ||
         Number(record.minimumViewerAge || record.minimum_viewer_age || 0) >= 18
     ),
-    word_count: countWords(dreamText),
-    character_count: dreamText.length,
     sharing_mode: record.sharingMode || record.sharing_mode || "public_anonymous",
     included_in_research_stats: Boolean(
       record.includedInResearchStats || record.included_in_research_stats || record.researchConsent || record.isPublic
     ),
     public_consent: Boolean(record.publicConsent || record.public_consent || record.isPublic),
     research_consent: Boolean(record.researchConsent || record.research_consent || record.includedInResearchStats),
+    tag_slugs: tagSlugs.join(" | "),
+    tag_labels: tagLabels.join(" | "),
+    ...buildCategoryColumns(tags, language),
+  };
+
+  if (detailLevel === EXPORT_DETAIL_LEVELS.CODED) {
+    return codedRecord;
+  }
+
+  return {
+    ...codedRecord,
     title_source: record.titleSource || record.title_source || "unknown",
     title_confidence: clampNumber(record.titleConfidence || record.title_confidence),
     tags_source: record.tagsSource || record.tags_source || "user_or_legacy",
     tags_reviewed_by_user: Boolean(record.tagsReviewedByUser || record.tags_reviewed_by_user),
-    tag_slugs: tagSlugs.join(" | "),
-    tag_labels: tagLabels.join(" | "),
-    ...buildCategoryColumns(tags, language),
     suggested_tags_json: JSON.stringify(record.suggestedTags || record.suggested_tags || []),
     source_type: record.importBatchId || record.import_batch_id ? "diary_import" : "single_record",
     source_format: record.sourceFormat || record.source_format || "",
@@ -313,12 +343,11 @@ function sanitizeRecordForResearch(record, index, language) {
   };
 }
 
-function sanitizeRecordForPersonalExport(record, index, language) {
+function sanitizeRecordForPersonalExport(record, index, language, detailLevel = EXPORT_DETAIL_LEVELS.ANALYSIS) {
   const dreamText = getRecordText(record);
   const tags = normalizeTags(record.tags);
   const dateStatus = getRecordDateStatus(record);
-
-  return {
+  const baseRecord = {
     export_row: index + 1,
     private_record_id: record.id || record.dream_id || record.dreamId || `private-${index + 1}`,
     title: getRecordTitle(record),
@@ -330,20 +359,36 @@ function sanitizeRecordForPersonalExport(record, index, language) {
       normalizeLanguage(record.originalLanguage || record.original_language || "en"),
       language
     ),
+    word_count: countWords(dreamText),
+    character_count: dreamText.length,
+  };
+
+  if (detailLevel === EXPORT_DETAIL_LEVELS.DREAMS) {
+    return baseRecord;
+  }
+
+  const codedRecord = {
+    ...baseRecord,
     visibility: record.visibility || (record.isPublic ? "public" : "private"),
     sharing_mode: record.sharingMode || record.sharing_mode || "private",
     included_in_research_stats: Boolean(record.includedInResearchStats || record.included_in_research_stats),
     adult_content: Boolean(record.adultContent || record.adult_content || Number(record.minimumViewerAge || 0) >= 18),
     age_at_dream: record.ageAtDream || record.age_at_dream || "",
-    word_count: countWords(dreamText),
-    character_count: dreamText.length,
+    tag_slugs: tags.map((tag) => tag.slug).filter(Boolean).join(" | "),
+    tag_labels: tags.map((tag) => getTagLabel(tag, language)).filter(Boolean).join(" | "),
+    ...buildCategoryColumns(tags, language),
+  };
+
+  if (detailLevel === EXPORT_DETAIL_LEVELS.CODED) {
+    return codedRecord;
+  }
+
+  return {
+    ...codedRecord,
     title_source: record.titleSource || record.title_source || "unknown",
     title_confidence: clampNumber(record.titleConfidence || record.title_confidence),
     tags_source: record.tagsSource || record.tags_source || "user_or_legacy",
     tags_reviewed_by_user: Boolean(record.tagsReviewedByUser || record.tags_reviewed_by_user),
-    tag_slugs: tags.map((tag) => tag.slug).filter(Boolean).join(" | "),
-    tag_labels: tags.map((tag) => getTagLabel(tag, language)).filter(Boolean).join(" | "),
-    ...buildCategoryColumns(tags, language),
     suggested_tags_json: JSON.stringify(record.suggestedTags || record.suggested_tags || []),
     import_batch_id: record.importBatchId || record.import_batch_id || "",
     source_file_name: record.sourceFileName || record.source_file_name || "",

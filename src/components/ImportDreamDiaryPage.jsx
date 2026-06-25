@@ -91,6 +91,7 @@ const IMPORT_COPY = {
     importStarted: "Importing private dream records...",
     importComplete: ({ count }) => `${count} private dreams imported.` ,
     translationComplete: ({ count }) => `${count} diary versions attached as recorder translations.`,
+    skippedComplete: ({ count }) => `${count} duplicate dreams skipped.`,
     importErrors: ({ count }) => `${count} drafts could not be imported. Review the messages and try again.`,
     storageWarning:
       "Original file storage was not available, but parsed private records can still be saved.",
@@ -183,6 +184,7 @@ const IMPORT_COPY = {
     importNeedsDrafts: "請至少選取一則夢境匯入。",
     importStarted: "正在匯入私人夢境紀錄...",
     importComplete: ({ count }) => `已匯入 ${count} 則私人夢境。`,
+    skippedComplete: ({ count }) => `已略過 ${count} 則重複夢境。`,
     importErrors: ({ count }) => `${count} 則草稿無法匯入。請檢查訊息後再試。`,
     storageWarning: "原始檔案儲存尚不可用，但解析後的私人紀錄仍可儲存。",
     importFailed: "匯入無法完成。請檢查草稿後再試一次。",
@@ -274,6 +276,7 @@ const IMPORT_COPY = {
     importNeedsDrafts: "Selecciona al menos un sueño para importar.",
     importStarted: "Importando registros privados...",
     importComplete: ({ count }) => `${count} sueños privados importados.`,
+    skippedComplete: ({ count }) => `${count} sueños duplicados omitidos.`,
     importErrors: ({ count }) => `${count} borradores no se pudieron importar. Revisa los mensajes e inténtalo de nuevo.`,
     storageWarning: "El almacenamiento del archivo original no está disponible, pero los registros privados procesados se pueden guardar.",
     importFailed: "La importación no se pudo completar. Revisa los borradores e inténtalo de nuevo.",
@@ -327,10 +330,10 @@ const IMPORT_TIME_COPY = {
     formatText:
       "Best for translation linking: include dreamDate plus either dreamTime or dreamPeriod, and keep dreamSequence as 1 unless it is the second or later dream in that same period.",
     formatColumns:
-      "CSV columns: date,time,period,sequence,language,title,text,adultContent",
+      "CSV columns: date,time,period,sequence,language,title,text,tags,adultContent",
     promptTitle: "Copyable AI formatting prompt",
     promptText:
-      "Convert my dream diary into CSV for import. Do not invent, beautify, summarize, moralize, censor, or rewrite dream content. Preserve first-person wording and original details. Only structure the diary into columns: date,time,period,sequence,language,title,text,adultContent. Use date as YYYY-MM-DD when known, time as HH:mm when known, period as morning/afternoon/evening/night when stated, sequence as 1 by default unless the diary clearly says second/third dream in the same period, language as en/zh/es, title blank if unclear, adultContent true only when explicit adult content appears. Keep the text column as close to the original diary words as possible.",
+      "Convert my dream diary into CSV for import. Do not invent, beautify, summarize, moralize, censor, or rewrite dream content. Preserve first-person wording and original details. Only structure the diary into columns: date,time,period,sequence,language,title,text,tags,adultContent. Use date as YYYY-MM-DD when known, time as HH:mm when known, period as morning/afternoon/evening/night when stated, sequence as 1 by default unless the diary clearly says second/third dream in the same period, language as en/zh/es. If the diary has no title, you may add a short factual neutral title based only on the dream content; leave title blank if still unclear. Put tags in the tags column separated by semicolons, using concrete content, emotion, weather, style, era, perspective, dream-type, and psychological-observable labels already present in the diary. adultContent is true only when explicit adult content appears. Keep the text column as close to the original diary words as possible.",
     copyPrompt: "Copy prompt",
     copiedPrompt: "Copied",
     periods: {
@@ -358,10 +361,10 @@ const IMPORT_TIME_COPY = {
     formatText:
       "若要連結不同語言版本，最好提供夢境日期，並填入精確時間或時段；同一時段若沒有特別說明，夢序預設為第一個夢。",
     formatColumns:
-      "CSV 欄位：date,time,period,sequence,language,title,text,adultContent",
+      "CSV 欄位：date,time,period,sequence,language,title,text,tags,adultContent",
     promptTitle: "可複製的 AI 格式整理提示詞",
     promptText:
-      "請把我的夢境日記整理成可匯入的 CSV。不要創造、修飾、摘要、美化、道德化、審查或改寫夢境內容。保留第一人稱與原始細節。只把日記整理成欄位：date,time,period,sequence,language,title,text,adultContent。date 用 YYYY-MM-DD；time 若知道用 HH:mm；period 只用 morning/afternoon/evening/night；若同一時段沒有明確說第幾個夢，sequence 預設為 1；language 用 en/zh/es；title 不清楚就留空；adultContent 只有明確成人內容才填 true。text 欄位要盡量保留原本日記文字。",
+      "請把我的夢境日記整理成可匯入的 CSV。不要創造、修飾、摘要、美化、道德化、審查或改寫夢境內容。保留第一人稱與原始細節。只整理成欄位：date,time,period,sequence,language,title,text,tags,adultContent。date 用 YYYY-MM-DD；time 若知道用 HH:mm；period 只用 morning/afternoon/evening/night；若同一時段沒有明確說第幾個夢，sequence 預設為 1；language 用 en/zh/es。若原日記沒有標題，可以只根據夢境內容加一個短而中性的事實標題；仍不清楚就留空。tags 欄位用分號分隔，盡量使用日記中可見的具體內容、情緒、天氣、風格、時代、視角、夢境類型與心理觀察標籤。adultContent 只有明確成人內容才填 true。text 欄位要盡量保留原本日記文字。",
     copyPrompt: "複製提示詞",
     copiedPrompt: "已複製",
     periods: {
@@ -390,10 +393,10 @@ const IMPORT_TIME_COPY = {
     formatText:
       "Para vincular versiones traducidas: incluye dreamDate y dreamTime o dreamPeriod; deja dreamSequence en 1 salvo que sea el segundo o tercer sueno del mismo momento.",
     formatColumns:
-      "Columnas CSV: date,time,period,sequence,language,title,text,adultContent",
+      "Columnas CSV: date,time,period,sequence,language,title,text,tags,adultContent",
     promptTitle: "Prompt copiable para IA",
     promptText:
-      "Convierte mi diario de suenos en CSV para importar. No inventes, embellezcas, resumas, moralices, censures ni reescribas el contenido del sueno. Conserva la primera persona y los detalles originales. Solo organiza el diario en columnas: date,time,period,sequence,language,title,text,adultContent. Usa date como YYYY-MM-DD cuando se conozca, time como HH:mm cuando se conozca, period como morning/afternoon/evening/night cuando aparezca, sequence como 1 por defecto salvo que el diario diga claramente segundo/tercer sueno en el mismo periodo, language como en/zh/es, title vacio si no esta claro, adultContent true solo si hay contenido adulto explicito. Mantén la columna text lo mas cercana posible a las palabras originales.",
+      "Convierte mi diario de sueños en CSV para importar. No inventes, embellezcas, resumas, moralices, censures ni reescribas el contenido del sueño. Conserva la primera persona y los detalles originales. Solo organiza el diario en columnas: date,time,period,sequence,language,title,text,tags,adultContent. Usa date como YYYY-MM-DD cuando se conozca, time como HH:mm cuando se conozca, period como morning/afternoon/evening/night cuando aparezca, sequence como 1 por defecto salvo que el diario diga claramente segundo/tercer sueño en el mismo periodo, language como en/zh/es. Si no hay título, puedes añadir un título breve, factual y neutral basado solo en el contenido del sueño; deja title vacío si no está claro. En tags, separa etiquetas con punto y coma y usa contenido concreto, emociones, clima, estilo, época, perspectiva, tipo de sueño y observables psicológicos presentes en el diario. adultContent true solo si hay contenido adulto explícito. Mantén la columna text lo más cercana posible a las palabras originales.",
     copyPrompt: "Copiar prompt",
     copiedPrompt: "Copiado",
     periods: {
@@ -628,18 +631,21 @@ export default function ImportDreamDiaryPage({
 
       setResult(importResult);
       const translationCount = importResult.linkedTranslationRecords?.length || 0;
+      const skippedCount = importResult.skippedDrafts?.length || 0;
       const translationNotice =
         translationCount > 0
           ? ` ${getImportTimeCopy(language).translationComplete({ count: translationCount })}`
           : "";
+      const skippedNotice =
+        skippedCount > 0 ? ` ${copy.skippedComplete({ count: skippedCount })}` : "";
       setNotice(
-        `${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice}`
+        `${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice}${skippedNotice}`
       );
       if (importResult.failedDrafts.length > 0) {
         setError(copy.importErrors({ count: importResult.failedDrafts.length }));
       }
       if (importResult.storageUploadError) {
-        setNotice(`${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice} ${copy.storageWarning}`);
+        setNotice(`${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice}${skippedNotice} ${copy.storageWarning}`);
       }
     } catch (importError) {
       setError(importError?.message || copy.importFailed);

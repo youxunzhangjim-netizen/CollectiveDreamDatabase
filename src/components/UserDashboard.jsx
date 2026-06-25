@@ -26,7 +26,11 @@ import {
   getVisibleDreamDate,
 } from "../lib/dreamDate.js";
 import { getTagLabel, RECORD_TAGS } from "../lib/tagTaxonomy.js";
-import { exportPersonalDreamsCsv, exportPersonalDreamsJson } from "../lib/researchExportService.js";
+import {
+  exportPersonalDreamsCsv,
+  exportPersonalDreamsJson,
+  EXPORT_DETAIL_LEVELS,
+} from "../lib/researchExportService.js";
 import LanguageMenu from "./LanguageMenu.jsx";
 
 const DASHBOARD_COPY = {
@@ -41,6 +45,10 @@ const DASHBOARD_COPY = {
     importButton: "Import Diary",
     exportCsvButton: "Export My CSV",
     exportJsonButton: "Export My JSON",
+    exportScopeLabel: "Export content",
+    exportScopeDreams: "Dream diary only",
+    exportScopeCoded: "Dreams + tags",
+    exportScopeAnalysis: "Full private fields",
     consoleLabel: "Account Console",
     memberSince: "Member since",
     signOut: "Sign Out",
@@ -121,6 +129,10 @@ const DASHBOARD_COPY = {
     importButton: "匯入日記",
     exportCsvButton: "匯出 CSV",
     exportJsonButton: "匯出 JSON",
+    exportScopeLabel: "匯出內容",
+    exportScopeDreams: "只匯出夢境日記",
+    exportScopeCoded: "夢境與標籤",
+    exportScopeAnalysis: "完整私人欄位",
     consoleLabel: "帳戶終端",
     memberSince: "會員起始日",
     signOut: "登出",
@@ -200,6 +212,10 @@ const DASHBOARD_COPY = {
     importButton: "Importar diario",
     exportCsvButton: "Exportar CSV",
     exportJsonButton: "Exportar JSON",
+    exportScopeLabel: "Contenido exportado",
+    exportScopeDreams: "Solo diario",
+    exportScopeCoded: "Sueños + etiquetas",
+    exportScopeAnalysis: "Campos privados completos",
     consoleLabel: "Consola de cuenta",
     memberSince: "Miembro desde",
     signOut: "Cerrar sesión",
@@ -374,6 +390,12 @@ export default function UserDashboard({
   const [collectionRecords, setCollectionRecords] = useState([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [recordsError, setRecordsError] = useState("");
+  const [exportDetail, setExportDetail] = useState(EXPORT_DETAIL_LEVELS.ANALYSIS);
+  const exportDetailOptions = [
+    { value: EXPORT_DETAIL_LEVELS.DREAMS, label: copy.exportScopeDreams },
+    { value: EXPORT_DETAIL_LEVELS.CODED, label: copy.exportScopeCoded },
+    { value: EXPORT_DETAIL_LEVELS.ANALYSIS, label: copy.exportScopeAnalysis },
+  ];
   const activeItems =
     activeTab === "observations"
       ? observations
@@ -607,10 +629,33 @@ export default function UserDashboard({
                 />
               </div>
 
-              <div className="cdo-mobile-stack-actions mt-4 grid gap-2 sm:grid-cols-2">
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-3">
+                <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                  {copy.exportScopeLabel}
+                </p>
+                <div className="grid gap-2 min-[520px]:grid-cols-3">
+                  {exportDetailOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setExportDetail(option.value)}
+                      className={[
+                        "min-w-0 rounded-xl border px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] transition",
+                        exportDetail === option.value
+                          ? "border-cyan-300/35 bg-cyan-300/10 text-cyan-100"
+                          : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-fuchsia-300/30 hover:text-fuchsia-100",
+                      ].join(" ")}
+                    >
+                      <span className="block truncate">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="cdo-mobile-stack-actions mt-3 grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() => exportPersonalDreamsCsv(observations, { language })}
+                  onClick={() => exportPersonalDreamsCsv(observations, { language, detailLevel: exportDetail })}
                   disabled={observations.length === 0}
                   className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -618,7 +663,7 @@ export default function UserDashboard({
                 </button>
                 <button
                   type="button"
-                  onClick={() => exportPersonalDreamsJson(observations, { language })}
+                  onClick={() => exportPersonalDreamsJson(observations, { language, detailLevel: exportDetail })}
                   disabled={observations.length === 0}
                   className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-fuchsia-100 transition hover:border-fuchsia-300/45 disabled:cursor-not-allowed disabled:opacity-50"
                 >
