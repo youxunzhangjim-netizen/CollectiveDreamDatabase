@@ -3,6 +3,7 @@ import AuthPanel from "./components/AuthPanel.jsx";
 import CollectiveDreamDashboard from "./components/CollectiveDreamDashboard.jsx";
 import DreamRecordPage from "./components/DreamRecordPage.jsx";
 import Footer from "./components/Footer.jsx";
+import ImportDreamDiaryPage from "./components/ImportDreamDiaryPage.jsx";
 import RecordDreamPage from "./components/RecordDreamPage.jsx";
 import UserDashboard from "./components/UserDashboard.jsx";
 import { useAuth } from "./hooks/useAuth.js";
@@ -168,7 +169,22 @@ export default function App() {
           currentUser={currentUser}
           onOpenAuth={() => setActiveView(currentUser ? "dashboard" : "auth")}
           onOpenRecorder={() => setActiveView("record")}
+          onOpenImporter={() => setActiveView("import")}
           onOpenRecord={(record) => openDreamRecord(record, "database")}
+        />
+    );
+  }
+
+  if (activeView === "import") {
+    return renderShell(
+      <ImportDreamDiaryPage
+          language={language}
+          setLanguage={handleLanguageChange}
+          currentUser={currentUser}
+          onOpenDatabase={() => setActiveView("database")}
+          onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
+          onOpenRecorder={() => setActiveView("record")}
+          onImported={(record) => openDreamRecord(record, "import")}
         />
     );
   }
@@ -181,6 +197,7 @@ export default function App() {
           currentUser={currentUser}
           onOpenDatabase={() => setActiveView("database")}
           onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
+          onOpenImporter={() => setActiveView("import")}
           onSubmitted={(record) => openDreamRecord(record, "record")}
         />
     );
@@ -208,6 +225,7 @@ export default function App() {
           onSignOut={handleSignOut}
           onOpenDatabase={() => setActiveView("database")}
           onOpenRecorder={() => setActiveView("record")}
+          onOpenImporter={() => setActiveView("import")}
           onOpenRecord={(record) => openDreamRecord(record, "dashboard")}
         />
     );
@@ -220,6 +238,7 @@ export default function App() {
         onAuthenticated={handleAuthenticated}
         onOpenDatabase={() => setActiveView("database")}
         onOpenRecorder={() => setActiveView("record")}
+        onOpenImporter={() => setActiveView("import")}
       />
   );
 }

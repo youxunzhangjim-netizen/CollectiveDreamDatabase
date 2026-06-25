@@ -20,6 +20,7 @@ const AUTH_COPY = {
     spanishLabel: "Spanish interface",
     databaseButton: "Research Archive",
     recordButton: "Record Dream",
+    importButton: "Import Diary",
     eyebrow: "Account Entry",
     title: "Access the Collective Dream Observatory",
     subtitle:
@@ -40,7 +41,7 @@ const AUTH_COPY = {
     loadingGoogle: "Opening Google",
     loadingGuest: "Opening guest mode",
     consentText:
-      "By proceeding, you retain full copyright of your text but grant this database the right to permanently store and publicly display your records.",
+      "By proceeding, your dreams stay private by default. You choose later whether to share anonymously, use a pseudonym, or contribute only to aggregated research statistics.",
     switchToSignup: "Need an account profile?",
     switchToLogin: "Already have an account?",
     switchSignupAction: "Create account",
@@ -69,6 +70,7 @@ const AUTH_COPY = {
     spanishLabel: "西班牙文介面",
     databaseButton: "研究檔案庫",
     recordButton: "記錄夢境",
+    importButton: "匯入日記",
     eyebrow: "帳戶入口",
     title: "進入集體夢境觀測站",
     subtitle:
@@ -89,7 +91,7 @@ const AUTH_COPY = {
     loadingGoogle: "正在開啟 Google",
     loadingGuest: "正在開啟訪客通道",
     consentText:
-      "繼續後，你仍保留文字的完整著作權，但授權此資料庫永久儲存並公開顯示你的紀錄。",
+      "繼續後，你的夢境預設保持私人。之後可由你選擇匿名分享、以暱稱分享，或只加入整體研究統計。",
     switchToSignup: "需要建立帳戶？",
     switchToLogin: "已經有帳戶？",
     switchSignupAction: "建立帳戶",
@@ -117,6 +119,7 @@ const AUTH_COPY = {
     spanishLabel: "Interfaz en español",
     databaseButton: "Archivo de investigación",
     recordButton: "Registrar sueño",
+    importButton: "Importar diario",
     eyebrow: "Entrada de cuenta",
     title: "Accede al Observatorio Colectivo de Sueños",
     subtitle:
@@ -137,7 +140,7 @@ const AUTH_COPY = {
     loadingGoogle: "Abriendo Google",
     loadingGuest: "Abriendo modo invitado",
     consentText:
-      "Al continuar, conservas todos los derechos de autor sobre tu texto, pero concedes a esta base de datos el derecho de almacenar y mostrar públicamente tus registros de forma permanente.",
+      "Al continuar, tus sueños permanecen privados por defecto. Después eliges si compartirlos de forma anónima, con seudónimo o contribuir a estadísticas agregadas de investigación.",
     switchToSignup: "¿Necesitas un perfil?",
     switchToLogin: "¿Ya tienes cuenta?",
     switchSignupAction: "Crear cuenta",
@@ -166,6 +169,7 @@ export default function AuthPanel({
   onAuthenticated,
   onOpenDatabase,
   onOpenRecorder,
+  onOpenImporter,
 }) {
   const copy = AUTH_COPY[language] || AUTH_COPY.zh;
   const [mode, setMode] = useState("login");
@@ -278,11 +282,11 @@ export default function AuthPanel({
       <AuthBackground />
 
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <button
             type="button"
             onClick={onOpenDatabase}
-            className="group flex items-center gap-3"
+            className="group flex min-w-0 items-center gap-3 self-start"
           >
             <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)]">
               <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
@@ -299,13 +303,20 @@ export default function AuthPanel({
             </span>
           </button>
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 min-[460px]:grid-cols-3 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
             <button
               type="button"
               onClick={onOpenRecorder}
-              className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15"
+              className="min-w-0 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
             >
               {copy.recordButton}
+            </button>
+            <button
+              type="button"
+              onClick={onOpenImporter}
+              className="min-w-0 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
+            >
+              {copy.importButton}
             </button>
             <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
           </div>

@@ -22,6 +22,13 @@ import {
   saveRecordForUser,
   unfollowRecorderForUser,
 } from "../lib/recordsService.js";
+import {
+  exportMethodologyMarkdown,
+  exportPatternSummaryJson,
+  exportResearchRecordsCsv,
+  exportResearchRecordsJson,
+  exportTagCodebookCsv,
+} from "../lib/researchExportService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import {
   getCategoryLabel as getTaxonomyCategoryLabel,
@@ -77,6 +84,7 @@ const CATEGORY_DOT_STYLES = {
 
 const DEFAULT_TAGS = Object.values(RECORD_TAGS);
 const PAGE_SIZE = 20;
+const MIN_PRIVACY_GROUP_COUNT = 3;
 const REPORT_SUGGESTION_MAILTO =
   "mailto:collectivedreamdatabase@gmail.com?subject=Collective%20Dream%20Observatory%20Report%20or%20Suggestion";
 
@@ -90,6 +98,7 @@ const UI_COPY = {
     mobileReportSuggestion: "Report",
     globalDatabase: "Research Archive",
     submitObservation: "Record Dream",
+    importDiary: "Import Diary",
     loginButton: "Login",
     accountButton: "Account",
     reportSuggestion: "Report / Suggestion",
@@ -134,7 +143,7 @@ const UI_COPY = {
       },
       {
         title: "Research Archive",
-        text: "The Collective Dream Database module supports tags, filters, aggregate statistics, methodology, sample size awareness, and future export.",
+        text: "The Collective Dream Database module supports tags, filters, aggregate statistics, methodology, sample size awareness, and researcher exports.",
       },
     ],
     accessLabel: "Viewing",
@@ -202,6 +211,38 @@ const UI_COPY = {
     researchAverageCoherence: "Avg coherence",
     researchEmotionLead: "Leading emotion",
     researchLanguageLead: "Leading original language",
+    exportTitle: "Research exports",
+    exportText: "Download the current public/readable archive view for professional analysis. Exports remove direct account identifiers and reflect the filters currently active in the browser.",
+    exportCsv: "Records CSV",
+    exportJson: "Records JSON",
+    exportPatterns: "Patterns JSON",
+    exportCodebook: "Tag codebook",
+    exportMethodology: "Method notes",
+    exportPrivacyNote: "Private and stats-only dreams are not exported from the browser; they require server-side aggregation with consent checks.",
+    patternDashboardTitle: "Collective Patterns",
+    patternDashboardText:
+      "Aggregated dream statistics for public, readable records. Private and stats-only records need a server-side aggregation pipeline before they can appear here safely.",
+    patternSampleSize: "Sample size",
+    patternDateRange: "Date range",
+    patternFilters: "Filters",
+    patternMissingData: "Missing dates",
+    patternSmallSampleWarning: ({ count }) =>
+      `Sample size is ${count}. Treat charts as exploration, not research evidence, until N ≥ 10.`,
+    patternSuppressed: "Small groups below privacy threshold are hidden.",
+    patternNoData: "No aggregate data yet",
+    patternAllLoaded: "All loaded records",
+    patternFiltered: "Current filters applied",
+    patternEmotions: "Common emotions",
+    patternSymbols: "Recurring symbols",
+    patternDreamTypes: "Dream types",
+    patternLanguages: "Languages",
+    patternCountries: "Countries / regions",
+    patternLucidNightmare: "Nightmare / lucid ratio",
+    patternDreamLength: "Dream length",
+    patternCooccurrence: "Tag co-occurrence",
+    patternNightmare: "Nightmare",
+    patternLucid: "Lucid",
+    patternRecords: "records",
     noResearchData: "Not enough signal yet",
     collectDream: "Collect",
     collectedDream: "Collected",
@@ -230,6 +271,7 @@ const UI_COPY = {
     mobileReportSuggestion: "回報",
     globalDatabase: "研究檔案庫",
     submitObservation: "記錄夢境",
+    importDiary: "匯入日記",
     loginButton: "登入",
     accountButton: "帳戶",
     reportSuggestion: "回報／建議",
@@ -274,7 +316,7 @@ const UI_COPY = {
       },
       {
         title: "研究檔案庫",
-        text: "「集體夢境資料庫」模組支援標籤、篩選、整體統計、研究方法、樣本數意識與未來資料匯出。",
+        text: "「集體夢境資料庫」模組支援標籤、篩選、整體統計、研究方法、樣本數意識與研究匯出。",
       },
     ],
     accessLabel: "瀏覽",
@@ -338,6 +380,38 @@ const UI_COPY = {
     researchAverageCoherence: "平均一致性",
     researchEmotionLead: "主要情緒",
     researchLanguageLead: "主要原始語言",
+    exportTitle: "研究匯出",
+    exportText: "下載目前公開／可讀取的檔案庫視圖，用於專業分析。匯出會移除直接帳戶識別資訊，並依照目前瀏覽器中的篩選條件產生。",
+    exportCsv: "紀錄 CSV",
+    exportJson: "紀錄 JSON",
+    exportPatterns: "模式 JSON",
+    exportCodebook: "標籤碼本",
+    exportMethodology: "方法說明",
+    exportPrivacyNote: "私人夢境與僅統計夢境不會從瀏覽器匯出；它們需要具同意檢查的伺服器端聚合。",
+    patternDashboardTitle: "集體模式",
+    patternDashboardText:
+      "根據公開且可讀取的夢境紀錄建立整體統計。私人與只加入統計的紀錄，需要伺服器端聚合流程才能安全顯示於此。",
+    patternSampleSize: "樣本數",
+    patternDateRange: "日期範圍",
+    patternFilters: "篩選條件",
+    patternMissingData: "缺少日期",
+    patternSmallSampleWarning: ({ count }) =>
+      `目前樣本數為 ${count}。在 N ≥ 10 前，圖表只能作為探索，不應作為研究證據。`,
+    patternSuppressed: "低於隱私門檻的小群體已隱藏。",
+    patternNoData: "尚無整體資料",
+    patternAllLoaded: "所有已載入紀錄",
+    patternFiltered: "已套用目前篩選",
+    patternEmotions: "常見情緒",
+    patternSymbols: "重複符號",
+    patternDreamTypes: "夢境類型",
+    patternLanguages: "語言",
+    patternCountries: "國家／地區",
+    patternLucidNightmare: "惡夢／清醒夢比例",
+    patternDreamLength: "夢境長度",
+    patternCooccurrence: "標籤共現",
+    patternNightmare: "惡夢",
+    patternLucid: "清醒夢",
+    patternRecords: "筆紀錄",
     noResearchData: "訊號尚不足",
     collectDream: "收藏",
     collectedDream: "已收藏",
@@ -366,6 +440,7 @@ const UI_COPY = {
     mobileReportSuggestion: "Reporte",
     globalDatabase: "Archivo de investigación",
     submitObservation: "Registrar sueño",
+    importDiary: "Importar diario",
     loginButton: "Iniciar sesión",
     accountButton: "Cuenta",
     reportSuggestion: "Reporte / sugerencia",
@@ -410,7 +485,7 @@ const UI_COPY = {
       },
       {
         title: "Archivo de investigación",
-        text: "El módulo Base de Datos Colectiva de Sueños admite etiquetas, filtros, estadísticas, metodología, tamaño de muestra y futura exportación.",
+        text: "El módulo Base de Datos Colectiva de Sueños admite etiquetas, filtros, estadísticas, metodología, tamaño de muestra y exportaciones de investigación.",
       },
     ],
     accessLabel: "Vista",
@@ -479,6 +554,38 @@ const UI_COPY = {
     researchAverageCoherence: "Coherencia media",
     researchEmotionLead: "Emoción principal",
     researchLanguageLead: "Idioma original principal",
+    exportTitle: "Exportaciones de investigación",
+    exportText: "Descarga la vista pública/legible actual del archivo para análisis profesional. Las exportaciones eliminan identificadores directos de cuenta y reflejan los filtros activos en el navegador.",
+    exportCsv: "Registros CSV",
+    exportJson: "Registros JSON",
+    exportPatterns: "Patrones JSON",
+    exportCodebook: "Codebook de etiquetas",
+    exportMethodology: "Notas metodológicas",
+    exportPrivacyNote: "Los sueños privados y solo-estadísticos no se exportan desde el navegador; requieren agregación del servidor con verificación de consentimiento.",
+    patternDashboardTitle: "Patrones colectivos",
+    patternDashboardText:
+      "Estadísticas agregadas basadas en registros públicos y legibles. Los registros privados o solo estadísticos necesitan agregación del servidor para aparecer aquí con seguridad.",
+    patternSampleSize: "Tamaño de muestra",
+    patternDateRange: "Rango de fechas",
+    patternFilters: "Filtros",
+    patternMissingData: "Fechas faltantes",
+    patternSmallSampleWarning: ({ count }) =>
+      `El tamaño de muestra es ${count}. Usa los gráficos como exploración, no evidencia de investigación, hasta N ≥ 10.`,
+    patternSuppressed: "Los grupos pequeños bajo el umbral de privacidad están ocultos.",
+    patternNoData: "Aún no hay datos agregados",
+    patternAllLoaded: "Todos los registros cargados",
+    patternFiltered: "Filtros actuales aplicados",
+    patternEmotions: "Emociones comunes",
+    patternSymbols: "Símbolos recurrentes",
+    patternDreamTypes: "Tipos de sueño",
+    patternLanguages: "Idiomas",
+    patternCountries: "Países / regiones",
+    patternLucidNightmare: "Pesadilla / lúcido",
+    patternDreamLength: "Longitud del sueño",
+    patternCooccurrence: "Coocurrencia de etiquetas",
+    patternNightmare: "Pesadilla",
+    patternLucid: "Lúcido",
+    patternRecords: "registros",
     noResearchData: "Señal insuficiente",
     collectDream: "Coleccionar",
     collectedDream: "Coleccionado",
@@ -509,6 +616,7 @@ export default function CollectiveDreamDashboard({
   currentUser,
   onOpenAuth,
   onOpenRecorder,
+  onOpenImporter,
   onOpenRecord,
 }) {
   const [localLanguage, setLocalLanguage] = useState("zh");
@@ -520,6 +628,7 @@ export default function CollectiveDreamDashboard({
   const [selectedTagSlugs, setSelectedTagSlugs] = useState([]);
   const [matchMode, setMatchMode] = useState("all");
   const [sortMode, setSortMode] = useState("newest");
+  const [activeSection, setActiveSection] = useState("explore");
   const [currentPage, setCurrentPage] = useState(1);
   const [loadState, setLoadState] = useState(INITIAL_LOAD_STATE);
   const [loadError, setLoadError] = useState(null);
@@ -747,6 +856,16 @@ export default function CollectiveDreamDashboard({
     () => buildResearchStats(dreams, filteredDreams, language),
     [dreams, filteredDreams, language]
   );
+  const collectivePatternStats = useMemo(
+    () =>
+      buildCollectivePatternStats({
+        dreams: filteredDreams,
+        allDreams: dreams,
+        language,
+        filtersActive: Boolean(query.trim() || selectedTagSlugs.length > 0),
+      }),
+    [dreams, filteredDreams, language, query, selectedTagSlugs]
+  );
   const schemaStats = useMemo(() => buildSchemaStats(dreams), [dreams]);
   const tagCounts = useMemo(() => buildTagCounts(dreams), [dreams]);
   const followingRecorderIds = useMemo(
@@ -760,6 +879,37 @@ export default function CollectiveDreamDashboard({
         ? current.filter((item) => item !== slug)
         : [...current, slug]
     );
+  }
+
+  function scrollToSection(sectionId) {
+    if (typeof window === "undefined") return;
+
+    window.setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
+  }
+
+  function handleHomeSection(section, index) {
+    const mode = ["record", "explore", "patterns", "dream-map", "research"][index];
+
+    if (mode === "record") {
+      onOpenRecorder?.();
+      return;
+    }
+
+    if (mode === "dream-map") {
+      onOpenAuth?.();
+      return;
+    }
+
+    setActiveSection(mode);
+
+    if (mode === "patterns") scrollToSection("collective-patterns");
+    if (mode === "research") scrollToSection("research-archive");
+    if (mode === "explore") scrollToSection("dream-explore");
   }
 
   async function handleToggleFollow(dream) {
@@ -814,6 +964,7 @@ export default function CollectiveDreamDashboard({
           viewerProfile={viewerProfile}
           onOpenAuth={onOpenAuth}
           onOpenRecorder={onOpenRecorder}
+          onOpenImporter={onOpenImporter}
         />
 
       <section className="relative mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
@@ -827,9 +978,28 @@ export default function CollectiveDreamDashboard({
           copy={copy}
         />
 
-        <HomePathways copy={copy} />
+        <HomePathways
+          copy={copy}
+          activeSection={activeSection}
+          onSelectSection={handleHomeSection}
+        />
 
-        <ResearchPanel stats={researchStats} copy={copy} />
+        <CollectivePatternsPanel stats={collectivePatternStats} copy={copy} />
+
+        <ResearchPanel
+          stats={researchStats}
+          copy={copy}
+          records={filteredDreams}
+          patternStats={collectivePatternStats}
+          tags={tags}
+          language={language}
+          exportFilters={{
+            query,
+            selectedTagSlugs,
+            matchMode,
+            sortMode,
+          }}
+        />
 
         <FilterPanel
           tags={tags}
@@ -923,6 +1093,21 @@ function normalizeDreamCard(row) {
         : "anonymous",
     creatorDisplayName: row.creatorDisplayName || "",
     creatorEmail: row.creatorEmail || "",
+    creatorCountry: row.creatorCountry || row.creatorCountryRegion || "",
+    visibility: row.visibility || (row.isPublic === false ? "private" : "public"),
+    isPublic: typeof row.isPublic === "boolean" ? row.isPublic : row.visibility === "public",
+    sharingMode:
+      row.sharingMode ||
+      (row.visibility === "stats_only"
+        ? "stats_only"
+        : row.isPublic
+          ? row.recordIdentityMode === "account" || row.attributionMode === "account"
+            ? "public_pseudonym"
+            : "public_anonymous"
+          : "private"),
+    includedInResearchStats: Boolean(
+      row.includedInResearchStats || row.researchConsent
+    ),
     originalLanguage,
     originalTitle,
     originalText,
@@ -956,6 +1141,8 @@ function normalizeDreamCard(row) {
     environmentTags: Array.isArray(row.environmentTags) ? row.environmentTags : [],
     entityTags: Array.isArray(row.entityTags) ? row.entityTags : [],
     anomalyTags,
+    emotionTags: Array.isArray(row.emotionTags) ? row.emotionTags : [],
+    dreamTypeTags: Array.isArray(row.dreamTypeTags) ? row.dreamTypeTags : [],
     pseudo_id: row.pseudo_id || row.pseudoId || "",
     pseudoId: row.pseudoId || row.pseudo_id || "",
     signal_coherence: row.signal_coherence || 50,
@@ -1103,6 +1290,148 @@ function mergeDreamSets(...dreamSets) {
   return [...merged.values()];
 }
 
+function buildCollectivePatternStats({ dreams, allDreams, language, filtersActive }) {
+  const emotionCounts = new Map();
+  const symbolCounts = new Map();
+  const dreamTypeCounts = new Map();
+  const languageCounts = new Map();
+  const countryCounts = new Map();
+  const cooccurrenceCounts = new Map();
+  const lengthBinCounts = new Map();
+  const datedDreams = [];
+  let missingDateCount = 0;
+  let lucidCount = 0;
+  let nightmareCount = 0;
+
+  dreams.forEach((dream) => {
+    const originalLanguage = normalizeLanguage(dream.originalLanguage);
+    incrementCount(languageCounts, getLanguageName(originalLanguage, language));
+
+    const dreamDate = dream.dreamDateStatus === "hidden" ? "" : dream.dreamDate || dream.dream_date || "";
+    const parsedDate = new Date(dreamDate).getTime();
+    if (Number.isFinite(parsedDate)) {
+      datedDreams.push(parsedDate);
+    } else {
+      missingDateCount += 1;
+    }
+
+    const country = String(dream.creatorCountry || dream.creatorCountryRegion || "").trim();
+    if (country) incrementCount(countryCounts, country);
+
+    const dreamText = getDreamText(dream);
+    incrementCount(lengthBinCounts, getDreamLengthBin(dreamText));
+
+    if (hasDreamSlug(dream, "lucid")) lucidCount += 1;
+    if (hasDreamSlug(dream, "nightmare")) nightmareCount += 1;
+
+    const visibleTagLabels = [];
+
+    dream.tags?.forEach((tag) => {
+      if (!tag?.slug) return;
+      const label = getTagName(tag, language);
+      visibleTagLabels.push(label);
+
+      if (tag.category === "Emotions") incrementCount(emotionCounts, label);
+      if (tag.category === "Dream Types") incrementCount(dreamTypeCounts, label);
+      if (["Anomalies", "Dream Analysis", "Entities", "Environment"].includes(tag.category)) {
+        incrementCount(symbolCounts, label);
+      }
+    });
+
+    const uniqueLabels = [...new Set(visibleTagLabels)].slice(0, 18);
+    for (let leftIndex = 0; leftIndex < uniqueLabels.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < uniqueLabels.length; rightIndex += 1) {
+        const pair = [uniqueLabels[leftIndex], uniqueLabels[rightIndex]].sort().join(" + ");
+        incrementCount(cooccurrenceCounts, pair);
+      }
+    }
+  });
+
+  const dateRange = buildDateRangeLabel(datedDreams);
+  const suppressedCount = [
+    emotionCounts,
+    symbolCounts,
+    dreamTypeCounts,
+    countryCounts,
+    cooccurrenceCounts,
+  ].reduce((total, map) => total + countSuppressedGroups(map), 0);
+
+  return {
+    sampleSize: dreams.length,
+    totalLoaded: allDreams.length,
+    filtersActive,
+    dateRange,
+    missingDateCount,
+    suppressedCount,
+    emotions: toPrivacySafeEntries(emotionCounts),
+    symbols: toPrivacySafeEntries(symbolCounts),
+    dreamTypes: toPrivacySafeEntries(dreamTypeCounts),
+    languages: toPrivacySafeEntries(languageCounts, 1),
+    countries: toPrivacySafeEntries(countryCounts),
+    cooccurrences: toPrivacySafeEntries(cooccurrenceCounts),
+    lengthBins: toSortedLengthBins(lengthBinCounts),
+    lucidCount,
+    nightmareCount,
+  };
+}
+
+function incrementCount(map, key) {
+  if (!key) return;
+  map.set(key, (map.get(key) || 0) + 1);
+}
+
+function hasDreamSlug(dream, slug) {
+  return (
+    dream.tags?.some((tag) => tag.slug === slug) ||
+    dream.dreamTypeTags?.includes(slug) ||
+    false
+  );
+}
+
+function getDreamLengthBin(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) return "0";
+
+  const tokenCount = trimmed.split(/\s+/u).filter(Boolean).length;
+  const approximateCount = tokenCount <= 1 ? trimmed.length : tokenCount;
+
+  if (approximateCount < 50) return "1–49";
+  if (approximateCount < 150) return "50–149";
+  if (approximateCount < 300) return "150–299";
+  if (approximateCount < 600) return "300–599";
+
+  return "600+";
+}
+
+function buildDateRangeLabel(timestamps) {
+  if (!timestamps.length) return "";
+
+  const sorted = [...timestamps].sort((a, b) => a - b);
+  const start = new Date(sorted[0]).toISOString().slice(0, 10);
+  const end = new Date(sorted[sorted.length - 1]).toISOString().slice(0, 10);
+
+  return start === end ? start : `${start} – ${end}`;
+}
+
+function toPrivacySafeEntries(map, minimumCount = MIN_PRIVACY_GROUP_COUNT, limit = 8) {
+  return [...map.entries()]
+    .filter(([, count]) => count >= minimumCount)
+    .sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])))
+    .slice(0, limit)
+    .map(([label, count]) => ({ label, count }));
+}
+
+function countSuppressedGroups(map, minimumCount = MIN_PRIVACY_GROUP_COUNT) {
+  return [...map.values()].filter((count) => count > 0 && count < minimumCount).length;
+}
+
+function toSortedLengthBins(map) {
+  const order = ["0", "1–49", "50–149", "150–299", "300–599", "600+"];
+  return order
+    .map((label) => ({ label, count: map.get(label) || 0 }))
+    .filter((item) => item.count > 0);
+}
+
 function buildResearchStats(dreams, visibleDreams, language) {
   const emotionCounts = new Map();
   const languageCounts = new Map();
@@ -1246,6 +1575,7 @@ function TopNav({
   viewerProfile,
   onOpenAuth,
   onOpenRecorder,
+  onOpenImporter,
 }) {
   const accountLabel = getAccountNavLabel(currentUser, viewerProfile, copy);
 
@@ -1278,10 +1608,13 @@ function TopNav({
           </div>
         </div>
 
-        <div className="grid w-full grid-cols-4 gap-1.5 lg:hidden">
+        <div className="cdo-mobile-scroll-nav -mx-1 px-1 lg:hidden">
           <NavButton active>{copy.mobileDatabase}</NavButton>
           <NavButton onClick={onOpenRecorder || onOpenAuth}>
             {copy.mobileSubmit}
+          </NavButton>
+          <NavButton onClick={onOpenImporter || onOpenAuth}>
+            {copy.importDiary}
           </NavButton>
           <NavButton onClick={onOpenAuth} fixed>
             {accountLabel}
@@ -1295,6 +1628,9 @@ function TopNav({
           <NavButton active>{copy.globalDatabase}</NavButton>
           <NavButton onClick={onOpenRecorder || onOpenAuth}>
             {copy.submitObservation}
+          </NavButton>
+          <NavButton onClick={onOpenImporter || onOpenAuth}>
+            {copy.importDiary}
           </NavButton>
           <NavButton onClick={onOpenAuth} fixed>
             {accountLabel}
@@ -1411,8 +1747,9 @@ function HeroPanel({
   );
 }
 
-function HomePathways({ copy }) {
+function HomePathways({ copy, activeSection, onSelectSection }) {
   const sections = copy.homeSections || [];
+  const sectionModes = ["record", "explore", "patterns", "dream-map", "research"];
 
   return (
     <section className="mb-6 rounded-3xl border border-cyan-300/15 bg-zinc-950/65 p-4 shadow-[0_12px_50px_rgba(0,0,0,.28)] backdrop-blur sm:p-6">
@@ -1444,17 +1781,32 @@ function HomePathways({ copy }) {
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {sections.map((section) => (
-          <div
-            key={section.title}
-            className="rounded-2xl border border-white/10 bg-black/30 p-4 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]"
-          >
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-200/70">
-              {section.title}
-            </p>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">{section.text}</p>
-          </div>
-        ))}
+        {sections.map((section, index) => {
+          const mode = sectionModes[index];
+          const active = activeSection === mode;
+
+          return (
+            <button
+              key={section.title}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onSelectSection?.(section, index)}
+              className={[
+                "min-w-0 rounded-2xl border p-4 text-left transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]",
+                active
+                  ? "border-cyan-300/35 bg-cyan-300/10 shadow-[0_0_28px_rgba(34,211,238,.08)]"
+                  : "border-white/10 bg-black/30",
+              ].join(" ")}
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70 sm:tracking-[0.2em]">
+                {section.title}
+              </p>
+              <p className="cdo-mobile-readable-text mt-3 text-sm leading-6 text-zinc-400">
+                {section.text}
+              </p>
+            </button>
+          );
+        })}
       </div>
     </section>
   );
@@ -1474,9 +1826,9 @@ function AudienceCard({ title, text, accent }) {
   );
 }
 
-function ResearchPanel({ stats, copy }) {
+function ResearchPanel({ stats, copy, records = [], patternStats, tags = [], language, exportFilters }) {
   return (
-    <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
+    <section id="research-archive" className="mb-6 scroll-mt-28 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
@@ -1508,7 +1860,39 @@ function ResearchPanel({ stats, copy }) {
           value={stats.leadingLanguage || copy.noResearchData}
         />
       </div>
+
+      <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-cyan-100">{copy.exportTitle}</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">{copy.exportText}</p>
+            <p className="mt-2 text-xs leading-5 text-zinc-500">{copy.exportPrivacyNote}</p>
+          </div>
+          <span className="rounded-full border border-cyan-300/20 bg-black/30 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">N={records.length}</span>
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <ExportButton disabled={records.length === 0} onClick={() => exportResearchRecordsCsv(records, { language, filters: exportFilters })}>{copy.exportCsv}</ExportButton>
+          <ExportButton disabled={records.length === 0} onClick={() => exportResearchRecordsJson(records, { language, filters: exportFilters })}>{copy.exportJson}</ExportButton>
+          <ExportButton disabled={!patternStats} onClick={() => exportPatternSummaryJson(patternStats, { language, filters: exportFilters })}>{copy.exportPatterns}</ExportButton>
+          <ExportButton onClick={() => exportTagCodebookCsv(tags, { language, filters: exportFilters })}>{copy.exportCodebook}</ExportButton>
+          <ExportButton onClick={() => exportMethodologyMarkdown({ stats: patternStats, filters: exportFilters, language })}>{copy.exportMethodology}</ExportButton>
+        </div>
+      </div>
     </section>
+  );
+}
+
+function ExportButton({ children, onClick, disabled = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/35 hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {children}
+    </button>
   );
 }
 
@@ -1522,6 +1906,131 @@ function ResearchMetric({ label, value }) {
         {value}
       </p>
     </div>
+  );
+}
+
+function CollectivePatternsPanel({ stats, copy }) {
+  const sampleTooSmall = stats.sampleSize > 0 && stats.sampleSize < 10;
+
+  return (
+    <section id="collective-patterns" className="mb-6 scroll-mt-28 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
+            {copy.patternDashboardTitle}
+          </p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
+            {copy.patternDashboardText}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <ResearchMetric label={copy.patternSampleSize} value={`N=${stats.sampleSize}`} />
+        <ResearchMetric label={copy.patternDateRange} value={stats.dateRange || copy.patternNoData} />
+        <ResearchMetric label={copy.patternFilters} value={stats.filtersActive ? copy.patternFiltered : copy.patternAllLoaded} />
+        <ResearchMetric label={copy.patternMissingData} value={String(stats.missingDateCount)} />
+      </div>
+
+      {(sampleTooSmall || stats.suppressedCount > 0) && (
+        <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100">
+          {sampleTooSmall && <p>{copy.patternSmallSampleWarning({ count: stats.sampleSize })}</p>}
+          {stats.suppressedCount > 0 && <p>{copy.patternSuppressed}</p>}
+        </div>
+      )}
+
+      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+        <PatternBarList
+          title={copy.patternEmotions}
+          items={stats.emotions}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternSymbols}
+          items={stats.symbols}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternDreamTypes}
+          items={stats.dreamTypes}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternLanguages}
+          items={stats.languages}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternCountries}
+          items={stats.countries}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternLucidNightmare}
+          items={[
+            { label: copy.patternNightmare, count: stats.nightmareCount },
+            { label: copy.patternLucid, count: stats.lucidCount },
+          ].filter((item) => item.count > 0)}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternDreamLength}
+          items={stats.lengthBins}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternCooccurrence}
+          items={stats.cooccurrences}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+      </div>
+    </section>
+  );
+}
+
+function PatternBarList({ title, items = [], total, empty }) {
+  const maxCount = Math.max(1, ...items.map((item) => item.count || 0));
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-black/30 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-mono text-xs uppercase tracking-[0.24em] text-zinc-300">
+          {title}
+        </p>
+        <span className="rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100">
+          N={total}
+        </span>
+      </div>
+
+      {items.length > 0 ? (
+        <div className="mt-4 space-y-3">
+          {items.map((item) => (
+            <div key={item.label}>
+              <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                <span className="truncate text-zinc-300">{item.label}</span>
+                <span className="font-mono text-xs text-cyan-100">{item.count}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="cdo-gradient-bar h-full rounded-full"
+                  style={{ width: `${Math.max(6, Math.round((item.count / maxCount) * 100))}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 text-sm text-zinc-500">{empty}</p>
+      )}
+    </section>
   );
 }
 
@@ -1695,7 +2204,7 @@ function ObservationGrid({
     const emptyDatabase = totalDreamCount === 0;
 
     return (
-      <section className="rounded-3xl border border-dashed border-cyan-300/20 bg-cyan-300/5 p-10 text-center">
+      <section id="dream-explore" className="scroll-mt-28 rounded-3xl border border-dashed border-cyan-300/20 bg-cyan-300/5 p-10 text-center">
         <p className="font-mono text-sm uppercase tracking-[0.25em] text-cyan-100">
           {emptyDatabase ? copy.noRecordsTitle : copy.noMatchesTitle}
         </p>
@@ -1707,7 +2216,7 @@ function ObservationGrid({
   }
 
   return (
-    <section className="columns-1 gap-5 sm:columns-2 xl:columns-3 2xl:columns-4">
+    <section id="dream-explore" className="scroll-mt-28 columns-1 gap-5 sm:columns-2 xl:columns-3 2xl:columns-4">
       {dreams.map((dream) => (
         <ObservationCard
           key={dream.dream_id}
@@ -2008,7 +2517,7 @@ function ObservationCard({
 
           <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-300 to-fuchsia-400"
+              className="cdo-gradient-bar h-full rounded-full"
               style={{ width: `${dream.signal_coherence}%` }}
             />
           </div>
@@ -2109,14 +2618,14 @@ function NavButton({ children, active = false, onClick, fixed = false }) {
       type="button"
       onClick={onClick}
       className={[
-        "min-h-9 min-w-0 rounded-xl px-1.5 py-1.5 font-mono text-[9px] uppercase tracking-[0.1em] transition sm:min-h-10 sm:rounded-full sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.18em]",
+        "cdo-mobile-label min-h-10 min-w-0 rounded-xl px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] transition sm:min-h-10 sm:rounded-full sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.18em] lg:min-w-[5.6rem]",
         fixed ? "overflow-hidden sm:w-36" : "",
         active
           ? "border border-cyan-300/30 bg-cyan-300/10 text-cyan-50 shadow-[0_0_18px_rgba(34,211,238,.12)]"
           : "border border-white/10 bg-white/[0.03] text-zinc-400 hover:border-fuchsia-300/30 hover:text-fuchsia-100",
       ].join(" ")}
     >
-      <span className="block truncate">{children}</span>
+      <span className="block max-w-full truncate sm:max-w-[9rem] lg:max-w-none">{children}</span>
     </button>
   );
 }

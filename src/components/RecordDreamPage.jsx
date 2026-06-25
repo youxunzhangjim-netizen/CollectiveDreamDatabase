@@ -38,14 +38,15 @@ const RECORD_COPY = {
     chineseLabel: "Traditional Chinese interface",
     spanishLabel: "Spanish interface",
     database: "Research Archive",
+    importDiary: "Import Diary",
     account: "Account",
     guest: "Guest",
     accountLinked: "Linked account",
     guestMode: "Anonymous record",
-    kicker: "Fast Wake Recording",
+    kicker: "Private-first Dream Capture",
     title: "Record the dream before it fades.",
     subtitle:
-      "Start with the words. Login is optional before publishing; if you login here, this draft will attach to your account automatically.",
+      "Start with the words. Every new dream is saved privately first. After saving, you can keep it private, share it anonymously, share with a pseudonym, or contribute only to aggregated statistics.",
     dreamTextLabel: "Dream words",
     dreamTextPlaceholder:
       "Write fragments, scenes, feelings, places, dialogue, colors, sounds... exact order is not required.",
@@ -78,31 +79,37 @@ const RECORD_COPY = {
     duplicateTag: "A matching tag already exists.",
     customTagHelp: "Add only when the existing options in this type do not match.",
     adultContent: "Includes adult content",
-    recordIdentity: "Public recorder identity",
-    recordAsAccount: "Show account",
-    recordAsAnonymous: "Hide identity",
-    submitAccount: "Publish to My Account",
-    submitAnonymous: "Publish Anonymously",
-    submitting: "Publishing record",
+    recordIdentity: "Future sharing identity",
+    recordAsAccount: "Use pseudonym",
+    recordAsAnonymous: "Stay anonymous",
+    submitAccount: "Save Private Dream",
+    submitAnonymous: "Save Private Dream",
+    submitting: "Saving private record",
     consentText:
-      "By proceeding, you retain full copyright of your text but grant this database the right to permanently store and publicly display your records.",
-    textRequired: "Write at least a few words before publishing.",
-    publishError: "The record could not be published. Check your connection and try again.",
+      "By saving, you keep copyright and create a private dream record first. Nothing becomes public until you choose a sharing mode after saving.",
+    privacyFirstTitle: "Private-first by default",
+    privacyFirstText:
+      "After this dream is saved, open the record to choose: keep private, share anonymously, share with a pseudonym, or contribute only to aggregated statistics.",
+    diagnosisReminderTitle: "Not a diagnosis",
+    diagnosisReminderText:
+      "Dream tags, statistics, and reflections are for self-exploration and research patterns only. They are not medical, psychological, or psychiatric diagnosis.",
+    textRequired: "Write at least a few words before saving.",
+    publishError: "The record could not be saved. Check your connection and try again.",
     publishPermissionDenied:
-      "The record could not be accepted right now. Check the required fields and try again.",
+      "The private record could not be accepted right now. Check the required fields and try again.",
     publishAuthMismatch:
-      "Your account session was still syncing. Try publishing once more.",
+      "Your account session was still syncing. Try saving once more.",
     publishUnavailable:
       "The archive is not reachable right now. Try again in a moment.",
     publishInvalidData:
-      "One record field needs adjustment before publishing.",
+      "One record field needs adjustment before saving.",
     accountEditable:
-      "Account-backed records can be edited or deleted later from your account.",
+      "Saved records stay private first and can be edited, deleted, unpublished, or shared later from your account.",
     anonymousLocked:
-      "Anonymous records become public archive entries and cannot be edited or deleted later.",
+      "Guest records are also private first. Keep this browser session if you want to edit, delete, or share them later.",
     authTitle: "Optional account link",
     authText:
-      "You can login or create an account without leaving this draft. After login, publishing will attach the dream to that account.",
+      "You can login or create an account without leaving this draft. After login, saving will attach the private dream to that account.",
     loginTab: "Login",
     signupTab: "Sign up",
     email: "Email",
@@ -115,7 +122,7 @@ const RECORD_COPY = {
     loadingLogin: "Checking account",
     loadingSignup: "Creating account",
     loadingGoogle: "Opening Google",
-    linkedNotice: "Account linked. This draft will publish to your account.",
+    linkedNotice: "Account linked. This draft will save privately to your account.",
     emailRequired: "Enter an email address.",
     passwordRequired: "Enter a password.",
     authError: "The account state could not be confirmed. The draft is still here.",
@@ -142,14 +149,15 @@ const RECORD_COPY = {
     chineseLabel: "繁體中文介面",
     spanishLabel: "西班牙文介面",
     database: "研究檔案庫",
+    importDiary: "匯入日記",
     account: "帳戶",
     guest: "訪客",
     accountLinked: "已連結帳戶",
     guestMode: "匿名記錄",
-    kicker: "醒來快速記錄",
+    kicker: "隱私優先夢境記錄",
     title: "先把夢寫下來，趁它還沒消散。",
     subtitle:
-      "先寫文字。發布前可以選擇登入；如果你在這裡登入，這份草稿會自動連到你的帳戶。",
+      "先寫文字。每一則新夢境都會先儲存為私人紀錄。儲存後，你可以選擇保留私人、匿名分享、以暱稱分享，或只加入整體統計。",
     dreamTextLabel: "夢境文字",
     dreamTextPlaceholder:
       "寫下片段、場景、感覺、地點、對話、顏色、聲音……不需要一開始就整理成完整順序。",
@@ -180,25 +188,31 @@ const RECORD_COPY = {
     duplicateTag: "已經有相同或相近的標籤。",
     customTagHelp: "只有在此類型的現有選項不符合時才新增。",
     adultContent: "包含成人內容",
-    recordIdentity: "公開記錄身分",
-    recordAsAccount: "顯示帳戶",
-    recordAsAnonymous: "隱藏身分",
-    submitAccount: "發布到我的帳戶",
-    submitAnonymous: "匿名發布",
-    submitting: "正在發布記錄",
+    recordIdentity: "之後分享身分",
+    recordAsAccount: "使用暱稱",
+    recordAsAnonymous: "保持匿名",
+    submitAccount: "儲存私人夢境",
+    submitAnonymous: "儲存私人夢境",
+    submitting: "正在儲存私人紀錄",
     consentText:
-      "繼續後，你仍保留文字的完整著作權，但授權此資料庫永久儲存並公開顯示你的紀錄。",
-    textRequired: "發布前請至少寫下幾個字。",
-    publishError: "記錄無法發布。請檢查連線後再試一次。",
-    publishPermissionDenied: "紀錄目前無法送出。請檢查必填內容後再試一次。",
-    publishAuthMismatch: "你的帳戶狀態還在同步。請再按一次發布。",
+      "儲存後，你仍保留文字著作權，並先建立私人夢境紀錄。除非你之後選擇分享模式，否則不會公開顯示。",
+    privacyFirstTitle: "預設私人保存",
+    privacyFirstText:
+      "儲存這則夢境後，打開紀錄即可選擇：保留私人、匿名分享、以暱稱分享，或只加入整體統計。",
+    diagnosisReminderTitle: "這不是診斷",
+    diagnosisReminderText:
+      "夢境標籤、統計與反思只用於自我探索與研究模式觀察，並不是醫療、心理或精神科診斷。",
+    textRequired: "儲存前請至少寫下幾個字。",
+    publishError: "記錄無法儲存。請檢查連線後再試一次。",
+    publishPermissionDenied: "私人紀錄目前無法送出。請檢查必填內容後再試一次。",
+    publishAuthMismatch: "你的帳戶狀態還在同步。請再按一次儲存。",
     publishUnavailable: "資料庫目前無法連線。請稍後再試。",
-    publishInvalidData: "有一個紀錄欄位需要調整後才能發布。",
-    accountEditable: "連到帳戶的記錄之後可以在帳戶中修改或刪除。",
-    anonymousLocked: "匿名記錄發布後會成為公開檔案項目，之後不能修改或刪除。",
+    publishInvalidData: "有一個紀錄欄位需要調整後才能儲存。",
+    accountEditable: "儲存後的紀錄會先保持私人，之後可以在帳戶中修改、刪除、取消公開或選擇分享。",
+    anonymousLocked: "訪客紀錄也會先保持私人；如果之後要修改、刪除或分享，請保留這個瀏覽器工作階段。",
     authTitle: "選用帳戶連結",
     authText:
-      "你可以在不離開草稿的情況下登入或建立帳戶。登入後，發布會自動連到該帳戶。",
+      "你可以在不離開草稿的情況下登入或建立帳戶。登入後，儲存會自動連到該帳戶。",
     loginTab: "登入",
     signupTab: "註冊",
     email: "電子郵件",
@@ -211,7 +225,7 @@ const RECORD_COPY = {
     loadingLogin: "正在確認帳戶",
     loadingSignup: "正在建立帳戶",
     loadingGoogle: "正在開啟 Google",
-    linkedNotice: "帳戶已連結。這份草稿會發布到你的帳戶。",
+    linkedNotice: "帳戶已連結。這份草稿會儲存為你的私人夢境。",
     emailRequired: "請輸入電子郵件。",
     passwordRequired: "請輸入密碼。",
     authError: "無法確認帳戶狀態；草稿仍然保留在這裡。",
@@ -237,14 +251,15 @@ const RECORD_COPY = {
     chineseLabel: "Interfaz en chino tradicional",
     spanishLabel: "Interfaz en español",
     database: "Archivo",
+    importDiary: "Importar diario",
     account: "Cuenta",
     guest: "Invitado",
     accountLinked: "Cuenta vinculada",
     guestMode: "Registro anónimo",
-    kicker: "Registro rápido al despertar",
+    kicker: "Registro privado por defecto",
     title: "Registra el sueño antes de que se desvanezca.",
     subtitle:
-      "Empieza con las palabras. Iniciar sesión es opcional antes de publicar; si entras aquí, el borrador se conectará automáticamente a tu cuenta.",
+      "Empieza con las palabras. Cada sueño nuevo se guarda primero en privado. Después puedes mantenerlo privado, compartirlo de forma anónima, compartirlo con seudónimo o contribuir solo a estadísticas agregadas.",
     dreamTextLabel: "Palabras del sueño",
     dreamTextPlaceholder:
       "Escribe fragmentos, escenas, sensaciones, lugares, diálogos, colores, sonidos... no hace falta ordenarlo todo al inicio.",
@@ -277,31 +292,37 @@ const RECORD_COPY = {
     duplicateTag: "Ya existe una etiqueta equivalente.",
     customTagHelp: "Añade solo cuando las opciones de este tipo no encajan.",
     adultContent: "Incluye contenido adulto",
-    recordIdentity: "Identidad pública",
-    recordAsAccount: "Mostrar cuenta",
-    recordAsAnonymous: "Ocultar identidad",
-    submitAccount: "Publicar en mi cuenta",
-    submitAnonymous: "Publicar anónimo",
-    submitting: "Publicando registro",
+    recordIdentity: "Identidad futura",
+    recordAsAccount: "Usar seudónimo",
+    recordAsAnonymous: "Seguir anónimo",
+    submitAccount: "Guardar sueño privado",
+    submitAnonymous: "Guardar sueño privado",
+    submitting: "Guardando registro privado",
     consentText:
-      "Al continuar, conservas todos los derechos de autor sobre tu texto, pero concedes a esta base de datos el derecho de almacenar y mostrar públicamente tus registros de forma permanente.",
-    textRequired: "Escribe al menos unas palabras antes de publicar.",
-    publishError: "No se pudo publicar el registro. Revisa la conexión e inténtalo otra vez.",
+      "Al guardar, conservas tus derechos de autor y creas primero un registro privado. Nada se hace público hasta que elijas un modo de compartir después.",
+    privacyFirstTitle: "Privado por defecto",
+    privacyFirstText:
+      "Después de guardar este sueño, abre el registro para elegir: mantenerlo privado, compartirlo de forma anónima, compartirlo con seudónimo o contribuir solo a estadísticas agregadas.",
+    diagnosisReminderTitle: "No es un diagnóstico",
+    diagnosisReminderText:
+      "Las etiquetas, estadísticas y reflexiones sirven para autoexploración y patrones de investigación. No son diagnósticos médicos, psicológicos ni psiquiátricos.",
+    textRequired: "Escribe al menos unas palabras antes de guardar.",
+    publishError: "No se pudo guardar el registro. Revisa la conexión e inténtalo otra vez.",
     publishPermissionDenied:
-      "El registro no se pudo aceptar ahora. Revisa los campos necesarios e inténtalo otra vez.",
+      "El registro privado no se pudo aceptar ahora. Revisa los campos necesarios e inténtalo otra vez.",
     publishAuthMismatch:
-      "La sesión de tu cuenta todavía se estaba sincronizando. Intenta publicar una vez más.",
+      "La sesión de tu cuenta todavía se estaba sincronizando. Intenta guardar una vez más.",
     publishUnavailable:
       "El archivo no está disponible ahora. Inténtalo de nuevo en un momento.",
     publishInvalidData:
-      "Un campo del registro necesita ajuste antes de publicar.",
+      "Un campo del registro necesita ajuste antes de guardar.",
     accountEditable:
-      "Los registros conectados a una cuenta se pueden editar o eliminar más tarde.",
+      "Los registros guardados permanecen privados primero y luego se pueden editar, eliminar, retirar o compartir desde tu cuenta.",
     anonymousLocked:
-      "Los registros anónimos quedan como entradas públicas y no se pueden editar ni eliminar después.",
+      "Los registros de invitado también se guardan en privado primero. Conserva esta sesión del navegador si quieres editarlos, eliminarlos o compartirlos después.",
     authTitle: "Vincular cuenta opcional",
     authText:
-      "Puedes iniciar sesión o crear cuenta sin salir del borrador. Después, la publicación se conectará a esa cuenta.",
+      "Puedes iniciar sesión o crear cuenta sin salir del borrador. Después, el guardado se conectará a esa cuenta.",
     loginTab: "Entrar",
     signupTab: "Crear",
     email: "Correo",
@@ -314,7 +335,7 @@ const RECORD_COPY = {
     loadingLogin: "Confirmando cuenta",
     loadingSignup: "Creando cuenta",
     loadingGoogle: "Abriendo Google",
-    linkedNotice: "Cuenta vinculada. Este borrador se publicará en tu cuenta.",
+    linkedNotice: "Cuenta vinculada. Este borrador se guardará en privado en tu cuenta.",
     emailRequired: "Introduce un correo.",
     passwordRequired: "Introduce una contraseña.",
     authError: "No se pudo confirmar la cuenta. El borrador sigue aquí.",
@@ -342,6 +363,7 @@ export default function RecordDreamPage({
   currentUser,
   onOpenDatabase,
   onOpenDashboard,
+  onOpenImporter,
   onSubmitted,
 }) {
   const copy = RECORD_COPY[language] || RECORD_COPY.zh;
@@ -678,6 +700,13 @@ export default function RecordDreamPage({
                 {accountBacked ? copy.account : copy.guest}
               </button>
             )}
+            <button
+              type="button"
+              onClick={onOpenImporter}
+              className="min-w-0 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
+            >
+              {copy.importDiary}
+            </button>
             <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
           </div>
         </header>
@@ -966,6 +995,19 @@ export default function RecordDreamPage({
                 {accountBacked ? copy.accountEditable : copy.anonymousLocked}
               </p>
 
+              <div className="grid gap-3 md:grid-cols-2">
+                <InfoNotice
+                  title={copy.privacyFirstTitle}
+                  text={copy.privacyFirstText}
+                  tone="cyan"
+                />
+                <InfoNotice
+                  title={copy.diagnosisReminderTitle}
+                  text={copy.diagnosisReminderText}
+                  tone="fuchsia"
+                />
+              </div>
+
               {submitError && (
                 <p className="rounded-2xl border border-red-300/25 bg-red-400/5 p-4 font-mono text-xs leading-5 text-red-100">
                   {submitError}
@@ -1140,6 +1182,22 @@ function SessionBadge({ copy, accountBacked }) {
   );
 }
 
+function InfoNotice({ title, text, tone = "cyan" }) {
+  const toneClass =
+    tone === "fuchsia"
+      ? "border-fuchsia-300/20 bg-fuchsia-300/5 text-fuchsia-100"
+      : "border-cyan-300/20 bg-cyan-300/5 text-cyan-100";
+
+  return (
+    <section className={`rounded-2xl border p-4 ${toneClass}`}>
+      <p className="font-mono text-[10px] uppercase tracking-[0.22em]">
+        {title}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-zinc-300">{text}</p>
+    </section>
+  );
+}
+
 function TagGroup({
   group,
   language,
@@ -1293,7 +1351,7 @@ function getPublishErrorMessage(error, copy) {
 function reportPublishError(error) {
   if (typeof console === "undefined") return;
 
-  console.error("[CollectiveDreamDatabase publish]", {
+  console.error("[CollectiveDreamDatabase save]", {
     code: error?.code,
     message: error?.message,
   });

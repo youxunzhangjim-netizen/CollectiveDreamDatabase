@@ -26,6 +26,7 @@ import {
   getVisibleDreamDate,
 } from "../lib/dreamDate.js";
 import { getTagLabel, RECORD_TAGS } from "../lib/tagTaxonomy.js";
+import { exportPersonalDreamsCsv, exportPersonalDreamsJson } from "../lib/researchExportService.js";
 import LanguageMenu from "./LanguageMenu.jsx";
 
 const DASHBOARD_COPY = {
@@ -37,6 +38,9 @@ const DASHBOARD_COPY = {
     spanishLabel: "Spanish interface",
     databaseButton: "Research Archive",
     recordButton: "Record Dream",
+    importButton: "Import Diary",
+    exportCsvButton: "Export My CSV",
+    exportJsonButton: "Export My JSON",
     consoleLabel: "Account Console",
     memberSince: "Member since",
     signOut: "Sign Out",
@@ -86,11 +90,18 @@ const DASHBOARD_COPY = {
     anonymousObserver: "Anonymous Observer",
     unknownDate: "Date unknown",
     hiddenDate: "Date hidden",
-    analysisTitle: "Personal Upload Analysis",
+    analysisTitle: "My Dream Map",
     analysisText:
-      "A private summary of the dreams uploaded from this account for self-study and pattern tracking.",
+      "A private pattern dashboard for self-reflection. It highlights recurring places, entities, symbols, emotions, lucid/nightmare frequency, similar dreams, and gentle questions without diagnosis.",
     analysisTotal: "Uploaded",
     analysisAdult: "Mature tagged",
+    analysisFrequency: "Dream frequency",
+    analysisRecurringPlaces: "Recurring places",
+    analysisRecurringEntities: "Recurring people/entities",
+    analysisCommonSymbols: "Common symbols",
+    analysisLucidNightmare: "Lucid / nightmare",
+    analysisSimilarDreams: "Similar dreams",
+    analysisReflectionQuestions: "Questions for reflection",
     analysisDreamTypeLead: "Leading dream type",
     analysisPsychologyLead: "Leading psyche signal",
     analysisAnalysisLead: "Leading analysis marker",
@@ -107,6 +118,9 @@ const DASHBOARD_COPY = {
     spanishLabel: "西班牙文介面",
     databaseButton: "研究檔案庫",
     recordButton: "記錄夢境",
+    importButton: "匯入日記",
+    exportCsvButton: "匯出 CSV",
+    exportJsonButton: "匯出 JSON",
     consoleLabel: "帳戶終端",
     memberSince: "會員起始日",
     signOut: "登出",
@@ -156,10 +170,17 @@ const DASHBOARD_COPY = {
     anonymousObserver: "匿名觀察者",
     unknownDate: "日期不確定",
     hiddenDate: "日期已隱藏",
-    analysisTitle: "個人上傳分析",
-    analysisText: "只根據此帳戶上傳的夢境建立的私人摘要，可用於自我研究與模式追蹤。",
+    analysisTitle: "我的夢境地圖",
+    analysisText: "只根據此帳戶夢境建立的私人模式儀表板，用於自我反思。它會整理重複場景、人物／實體、符號、情緒、清醒夢／惡夢、相似夢境與溫和反思問題，但不做診斷。",
     analysisTotal: "已上傳",
     analysisAdult: "成人標記",
+    analysisFrequency: "夢境頻率",
+    analysisRecurringPlaces: "重複場景",
+    analysisRecurringEntities: "重複人物／實體",
+    analysisCommonSymbols: "常見符號",
+    analysisLucidNightmare: "清醒夢／惡夢",
+    analysisSimilarDreams: "相似夢境",
+    analysisReflectionQuestions: "反思問題",
     analysisDreamTypeLead: "主要夢境類型",
     analysisPsychologyLead: "主要心理訊號",
     analysisAnalysisLead: "主要分析標記",
@@ -176,6 +197,9 @@ const DASHBOARD_COPY = {
     spanishLabel: "Interfaz en español",
     databaseButton: "Archivo de investigación",
     recordButton: "Registrar sueño",
+    importButton: "Importar diario",
+    exportCsvButton: "Exportar CSV",
+    exportJsonButton: "Exportar JSON",
     consoleLabel: "Consola de cuenta",
     memberSince: "Miembro desde",
     signOut: "Cerrar sesión",
@@ -225,11 +249,18 @@ const DASHBOARD_COPY = {
     anonymousObserver: "Observador anónimo",
     unknownDate: "Fecha desconocida",
     hiddenDate: "Fecha oculta",
-    analysisTitle: "Análisis personal",
+    analysisTitle: "Mi mapa de sueños",
     analysisText:
-      "Resumen privado de los sueños subidos desde esta cuenta para estudio propio y seguimiento de patrones.",
+      "Panel privado de patrones para autorreflexión. Destaca lugares, entidades, símbolos, emociones, frecuencia de sueños lúcidos/pesadillas, sueños similares y preguntas suaves sin diagnóstico.",
     analysisTotal: "Subidos",
     analysisAdult: "Madurez marcada",
+    analysisFrequency: "Frecuencia",
+    analysisRecurringPlaces: "Lugares recurrentes",
+    analysisRecurringEntities: "Personas/entidades",
+    analysisCommonSymbols: "Símbolos comunes",
+    analysisLucidNightmare: "Lúcido / pesadilla",
+    analysisSimilarDreams: "Sueños similares",
+    analysisReflectionQuestions: "Preguntas de reflexión",
     analysisDreamTypeLead: "Tipo principal",
     analysisPsychologyLead: "Señal psíquica principal",
     analysisAnalysisLead: "Marcador principal",
@@ -325,6 +356,7 @@ export default function UserDashboard({
   onSignOut,
   onOpenDatabase,
   onOpenRecorder,
+  onOpenImporter,
   onOpenRecord,
 }) {
   const copy = DASHBOARD_COPY[language] || DASHBOARD_COPY.zh;
@@ -359,6 +391,7 @@ export default function UserDashboard({
     () => buildPersonalDreamAnalysis(observations, language, copy),
     [copy, language, observations]
   );
+  const lastSyncLabel = useMemo(() => formatLastSync(language), [language]);
 
   useEffect(() => {
     document.title = copy.documentTitle;
@@ -450,10 +483,6 @@ export default function UserDashboard({
 
   async function handleRemove(id) {
     if (activeTab === "observations") {
-      const record = observations.find((item) => item.id === id);
-
-      if (record?.anonymousLocked) return;
-
       await deleteOwnedRecord(user, id);
       setObservations((current) => current.filter((item) => item.id !== id));
       return;
@@ -494,19 +523,26 @@ export default function UserDashboard({
             </span>
           </button>
 
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-3">
+          <div className="cdo-mobile-scroll-nav sm:grid sm:w-auto sm:grid-cols-4 sm:items-center sm:gap-3">
             <button
               type="button"
               onClick={onOpenRecorder}
-              className="min-w-0 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
+              className="cdo-mobile-label min-w-0 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
             >
               {copy.recordButton}
+            </button>
+            <button
+              type="button"
+              onClick={onOpenImporter}
+              className="cdo-mobile-label min-w-0 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
+            >
+              {copy.importButton}
             </button>
             <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
             <button
               type="button"
               onClick={onSignOut}
-              className="col-span-2 min-w-0 rounded-xl border border-red-300/25 bg-red-400/5 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-100 transition hover:border-red-300/45 hover:bg-red-400/10 sm:col-span-1 sm:px-4 sm:text-xs sm:tracking-[0.2em]"
+              className="cdo-mobile-label col-span-2 min-w-0 rounded-xl border border-red-300/25 bg-red-400/5 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-100 transition hover:border-red-300/45 hover:bg-red-400/10 sm:col-span-1 sm:px-4 sm:text-xs sm:tracking-[0.2em]"
             >
               {copy.signOut}
             </button>
@@ -560,14 +596,35 @@ export default function UserDashboard({
               </div>
             </div>
 
-            <div className="grid gap-3 border-t border-white/10 bg-black/30 p-5 sm:grid-cols-2 lg:grid-cols-4 lg:border-l lg:border-t-0 lg:p-7">
-              <StatusBlock label={copy.observationCount} value={String(observations.length)} />
-              <StatusBlock label={copy.savedCount} value={String(savedRecords.length)} />
-              <StatusBlock label={copy.collectionsTab} value={String(collectionRecords.length)} />
-              <StatusBlock
-                label={copy.identityStatus}
-                value={getLanguageName(displayUser.preferredLanguage || language, language)}
-              />
+            <div className="border-t border-white/10 bg-black/30 p-5 lg:border-l lg:border-t-0 lg:p-7">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <StatusBlock label={copy.observationCount} value={String(observations.length)} />
+                <StatusBlock label={copy.savedCount} value={String(savedRecords.length)} />
+                <StatusBlock label={copy.collectionsTab} value={String(collectionRecords.length)} />
+                <StatusBlock
+                  label={copy.identityStatus}
+                  value={getLanguageName(displayUser.preferredLanguage || language, language)}
+                />
+              </div>
+
+              <div className="cdo-mobile-stack-actions mt-4 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => exportPersonalDreamsCsv(observations, { language })}
+                  disabled={observations.length === 0}
+                  className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {copy.exportCsvButton}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportPersonalDreamsJson(observations, { language })}
+                  disabled={observations.length === 0}
+                  className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-fuchsia-100 transition hover:border-fuchsia-300/45 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {copy.exportJsonButton}
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -776,7 +833,7 @@ export default function UserDashboard({
           </div>
 
           <p className="font-mono text-xs uppercase tracking-[0.22em] text-zinc-500">
-            {copy.lastSync}: 2026-06-23 03:18
+            {copy.lastSync}: {lastSyncLabel}
           </p>
         </section>
 
@@ -803,14 +860,11 @@ export default function UserDashboard({
                 copy={copy}
                 actionLabel={
                   activeTab === "observations"
-                    ? item.anonymousLocked
-                      ? copy.lockedButton
-                      : copy.deleteButton
+                    ? copy.deleteButton
                     : copy.removeButton
                 }
                 onOpen={() => onOpenRecord?.(item)}
                 onRemove={() => handleRemove(item.id)}
-                locked={activeTab === "observations" && item.anonymousLocked}
               />
             ))}
           </section>
@@ -820,6 +874,22 @@ export default function UserDashboard({
       </div>
     </main>
   );
+}
+
+function formatLastSync(language) {
+  const date = new Date();
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const locale = language === "zh" ? "zh-Hant-TW" : language === "es" ? "es" : "en";
+
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  } catch {
+    return date.toISOString().slice(0, 16).replace("T", " ");
+  }
 }
 
 function normalizeDashboardUser(user, profile) {
@@ -934,6 +1004,19 @@ function normalizeRecordItem(item, index) {
     authorName: item.authorName || item.creatorDisplayName || "",
     pseudoId: item.pseudoId || item.pseudo_id || "",
     visibility: item.visibility || (item.isPublic === false ? "private" : "public"),
+    isPublic: typeof item.isPublic === "boolean" ? item.isPublic : item.visibility === "public",
+    sharingMode:
+      item.sharingMode ||
+      (item.visibility === "stats_only"
+        ? "stats_only"
+        : item.isPublic
+          ? item.recordIdentityMode === "account" || item.attributionMode === "account"
+            ? "public_pseudonym"
+            : "public_anonymous"
+          : "private"),
+    includedInResearchStats: Boolean(
+      item.includedInResearchStats || item.researchConsent
+    ),
     tags: Array.isArray(item.tags) ? item.tags : [],
     environmentTags: Array.isArray(item.environmentTags) ? item.environmentTags : [],
     entityTags: Array.isArray(item.entityTags) ? item.entityTags : [],
@@ -997,13 +1080,24 @@ function buildPersonalDreamAnalysis(items, language, copy) {
   const dreamTypeCounts = new Map();
   const psychologyCounts = new Map();
   const analysisCounts = new Map();
+  const placeCounts = new Map();
+  const entityCounts = new Map();
+  const symbolCounts = new Map();
+  const monthCounts = new Map();
   let adultCount = 0;
   let ageTotal = 0;
   let ageCount = 0;
+  let lucidCount = 0;
+  let nightmareCount = 0;
 
   items.forEach((item) => {
     const originalLanguage = normalizeLanguage(item.originalLanguage);
     languageCounts.set(originalLanguage, (languageCounts.get(originalLanguage) || 0) + 1);
+
+    const monthKey = getDreamMonthKey(item);
+    if (monthKey) {
+      monthCounts.set(monthKey, (monthCounts.get(monthKey) || 0) + 1);
+    }
 
     if (item.adultContent || Number(item.minimumViewerAge || 0) >= 18) {
       adultCount += 1;
@@ -1016,20 +1110,36 @@ function buildPersonalDreamAnalysis(items, language, copy) {
     }
 
     getEmotionLabels(item, language).forEach((emotion) => {
-      emotionCounts.set(emotion, (emotionCounts.get(emotion) || 0) + 1);
+      incrementMap(emotionCounts, emotion);
     });
 
     getCategoryTagLabels(item, "Dream Types", language).forEach((label) => {
-      dreamTypeCounts.set(label, (dreamTypeCounts.get(label) || 0) + 1);
+      incrementMap(dreamTypeCounts, label);
     });
 
     getCategoryTagLabels(item, "Psychological Observables", language).forEach((label) => {
-      psychologyCounts.set(label, (psychologyCounts.get(label) || 0) + 1);
+      incrementMap(psychologyCounts, label);
     });
 
     getCategoryTagLabels(item, "Dream Analysis", language).forEach((label) => {
-      analysisCounts.set(label, (analysisCounts.get(label) || 0) + 1);
+      incrementMap(analysisCounts, label);
+      incrementMap(symbolCounts, label);
     });
+
+    getCategoryTagLabels(item, "Environment", language).forEach((label) => {
+      incrementMap(placeCounts, label);
+    });
+
+    getCategoryTagLabels(item, "Entities", language).forEach((label) => {
+      incrementMap(entityCounts, label);
+    });
+
+    getCategoryTagLabels(item, "Anomalies", language).forEach((label) => {
+      incrementMap(symbolCounts, label);
+    });
+
+    if (hasTagSlug(item, "lucid")) lucidCount += 1;
+    if (hasTagSlug(item, "nightmare")) nightmareCount += 1;
   });
 
   const leadingLanguage = getTopMapEntry(languageCounts);
@@ -1049,7 +1159,110 @@ function buildPersonalDreamAnalysis(items, language, copy) {
     leadingPsychology: leadingPsychology || copy.analysisNoData,
     leadingAnalysis: leadingAnalysis || copy.analysisNoData,
     averageAge: ageCount > 0 ? Math.round(ageTotal / ageCount) : copy.analysisNoData,
+    dreamFrequency: toTopEntries(monthCounts, 6),
+    recurringPlaces: toTopEntries(placeCounts, 5),
+    recurringEntities: toTopEntries(entityCounts, 5),
+    commonSymbols: toTopEntries(symbolCounts, 5),
+    lucidCount,
+    nightmareCount,
+    similarDreams: findSimilarDreamPairs(items, language).slice(0, 3),
+    reflectionQuestions: buildReflectionQuestions({
+      copy,
+      language,
+      places: toTopEntries(placeCounts, 2),
+      entities: toTopEntries(entityCounts, 2),
+      emotions: toTopEntries(emotionCounts, 2),
+      symbols: toTopEntries(symbolCounts, 2),
+    }),
   };
+}
+
+function incrementMap(map, key) {
+  if (!key) return;
+  map.set(key, (map.get(key) || 0) + 1);
+}
+
+function toTopEntries(map, limit = 5) {
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])))
+    .slice(0, limit)
+    .map(([label, count]) => ({ label, count }));
+}
+
+function getDreamMonthKey(item) {
+  const value = item.dreamDate || item.date || "";
+  if (!value || item.dreamDateStatus === "hidden") return "";
+
+  const text = String(value).slice(0, 7);
+  return /^\d{4}-\d{2}$/.test(text) ? text : "";
+}
+
+function hasTagSlug(item, slug) {
+  return (
+    item.tags?.some((tag) => tag.slug === slug) ||
+    item.dreamTypeTags?.includes(slug) ||
+    false
+  );
+}
+
+function findSimilarDreamPairs(items, language) {
+  const pairs = [];
+
+  for (let leftIndex = 0; leftIndex < items.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < items.length; rightIndex += 1) {
+      const left = items[leftIndex];
+      const right = items[rightIndex];
+      const leftSlugs = new Set((left.tags || []).map((tag) => tag.slug).filter(Boolean));
+      const rightSlugs = new Set((right.tags || []).map((tag) => tag.slug).filter(Boolean));
+      const overlap = [...leftSlugs].filter((slug) => rightSlugs.has(slug));
+
+      if (overlap.length < 2) continue;
+
+      pairs.push({
+        leftTitle: getOriginalItemTitle(left) || formatRecordDate(left.dreamDate) || left.id,
+        rightTitle: getOriginalItemTitle(right) || formatRecordDate(right.dreamDate) || right.id,
+        overlapCount: overlap.length,
+        tags: overlap
+          .slice(0, 3)
+          .map((slug) => getTagLabel(RECORD_TAGS[slug] || { slug, name: slug }, language)),
+      });
+    }
+  }
+
+  return pairs.sort((a, b) => b.overlapCount - a.overlapCount);
+}
+
+function buildReflectionQuestions({ copy, language, places, entities, emotions, symbols }) {
+  const noData = copy.analysisNoData;
+  const topPlace = places[0]?.label;
+  const topEntity = entities[0]?.label;
+  const topEmotion = emotions[0]?.label;
+  const topSymbol = symbols[0]?.label;
+
+  if (language === "zh") {
+    return [
+      topPlace ? `「${topPlace}」反覆出現時，通常伴隨什麼現實中的狀態或關係？` : noData,
+      topEntity ? `當「${topEntity}」出現時，你在夢中比較像是靠近、逃避、照顧，還是觀察？` : noData,
+      topEmotion ? `最近帶有「${topEmotion}」的夢，是在增加、減少，還是集中於某段時間？` : noData,
+      topSymbol ? `「${topSymbol}」像是一個物件、場景規則，還是一種選擇點？` : noData,
+    ].filter((item) => item && item !== noData).slice(0, 4);
+  }
+
+  if (language === "es") {
+    return [
+      topPlace ? `Cuando aparece “${topPlace}”, ¿qué estado o relación de la vida diaria suele acompañarlo?` : noData,
+      topEntity ? `Cuando aparece “${topEntity}”, ¿te acercas, huyes, cuidas u observas?` : noData,
+      topEmotion ? `¿Los sueños con “${topEmotion}” están aumentando, disminuyendo o concentrados en un periodo?` : noData,
+      topSymbol ? `¿“${topSymbol}” funciona como objeto, regla del escenario o punto de decisión?` : noData,
+    ].filter((item) => item && item !== noData).slice(0, 4);
+  }
+
+  return [
+    topPlace ? `When “${topPlace}” repeats, what waking-life state or relationship usually surrounds it?` : noData,
+    topEntity ? `When “${topEntity}” appears, are you approaching, avoiding, caring, or observing?` : noData,
+    topEmotion ? `Are dreams tagged “${topEmotion}” increasing, decreasing, or clustered in one period?` : noData,
+    topSymbol ? `Does “${topSymbol}” act like an object, a scene rule, or a choice point?` : noData,
+  ].filter((item) => item && item !== noData).slice(0, 4);
 }
 
 function getEmotionLabels(item, language) {
@@ -1173,7 +1386,100 @@ function PersonalAnalysisPanel({ stats, copy }) {
         <StatusBlock label={copy.analysisAnalysisLead} value={stats.leadingAnalysis} />
         <StatusBlock label={copy.analysisAverageAge} value={String(stats.averageAge)} />
       </div>
+
+      <div className="mt-5 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+        <MiniList title={copy.analysisFrequency} items={stats.dreamFrequency} empty={copy.analysisNoData} />
+        <MiniList title={copy.analysisRecurringPlaces} items={stats.recurringPlaces} empty={copy.analysisNoData} />
+        <MiniList title={copy.analysisRecurringEntities} items={stats.recurringEntities} empty={copy.analysisNoData} />
+        <MiniList title={copy.analysisCommonSymbols} items={stats.commonSymbols} empty={copy.analysisNoData} />
+        <StatusBlock
+          label={copy.analysisLucidNightmare}
+          value={`${stats.lucidCount || 0} / ${stats.nightmareCount || 0}`}
+        />
+        <SimilarDreamList
+          title={copy.analysisSimilarDreams}
+          items={stats.similarDreams}
+          empty={copy.analysisNoData}
+        />
+      </div>
+
+      <ReflectionList
+        title={copy.analysisReflectionQuestions}
+        questions={stats.reflectionQuestions}
+        empty={copy.analysisNoData}
+      />
     </section>
+  );
+}
+
+function MiniList({ title, items = [], empty }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+        {title}
+      </p>
+      {items.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          {items.map((item) => (
+            <div key={item.label} className="flex items-center justify-between gap-3">
+              <span className="truncate text-sm text-zinc-300">{item.label}</span>
+              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2 py-1 font-mono text-[10px] text-cyan-100">
+                {item.count}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-zinc-500">{empty}</p>
+      )}
+    </div>
+  );
+}
+
+function SimilarDreamList({ title, items = [], empty }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+        {title}
+      </p>
+      {items.length > 0 ? (
+        <div className="mt-3 space-y-3">
+          {items.map((item) => (
+            <div key={`${item.leftTitle}-${item.rightTitle}`} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <p className="text-sm leading-5 text-zinc-300">
+                {item.leftTitle} ↔ {item.rightTitle}
+              </p>
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100">
+                {item.tags.join(" / ")}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-zinc-500">{empty}</p>
+      )}
+    </div>
+  );
+}
+
+function ReflectionList({ title, questions = [], empty }) {
+  return (
+    <div className="mt-5 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
+      <p className="font-mono text-xs uppercase tracking-[0.26em] text-fuchsia-200/70">
+        {title}
+      </p>
+      {questions.length > 0 ? (
+        <ul className="mt-3 grid gap-3 md:grid-cols-2">
+          {questions.map((question) => (
+            <li key={question} className="rounded-xl border border-white/10 bg-black/25 p-3 text-sm leading-6 text-zinc-300">
+              {question}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-sm text-zinc-500">{empty}</p>
+      )}
+    </div>
   );
 }
 
@@ -1228,7 +1534,7 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
     <article
       onClick={onOpen}
       className={[
-        "cursor-pointer overflow-hidden rounded-3xl border bg-zinc-950/80 backdrop-blur transition duration-300 hover:-translate-y-1",
+        "cdo-record-card cursor-pointer overflow-hidden rounded-3xl border bg-zinc-950/80 backdrop-blur transition duration-300 hover:-translate-y-1",
         style.border,
         style.glow,
       ].join(" ")}

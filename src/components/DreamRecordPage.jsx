@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   collectRecordForUser,
+  deleteOwnedRecord,
   saveRecordForUser,
   updateOwnedRecordMetadata,
+  updateOwnedRecordSharing,
 } from "../lib/recordsService.js";
 import {
   getLanguageName,
@@ -75,6 +77,24 @@ const DETAIL_COPY = {
     visibility: "Visibility",
     privateRecord: "Private",
     publicRecord: "Public",
+    statsOnlyRecord: "Stats only",
+    sharingPanel: "Privacy & Sharing",
+    sharingHelp:
+      "Every dream starts private. Choose exactly how this record may leave your personal archive.",
+    keepPrivate: "Keep private",
+    shareAnonymously: "Share anonymously",
+    shareWithPseudonym: "Share with pseudonym",
+    contributeStatsOnly: "Stats only",
+    unpublishRecord: "Unpublish",
+    deleteRecord: "Delete Dream",
+    deleteConfirm: "Delete this dream permanently?",
+    deletedRecord: "Dream deleted",
+    sharingSaved: "Sharing choice saved",
+    accountNeededForPseudonym:
+      "Use a non-guest account before sharing with a pseudonym.",
+    notDiagnosisTitle: "Not a diagnosis",
+    notDiagnosisText:
+      "Dream tags, statistics, and AI reflections are for self-exploration and research patterns only. They are not medical, psychological, or psychiatric diagnosis.",
     recordText: "Dream Record",
     pictureGallery: "Dream Pictures",
     imageHiddenForGuest: "Pictures are hidden for guests. Sign in to view dream images.",
@@ -146,6 +166,22 @@ const DETAIL_COPY = {
     visibility: "可見性",
     privateRecord: "私人",
     publicRecord: "公開",
+    statsOnlyRecord: "只加入統計",
+    sharingPanel: "隱私與分享",
+    sharingHelp: "每一則夢境都先保持私人。請選擇這則紀錄可以如何離開你的個人檔案庫。",
+    keepPrivate: "保持私人",
+    shareAnonymously: "匿名分享",
+    shareWithPseudonym: "以暱稱分享",
+    contributeStatsOnly: "只加入統計",
+    unpublishRecord: "取消公開",
+    deleteRecord: "刪除夢境",
+    deleteConfirm: "確定要永久刪除此夢境嗎？",
+    deletedRecord: "夢境已刪除",
+    sharingSaved: "分享選擇已儲存",
+    accountNeededForPseudonym: "請先使用非訪客帳戶，才能以暱稱分享。",
+    notDiagnosisTitle: "這不是診斷",
+    notDiagnosisText:
+      "夢境標籤、統計與 AI 反思只用於自我探索與研究模式觀察，並不是醫療、心理或精神科診斷。",
     recordText: "夢境紀錄",
     pictureGallery: "夢境圖片",
     imageHiddenForGuest: "訪客不顯示圖片。登入後可查看夢境影像。",
@@ -215,6 +251,24 @@ const DETAIL_COPY = {
     visibility: "Visibilidad",
     privateRecord: "Privado",
     publicRecord: "Público",
+    statsOnlyRecord: "Solo estadísticas",
+    sharingPanel: "Privacidad y uso compartido",
+    sharingHelp:
+      "Cada sueño empieza privado. Elige exactamente cómo puede salir este registro de tu archivo personal.",
+    keepPrivate: "Mantener privado",
+    shareAnonymously: "Compartir anónimo",
+    shareWithPseudonym: "Compartir con seudónimo",
+    contributeStatsOnly: "Solo estadísticas",
+    unpublishRecord: "Retirar publicación",
+    deleteRecord: "Eliminar sueño",
+    deleteConfirm: "¿Eliminar este sueño de forma permanente?",
+    deletedRecord: "Sueño eliminado",
+    sharingSaved: "Opción de compartir guardada",
+    accountNeededForPseudonym:
+      "Usa una cuenta no invitada antes de compartir con seudónimo.",
+    notDiagnosisTitle: "No es un diagnóstico",
+    notDiagnosisText:
+      "Las etiquetas, estadísticas y reflexiones de IA sirven para autoexploración y patrones de investigación. No son diagnósticos médicos, psicológicos ni psiquiátricos.",
     recordText: "Registro del Sueño",
     pictureGallery: "Imágenes del sueño",
     imageHiddenForGuest:
@@ -266,8 +320,7 @@ export default function DreamRecordPage({
   const isOwner = Boolean(
     currentUser?.uid &&
       normalizedRecord.ownerId &&
-      currentUser.uid === normalizedRecord.ownerId &&
-      !normalizedRecord.anonymousLocked
+      currentUser.uid === normalizedRecord.ownerId
   );
   const [titleDraft, setTitleDraft] = useState(normalizedRecord.originalTitle || "");
   const [dreamTextDraft, setDreamTextDraft] = useState(
@@ -284,6 +337,9 @@ export default function DreamRecordPage({
   const [recordIdentityMode, setRecordIdentityMode] = useState(
     normalizedRecord.recordIdentityMode
   );
+  const [sharingMode, setSharingMode] = useState(
+    getSharingModeFromRecord(normalizedRecord)
+  );
   const [selectedTagSlugs, setSelectedTagSlugs] = useState(() =>
     getEditableSelectedTagSlugs(normalizedRecord)
   );
@@ -297,6 +353,8 @@ export default function DreamRecordPage({
   const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [status, setStatus] = useState("");
   const [collecting, setCollecting] = useState(false);
+  const [sharingSaving, setSharingSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const title = getOriginalRecordTitle(normalizedRecord);
   const body = getOriginalRecordText(normalizedRecord);
   const originalLanguage = normalizeLanguage(normalizedRecord.originalLanguage);
@@ -350,6 +408,7 @@ export default function DreamRecordPage({
     setAgeAtDream(normalizedRecord.ageAtDream || "");
     setAdultContent(isAdultRecord(normalizedRecord));
     setRecordIdentityMode(normalizedRecord.recordIdentityMode);
+    setSharingMode(getSharingModeFromRecord(normalizedRecord));
     setSelectedTagSlugs(getEditableSelectedTagSlugs(normalizedRecord));
     setCustomTagDrafts({});
     setCustomTagEntries(getCustomTagEntries(normalizedRecord));
@@ -494,6 +553,64 @@ export default function DreamRecordPage({
     }
   }
 
+  async function handleSaveSharing(nextSharingMode) {
+    setStatus("");
+
+    if (
+      nextSharingMode === "public_pseudonym" &&
+      (!currentUser?.uid || currentUser.isAnonymous)
+    ) {
+      setStatus(copy.accountNeededForPseudonym);
+      return;
+    }
+
+    setSharingSaving(true);
+
+    try {
+      await updateOwnedRecordSharing(
+        currentUser,
+        normalizedRecord.id,
+        {
+          sharingMode: nextSharingMode,
+        },
+        profile
+      );
+      setSharingMode(nextSharingMode);
+      setRecordIdentityMode(
+        nextSharingMode === "public_pseudonym" ? "account" : "anonymous"
+      );
+      setLocalRecord((current) =>
+        mergeSharingEdits(current, nextSharingMode, currentUser, profile)
+      );
+      setStatus(copy.sharingSaved);
+    } catch (error) {
+      setStatus(error.message);
+    } finally {
+      setSharingSaving(false);
+    }
+  }
+
+  async function handleDeleteRecord() {
+    if (!normalizedRecord.id || deleting) return;
+
+    if (typeof window !== "undefined" && !window.confirm(copy.deleteConfirm)) {
+      return;
+    }
+
+    setDeleting(true);
+    setStatus("");
+
+    try {
+      await deleteOwnedRecord(currentUser, normalizedRecord.id);
+      setStatus(copy.deletedRecord);
+      onBack?.();
+    } catch (error) {
+      setStatus(error.message);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#030407] text-zinc-100 selection:bg-cyan-300/30 selection:text-cyan-50">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -627,11 +744,7 @@ export default function DreamRecordPage({
                 />
                 <InfoRow
                   label={copy.visibility}
-                  value={
-                    normalizedRecord.visibility === "private"
-                      ? copy.privateRecord
-                      : copy.publicRecord
-                  }
+                  value={getVisibilityLabel(normalizedRecord, copy)}
                 />
               </div>
 
@@ -651,6 +764,15 @@ export default function DreamRecordPage({
 
               {isOwner && (
                 <div className="mt-6 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
+                  <SharingControlPanel
+                    copy={copy}
+                    sharingMode={sharingMode}
+                    saving={sharingSaving}
+                    deleting={deleting}
+                    onShare={handleSaveSharing}
+                    onDelete={handleDeleteRecord}
+                  />
+
                   <p className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-cyan-200/70">
                     {copy.creatorPanel}
                   </p>
@@ -827,6 +949,79 @@ export default function DreamRecordPage({
   );
 }
 
+function SharingControlPanel({
+  copy,
+  sharingMode,
+  saving,
+  deleting,
+  onShare,
+  onDelete,
+}) {
+  const modes = [
+    { value: "private", label: copy.keepPrivate },
+    { value: "public_anonymous", label: copy.shareAnonymously },
+    { value: "public_pseudonym", label: copy.shareWithPseudonym },
+    { value: "stats_only", label: copy.contributeStatsOnly },
+  ];
+
+  return (
+    <section className="mb-6 rounded-2xl border border-white/10 bg-black/30 p-4">
+      <p className="font-mono text-xs uppercase tracking-[0.26em] text-cyan-200/70">
+        {copy.sharingPanel}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-zinc-300">{copy.sharingHelp}</p>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {modes.map((mode) => (
+          <button
+            key={mode.value}
+            type="button"
+            disabled={saving || deleting}
+            aria-pressed={sharingMode === mode.value}
+            onClick={() => onShare(mode.value)}
+            className={[
+              "rounded-xl border px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] transition disabled:cursor-not-allowed disabled:opacity-60",
+              sharingMode === mode.value
+                ? "border-cyan-300/45 bg-cyan-300 text-zinc-950"
+                : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+            ].join(" ")}
+          >
+            {mode.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          disabled={saving || deleting || sharingMode === "private"}
+          onClick={() => onShare("private")}
+          className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-amber-100 transition hover:border-amber-300/45 hover:bg-amber-300/10 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {copy.unpublishRecord}
+        </button>
+        <button
+          type="button"
+          disabled={saving || deleting}
+          onClick={onDelete}
+          className="rounded-xl border border-red-300/25 bg-red-400/5 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-red-100 transition hover:border-red-300/45 hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {deleting ? "..." : copy.deleteRecord}
+        </button>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-fuchsia-300/20 bg-fuchsia-300/5 p-3">
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-100">
+          {copy.notDiagnosisTitle}
+        </p>
+        <p className="mt-2 text-xs leading-5 text-zinc-300">
+          {copy.notDiagnosisText}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function normalizeDreamRecord(record) {
   const originalLanguage = normalizeLanguage(
     record?.originalLanguage || record?.original_language || "en"
@@ -896,6 +1091,11 @@ function normalizeDreamRecord(record) {
     creatorEmail: record?.creatorEmail || "",
     pseudoId: record?.pseudo_id || record?.pseudoId || record?.creatorId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
+    isPublic: typeof record?.isPublic === "boolean" ? record.isPublic : record?.visibility === "public",
+    sharingMode: getSharingModeFromRawRecord(record),
+    includedInResearchStats: Boolean(
+      record?.includedInResearchStats || record?.researchConsent
+    ),
     tags: Array.isArray(record?.tags) ? record.tags : [],
     environmentTags: Array.isArray(record?.environmentTags) ? record.environmentTags : [],
     entityTags: Array.isArray(record?.entityTags) ? record.entityTags : [],
@@ -929,6 +1129,30 @@ function normalizeDreamRecord(record) {
   };
 }
 
+function getSharingModeFromRawRecord(record) {
+  if (
+    ["private", "public_anonymous", "public_pseudonym", "stats_only"].includes(
+      record?.sharingMode
+    )
+  ) {
+    return record.sharingMode;
+  }
+
+  if (record?.visibility === "stats_only") return "stats_only";
+
+  if (record?.visibility === "public" || record?.isPublic) {
+    return record?.recordIdentityMode === "account" || record?.attributionMode === "account"
+      ? "public_pseudonym"
+      : "public_anonymous";
+  }
+
+  return "private";
+}
+
+function getSharingModeFromRecord(record) {
+  return getSharingModeFromRawRecord(record);
+}
+
 function isAdultRecord(record) {
   return Boolean(record.adultContent) || Number(record.minimumViewerAge || 0) >= 18;
 }
@@ -936,6 +1160,16 @@ function isAdultRecord(record) {
 function getDreamDateDisplay(record, copy) {
   if (record.dreamDateStatus === "hidden") return copy.hiddenDreamDate;
   return record.dreamDate || copy.unknownDreamDate;
+}
+
+function getVisibilityLabel(record, copy) {
+  if (record.visibility === "stats_only" || record.sharingMode === "stats_only") {
+    return copy.statsOnlyRecord;
+  }
+
+  return record.visibility === "public" || record.isPublic
+    ? copy.publicRecord
+    : copy.privateRecord;
 }
 
 function getOriginalRecordTitle(record) {
@@ -1061,6 +1295,33 @@ function mergeRecordEdits(record, updates) {
     creatorEmail:
       updates.recordIdentityMode === "account" && updates.showEmail
         ? updates.creatorEmail || ""
+        : "",
+  };
+}
+
+function mergeSharingEdits(record, sharingMode, currentUser, profile) {
+  const publicMode =
+    sharingMode === "public_anonymous" || sharingMode === "public_pseudonym";
+  const recordIdentityMode =
+    sharingMode === "public_pseudonym" ? "account" : "anonymous";
+
+  return {
+    ...record,
+    visibility: sharingMode === "stats_only" ? "stats_only" : publicMode ? "public" : "private",
+    isPublic: publicMode,
+    sharingMode,
+    includedInResearchStats: sharingMode === "stats_only" || publicMode,
+    researchConsent: sharingMode === "stats_only" || publicMode,
+    publicConsent: publicMode,
+    recordIdentityMode,
+    attributionMode: recordIdentityMode,
+    creatorDisplayName:
+      recordIdentityMode === "account"
+        ? profile?.displayName || currentUser?.displayName || ""
+        : "",
+    creatorEmail:
+      recordIdentityMode === "account" && profile?.showEmail
+        ? currentUser?.email || ""
         : "",
   };
 }

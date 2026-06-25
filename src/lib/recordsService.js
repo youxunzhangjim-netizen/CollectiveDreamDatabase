@@ -41,6 +41,44 @@ function mapRecordSnapshot(snapshot) {
   }));
 }
 
+export const DREAM_SHARING_MODES = {
+  PRIVATE: "private",
+  PUBLIC_ANONYMOUS: "public_anonymous",
+  PUBLIC_PSEUDONYM: "public_pseudonym",
+  STATS_ONLY: "stats_only",
+};
+
+const PUBLIC_SHARING_MODES = new Set([
+  DREAM_SHARING_MODES.PUBLIC_ANONYMOUS,
+  DREAM_SHARING_MODES.PUBLIC_PSEUDONYM,
+]);
+
+function normalizeSharingMode(value) {
+  return Object.values(DREAM_SHARING_MODES).includes(value)
+    ? value
+    : DREAM_SHARING_MODES.PRIVATE;
+}
+
+function getSharingVisibility(sharingMode) {
+  if (sharingMode === DREAM_SHARING_MODES.STATS_ONLY) return "stats_only";
+  if (PUBLIC_SHARING_MODES.has(sharingMode)) return "public";
+
+  return "private";
+}
+
+function getRecordIdentityForSharing(sharingMode, fallback = "anonymous") {
+  if (sharingMode === DREAM_SHARING_MODES.PUBLIC_PSEUDONYM) return "account";
+  if (sharingMode === DREAM_SHARING_MODES.PUBLIC_ANONYMOUS) return "anonymous";
+
+  return fallback === "account" ? "account" : "anonymous";
+}
+
+function shouldIncludeInResearchStats(sharingMode, explicitValue) {
+  if (typeof explicitValue === "boolean") return explicitValue;
+
+  return sharingMode === DREAM_SHARING_MODES.STATS_ONLY || PUBLIC_SHARING_MODES.has(sharingMode);
+}
+
 function getTimestampMillis(value) {
   if (!value) return 0;
   if (typeof value.toMillis === "function") return value.toMillis();
@@ -81,7 +119,7 @@ export async function fetchPublicRecords({ includeAdult = false } = {}) {
 
 export async function createDreamRecord(currentUser, draft, profile = null) {
   if (!currentUser?.uid) {
-    throw new Error("A signed-in or guest session is required to publish a record.");
+    throw new Error("A signed-in or guest session is required to save a record.");
   }
 
   const dreamText = String(draft?.dreamText || draft?.originalText || "").trim();
@@ -108,10 +146,14 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
       : Math.max(0, Number(draft.ageAtDream));
   const adultContent = Boolean(draft?.adultContent);
   const accountBacked = !currentUser.isAnonymous;
-  const recordIdentityMode =
-    accountBacked && draft?.recordIdentityMode === "account"
-      ? "account"
-      : "anonymous";
+  const requestedSharingMode = normalizeSharingMode(draft?.sharingMode);
+  const sharingMode = DREAM_SHARING_MODES.PRIVATE;
+  const visibility = getSharingVisibility(sharingMode);
+  const isPublic = false;
+  const recordIdentityMode = getRecordIdentityForSharing(
+    sharingMode,
+    accountBacked && draft?.recordIdentityMode === "account" ? "account" : "anonymous"
+  );
   const creatorDisplayName =
     recordIdentityMode === "account"
       ? profile?.displayName || currentUser.displayName || ""
@@ -152,9 +194,16 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     dream_id: recordRef.id,
     ownerId: currentUser.uid,
     creatorId: currentUser.uid,
-    anonymousLocked: Boolean(currentUser.isAnonymous),
-    visibility: "public",
-    isPublic: true,
+    anonymousLocked: false,
+    visibility,
+    isPublic,
+    sharingMode,
+    requestedSharingMode,
+    includedInResearchStats: false,
+    researchConsent: false,
+    publicConsent: false,
+    consentVersion: "privacy-first-2026-06",
+    analysisDisclaimerAccepted: true,
     originalLanguage,
     originalTitle: title,
     originalText: dreamText,
@@ -172,10 +221,31 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     attributionMode: recordIdentityMode,
     creatorDisplayName,
     creatorEmail,
+    creatorCountry: "",
+    creatorCountryRegion: "",
     pseudoId: buildPseudoId(recordRef.id),
     adultContent,
     minimumViewerAge: adultContent ? 18 : 0,
     signal_coherence: 50,
+    sourceType: draft?.sourceType || (draft?.importBatchId ? "diary_import" : "single_record"),
+    importBatchId: draft?.importBatchId || "",
+    importDraftId: draft?.importDraftId || "",
+    sourceFileName: draft?.sourceFileName || "",
+    sourceFormat: draft?.sourceFormat || "",
+    sourceOrderIndex:
+      draft?.sourceOrderIndex === 0 || draft?.sourceOrderIndex
+        ? Number(draft.sourceOrderIndex)
+        : null,
+    sourceLineStart: draft?.sourceLineStart || null,
+    sourceLineEnd: draft?.sourceLineEnd || null,
+    titleSource: draft?.titleSource || (title ? "user" : "blank"),
+    titleConfidence: Number(draft?.titleConfidence || (title ? 1 : 0)),
+    tagsSource: draft?.tagsSource || "user_selected",
+    tagsReviewedByUser: Boolean(draft?.tagsReviewedByUser),
+    suggestedTags: sanitizeSuggestedTags(draft?.suggestedTags),
+    parserVersion: draft?.parserVersion || "",
+    autoTaggerVersion: draft?.autoTaggerVersion || "",
+    importedAt: draft?.importedAt || "",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -419,6 +489,10 @@ function normalizeRecordReference(record) {
   const thumbnailUrl = getPrimaryDreamImageUrl(record);
   const dreamDateStatus = getDreamDateStatus(record);
   const dreamDate = getVisibleDreamDate(record);
+  const visibility =
+    record?.visibility || (record?.isPublic === false ? "private" : "public");
+  const isPublic =
+    typeof record?.isPublic === "boolean" ? record.isPublic : visibility === "public";
 
   return {
     recordId,
@@ -461,7 +535,20 @@ function normalizeRecordReference(record) {
     creatorEmail:
       recordIdentityMode === "account" ? record?.creatorEmail || "" : "",
     pseudoId: record?.pseudo_id || record?.pseudoId || "",
-    visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
+    visibility,
+    isPublic,
+    sharingMode:
+      record?.sharingMode ||
+      (visibility === "stats_only"
+        ? DREAM_SHARING_MODES.STATS_ONLY
+        : isPublic
+          ? recordIdentityMode === "account"
+            ? DREAM_SHARING_MODES.PUBLIC_PSEUDONYM
+            : DREAM_SHARING_MODES.PUBLIC_ANONYMOUS
+          : DREAM_SHARING_MODES.PRIVATE),
+    includedInResearchStats: Boolean(
+      record?.includedInResearchStats || record?.researchConsent
+    ),
     adultContent,
     anonymousLocked: Boolean(record?.anonymousLocked),
     minimumViewerAge:
@@ -491,6 +578,25 @@ function normalizeRecordReference(record) {
       ? record.dreamAnalysisTags
       : [],
     customTags: Array.isArray(record?.customTags) ? record.customTags : [],
+    sourceType: record?.sourceType || (record?.importBatchId ? "diary_import" : "single_record"),
+    importBatchId: record?.importBatchId || "",
+    importDraftId: record?.importDraftId || "",
+    sourceFileName: record?.sourceFileName || "",
+    sourceFormat: record?.sourceFormat || "",
+    sourceOrderIndex:
+      record?.sourceOrderIndex === 0 || record?.sourceOrderIndex
+        ? Number(record.sourceOrderIndex)
+        : null,
+    sourceLineStart: record?.sourceLineStart || null,
+    sourceLineEnd: record?.sourceLineEnd || null,
+    titleSource: record?.titleSource || "",
+    titleConfidence: Number(record?.titleConfidence || 0),
+    tagsSource: record?.tagsSource || "",
+    tagsReviewedByUser: Boolean(record?.tagsReviewedByUser),
+    suggestedTags: Array.isArray(record?.suggestedTags) ? record.suggestedTags : [],
+    parserVersion: record?.parserVersion || "",
+    autoTaggerVersion: record?.autoTaggerVersion || "",
+    importedAt: record?.importedAt || "",
   };
 }
 
@@ -566,6 +672,24 @@ function normalizeOptionalTitle(title, dreamText) {
   if (firstSentence && trimmedTitle === firstSentence) return "";
 
   return trimmedTitle;
+}
+
+
+function sanitizeSuggestedTags(suggestedTags = []) {
+  if (!Array.isArray(suggestedTags)) return [];
+
+  return suggestedTags.slice(0, 24).map((tag) => ({
+    slug: String(tag?.slug || "").slice(0, 120),
+    label: String(tag?.label || "").slice(0, 80),
+    category: String(tag?.category || "").slice(0, 80),
+    confidence: Number.isFinite(Number(tag?.confidence))
+      ? Math.max(0, Math.min(1, Number(tag.confidence)))
+      : 0,
+    evidence: String(tag?.evidence || "").slice(0, 160),
+    tagType: String(tag?.tagType || "direct_content").slice(0, 40),
+    source: String(tag?.source || "").slice(0, 80),
+    needsReview: Boolean(tag?.needsReview),
+  })).filter((tag) => tag.slug);
 }
 
 function createExcerpt(text) {
@@ -684,6 +808,54 @@ export async function deleteOwnedRecord(currentUser, recordId) {
   if (!currentUser?.uid || !recordId) return;
 
   await deleteDoc(doc(requireFirestore(), "Records", recordId));
+}
+
+export async function updateOwnedRecordSharing(
+  currentUser,
+  recordId,
+  updates = {},
+  profile = null
+) {
+  if (!currentUser?.uid || !recordId) return;
+
+  const sharingMode = normalizeSharingMode(updates.sharingMode);
+  const visibility = getSharingVisibility(sharingMode);
+  const isPublic = visibility === "public";
+  const recordIdentityMode = getRecordIdentityForSharing(
+    sharingMode,
+    updates.recordIdentityMode
+  );
+  const includedInResearchStats = shouldIncludeInResearchStats(
+    sharingMode,
+    updates.includedInResearchStats
+  );
+  const creatorDisplayName =
+    recordIdentityMode === "account"
+      ? profile?.displayName || currentUser.displayName || ""
+      : "";
+  const creatorEmail =
+    recordIdentityMode === "account" && profile?.showEmail
+      ? currentUser.email || ""
+      : "";
+
+  await setDoc(
+    doc(requireFirestore(), "Records", recordId),
+    {
+      visibility,
+      isPublic,
+      sharingMode,
+      includedInResearchStats,
+      researchConsent: includedInResearchStats,
+      publicConsent: isPublic,
+      recordIdentityMode,
+      attributionMode: recordIdentityMode,
+      creatorDisplayName,
+      creatorEmail,
+      sharingUpdatedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
 
 export async function updateOwnedRecordMetadata(currentUser, recordId, updates) {

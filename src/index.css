@@ -7,17 +7,52 @@
   background: #030407;
 }
 
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select,
+p,
+h1,
+h2,
+h3,
+span {
+  overflow-wrap: anywhere;
+}
+
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
 :root[data-appearance="morning"] {
   color-scheme: light;
   background: #eef9ff;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
+  overflow-x: hidden;
   min-width: 320px;
   min-height: 100vh;
   background:
@@ -256,4 +291,82 @@ html[data-appearance="morning"] *::-webkit-scrollbar-thumb {
 *::-webkit-scrollbar-thumb {
   background: rgba(34, 211, 238, 0.45);
   border-radius: 999px;
+}
+
+
+/* Collective Dream Observatory UI refinements for the new import/export surfaces. */
+.cdo-gradient-bar {
+  background: linear-gradient(90deg, #67e8f9, #c084fc, #e879f9);
+}
+
+.cdo-action-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .cdo-mobile-scroll-nav {
+    display: flex !important;
+    width: 100%;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cdo-mobile-scroll-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cdo-mobile-scroll-nav > * {
+    flex: 0 0 auto;
+    min-width: max-content;
+    scroll-snap-align: start;
+  }
+
+  .cdo-mobile-label {
+    letter-spacing: 0.08em !important;
+    line-height: 1.2 !important;
+    white-space: nowrap;
+  }
+
+  .cdo-mobile-stack-actions {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .cdo-mobile-readable-text {
+    line-height: 1.65 !important;
+  }
+}
+
+html[data-appearance="morning"] .cdo-gradient-bar {
+  background: linear-gradient(90deg, #0ea5e9, #7c3aed, #c026d3) !important;
+}
+
+html[data-appearance="morning"] .cdo-record-card {
+  background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(236,253,255,.9) 52%, rgba(250,245,255,.94)) !important;
+}
+
+html[data-appearance="morning"] .cdo-mobile-scroll-nav {
+  scrollbar-color: rgba(14, 116, 144, 0.45) transparent;
+}
+
+html[data-appearance="morning"] [class*="text-red-100"],
+html[data-appearance="morning"] [class*="text-red-200"] {
+  color: #b91c1c !important;
+}
+
+html[data-appearance="morning"] [class*="bg-red-400/"] {
+  background-color: rgba(254, 226, 226, 0.78) !important;
+}
+
+html[data-appearance="morning"] [class*="border-red-300/"] {
+  border-color: rgba(220, 38, 38, 0.24) !important;
+}
+
+html[data-appearance="morning"] [class*="text-zinc-500"],
+html[data-appearance="morning"] [class*="text-zinc-600"] {
+  color: #64748b !important;
 }

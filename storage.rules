@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isSafeDiaryFile() {
+      return request.resource != null
+        && request.resource.size < 6 * 1024 * 1024
+        && request.resource.contentType in [
+          'text/plain',
+          'text/markdown',
+          'text/csv',
+          'application/json',
+          'application/octet-stream'
+        ];
+    }
+
+    match /users/{userId}/dream-imports/{batchId}/{fileName} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isSafeDiaryFile();
+    }
+  }
+}

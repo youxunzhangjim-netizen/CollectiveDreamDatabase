@@ -7,7 +7,7 @@ service cloud.firestore {
     }
 
     function isOwner(ownerId) {
-      return isSignedIn() && request.auth.uid == ownerId;
+      return isSignedIn() && ownerId is string && request.auth.uid == ownerId;
     }
 
     function isAnonymousAuth() {
@@ -15,8 +15,85 @@ service cloud.firestore {
         && request.auth.token.firebase.sign_in_provider == "anonymous";
     }
 
+    function validLanguage(language) {
+      return language in ["en", "zh", "es"];
+    }
+
+    function validDreamDateStatus(status) {
+      return status in ["known", "unknown", "hidden"];
+    }
+
+    function validSharingMode(mode) {
+      return mode in [
+        "private",
+        "public_anonymous",
+        "public_pseudonym",
+        "stats_only"
+      ];
+    }
+
+    function validVisibility(visibility) {
+      return visibility in ["private", "public", "stats_only"];
+    }
+
+    function optionalString(data, field, maxSize) {
+      return !data.keys().hasAny([field])
+        || (data[field] is string && data[field].size() <= maxSize);
+    }
+
+    function requiredString(data, field, minSize, maxSize) {
+      return data.keys().hasAny([field])
+        && data[field] is string
+        && data[field].size() >= minSize
+        && data[field].size() <= maxSize;
+    }
+
+    function optionalBool(data, field) {
+      return !data.keys().hasAny([field]) || data[field] is bool;
+    }
+
+    function optionalNumber(data, field, minValue, maxValue) {
+      return !data.keys().hasAny([field])
+        || (data[field] is number
+          && data[field] >= minValue
+          && data[field] <= maxValue);
+    }
+
+    function optionalNullableNumber(data, field, minValue, maxValue) {
+      return !data.keys().hasAny([field])
+        || data[field] == null
+        || (data[field] is number
+          && data[field] >= minValue
+          && data[field] <= maxValue);
+    }
+
+    function optionalList(data, field, maxSize) {
+      return !data.keys().hasAny([field])
+        || (data[field] is list && data[field].size() <= maxSize);
+    }
+
+    function optionalMap(data, field) {
+      return !data.keys().hasAny([field])
+        || data[field] == null
+        || data[field] is map;
+    }
+
+    function validOptionalAge(data, field) {
+      return !data.keys().hasAny([field])
+        || data[field] == ""
+        || (data[field] is number && data[field] >= 0 && data[field] <= 120);
+    }
+
+    function validOptionalLanguageField(data, field) {
+      return !data.keys().hasAny([field]) || validLanguage(data[field]);
+    }
+
+    function validOptionalDreamDateStatusField(data, field) {
+      return !data.keys().hasAny([field]) || validDreamDateStatus(data[field]);
+    }
+
     function isPublicRecord(data) {
-      return data.visibility == "public" || data.isPublic == true;
+      return data.isPublic == true || data.visibility == "public";
     }
 
     function recordRequiresAdult(data) {
@@ -34,35 +111,185 @@ service cloud.firestore {
         && (!recordRequiresAdult(data) || isAgeVerifiedAdult());
     }
 
-    function validOriginalLanguage(data) {
-      return !data.keys().hasAny(["originalLanguage"])
-        || data.originalLanguage in ["en", "zh", "es"];
+    function validAdultMetadata(data) {
+      return optionalBool(data, "adultContent")
+        && optionalNumber(data, "minimumViewerAge", 0, 120)
+        && (!data.keys().hasAll(["adultContent", "minimumViewerAge"])
+          || data.adultContent == false
+          || data.minimumViewerAge >= 18);
+    }
+
+    function validRecordCoreText(data) {
+      return requiredString(data, "ownerId", 1, 128)
+        && requiredString(data, "dream_text", 1, 120000)
+        && optionalString(data, "originalText", 120000)
+        && optionalString(data, "textEn", 120000)
+        && optionalString(data, "textZh", 120000)
+        && optionalString(data, "textEs", 120000)
+        && optionalString(data, "dream_text_en", 120000)
+        && optionalString(data, "dream_text_zh", 120000)
+        && optionalString(data, "dream_text_es", 120000)
+        && optionalString(data, "title", 220)
+        && optionalString(data, "originalTitle", 220)
+        && optionalString(data, "titleEn", 220)
+        && optionalString(data, "titleZh", 220)
+        && optionalString(data, "titleEs", 220)
+        && optionalString(data, "title_en", 220)
+        && optionalString(data, "title_zh", 220)
+        && optionalString(data, "title_es", 220)
+        && optionalString(data, "excerpt", 520)
+        && optionalString(data, "originalExcerpt", 520)
+        && optionalString(data, "excerptEn", 520)
+        && optionalString(data, "excerptZh", 520)
+        && optionalString(data, "excerptEs", 520)
+        && optionalString(data, "excerpt_en", 520)
+        && optionalString(data, "excerpt_zh", 520)
+        && optionalString(data, "excerpt_es", 520);
+    }
+
+    function validRecordTaxonomy(data) {
+      return optionalList(data, "tags", 160)
+        && optionalList(data, "environmentTags", 80)
+        && optionalList(data, "entityTags", 80)
+        && optionalList(data, "anomalyTags", 80)
+        && optionalList(data, "emotionTags", 80)
+        && optionalList(data, "styleTags", 80)
+        && optionalList(data, "eraTags", 80)
+        && optionalList(data, "weatherTags", 80)
+        && optionalList(data, "dreamTypeTags", 80)
+        && optionalList(data, "perspectiveTags", 80)
+        && optionalList(data, "psychologicalObservableTags", 80)
+        && optionalList(data, "dreamAnalysisTags", 80)
+        && optionalList(data, "customTags", 80)
+        && optionalList(data, "anomaly_tag_slugs", 80)
+        && optionalList(data, "suggestedTags", 80);
+    }
+
+    function validRecordMedia(data) {
+      return optionalList(data, "images", 8)
+        && optionalList(data, "dreamImages", 8)
+        && optionalList(data, "imageUrls", 8)
+        && optionalList(data, "pictureUrls", 8)
+        && optionalString(data, "thumbnailUrl", 2048)
+        && optionalString(data, "thumbnail_url", 2048)
+        && optionalString(data, "generated_image_url", 2048);
+    }
+
+    function validRecordImportMetadata(data) {
+      return optionalString(data, "sourceType", 40)
+        && optionalString(data, "importBatchId", 128)
+        && optionalString(data, "importDraftId", 128)
+        && optionalString(data, "sourceFileName", 240)
+        && optionalString(data, "sourceFormat", 40)
+        && optionalNullableNumber(data, "sourceOrderIndex", 0, 1000000)
+        && optionalNullableNumber(data, "sourceLineStart", 0, 10000000)
+        && optionalNullableNumber(data, "sourceLineEnd", 0, 10000000)
+        && optionalString(data, "titleSource", 80)
+        && optionalNumber(data, "titleConfidence", 0, 1)
+        && optionalString(data, "tagsSource", 80)
+        && optionalBool(data, "tagsReviewedByUser")
+        && optionalString(data, "parserVersion", 80)
+        && optionalString(data, "autoTaggerVersion", 80)
+        && optionalString(data, "importedAt", 80);
+    }
+
+    function validRecordSharingConsistency(data) {
+      return (!data.keys().hasAny(["visibility"]) || validVisibility(data.visibility))
+        && (!data.keys().hasAny(["isPublic"]) || data.isPublic is bool)
+        && (!data.keys().hasAny(["sharingMode"]) || validSharingMode(data.sharingMode))
+        && (!data.keys().hasAll(["visibility", "isPublic"])
+          || ((data.visibility == "public" && data.isPublic == true)
+            || (data.visibility != "public" && data.isPublic == false)))
+        && (!data.keys().hasAll(["sharingMode", "visibility", "isPublic"])
+          || (data.sharingMode != "private"
+            || (data.visibility == "private" && data.isPublic == false)))
+        && (!data.keys().hasAll(["sharingMode", "visibility", "isPublic"])
+          || (!(data.sharingMode in ["public_anonymous", "public_pseudonym"])
+            || (data.visibility == "public" && data.isPublic == true)))
+        && (!data.keys().hasAll(["sharingMode", "visibility", "isPublic"])
+          || (data.sharingMode != "stats_only"
+            || (data.visibility == "stats_only" && data.isPublic == false)));
+    }
+
+    function validRecordConsent(data) {
+      return optionalBool(data, "includedInResearchStats")
+        && optionalBool(data, "researchConsent")
+        && optionalBool(data, "publicConsent")
+        && (!data.keys().hasAll(["sharingMode", "includedInResearchStats"])
+          || data.sharingMode != "stats_only"
+          || data.includedInResearchStats == true)
+        && (!data.keys().hasAll(["sharingMode", "researchConsent"])
+          || data.sharingMode != "stats_only"
+          || data.researchConsent == true)
+        && (!data.keys().hasAll(["sharingMode", "publicConsent"])
+          || !(data.sharingMode in ["public_anonymous", "public_pseudonym"])
+          || data.publicConsent == true)
+        && (!data.keys().hasAll(["sharingMode", "publicConsent"])
+          || data.sharingMode != "stats_only"
+          || data.publicConsent == false);
     }
 
     function validRecordIdentity(data) {
-      return !data.keys().hasAny(["recordIdentityMode"])
-        || data.recordIdentityMode in ["account", "anonymous"];
+      return (!data.keys().hasAny(["recordIdentityMode"])
+          || data.recordIdentityMode in ["account", "anonymous"])
+        && (!data.keys().hasAny(["attributionMode"])
+          || data.attributionMode in ["account", "anonymous"])
+        && optionalString(data, "creatorDisplayName", 120)
+        && optionalString(data, "creatorEmail", 254)
+        && optionalString(data, "creatorCountry", 120)
+        && optionalString(data, "creatorCountryRegion", 120)
+        && optionalString(data, "pseudoId", 80)
+        && optionalString(data, "pseudo_id", 80);
     }
 
-    function validAnonymousLock(data) {
-      return !data.keys().hasAny(["anonymousLocked"])
-        || data.anonymousLocked is bool;
+    function validRecordScalars(data) {
+      return validOptionalLanguageField(data, "originalLanguage")
+        && validOptionalDreamDateStatusField(data, "dreamDateStatus")
+        && validOptionalDreamDateStatusField(data, "dream_date_status")
+        && optionalString(data, "dreamDate", 32)
+        && optionalString(data, "dream_date", 32)
+        && validOptionalAge(data, "ageAtDream")
+        && optionalBool(data, "anonymousLocked")
+        && optionalBool(data, "analysisDisclaimerAccepted")
+        && optionalString(data, "consentVersion", 80)
+        && optionalNumber(data, "signal_coherence", 0, 100)
+        && validAdultMetadata(data);
     }
 
-    function validRecordCreateMode(data) {
-      return (isAnonymousAuth()
-          && data.keys().hasAny(["anonymousLocked"])
-          && data.anonymousLocked == true
-          && (!data.keys().hasAny(["recordIdentityMode"])
-            || data.recordIdentityMode == "anonymous"))
-        || (!isAnonymousAuth()
-          && (!data.keys().hasAny(["anonymousLocked"])
-            || data.anonymousLocked == false));
+    function validRecordMetadata(data) {
+      return validRecordCoreText(data)
+        && validRecordScalars(data)
+        && validRecordSharingConsistency(data)
+        && validRecordConsent(data)
+        && validRecordIdentity(data)
+        && validRecordTaxonomy(data)
+        && validRecordMedia(data)
+        && validRecordImportMetadata(data);
     }
 
-    function isNotAnonymousLocked(data) {
-      return !data.keys().hasAny(["anonymousLocked"])
-        || data.anonymousLocked != true;
+    function validRecordCreatePrivacy(data) {
+      return data.keys().hasAll([
+          "visibility",
+          "isPublic",
+          "sharingMode",
+          "includedInResearchStats",
+          "researchConsent",
+          "publicConsent"
+        ])
+        && data.visibility == "private"
+        && data.isPublic == false
+        && data.sharingMode == "private"
+        && data.includedInResearchStats == false
+        && data.researchConsent == false
+        && data.publicConsent == false;
+    }
+
+    function validRecordCreateMetadata(data) {
+      return validRecordMetadata(data)
+        && validRecordCreatePrivacy(data)
+        && (!isAnonymousAuth()
+          || !data.keys().hasAny(["recordIdentityMode"])
+          || data.recordIdentityMode == "anonymous");
     }
 
     function anonymousLockUnchanged() {
@@ -73,31 +300,16 @@ service cloud.firestore {
           && request.resource.data.anonymousLocked == resource.data.anonymousLocked);
     }
 
-    function validAdultMetadata(data) {
-      return (!data.keys().hasAny(["adultContent"]) || data.adultContent is bool)
-        && (!data.keys().hasAny(["minimumViewerAge"])
-          || (data.minimumViewerAge is int
-            && data.minimumViewerAge >= 0
-            && data.minimumViewerAge <= 120))
-        && (!data.keys().hasAll(["adultContent", "minimumViewerAge"])
-          || data.adultContent == false
-          || data.minimumViewerAge >= 18);
-    }
-
-    function validRecordMetadata(data) {
-      return validOriginalLanguage(data)
-        && validRecordIdentity(data)
-        && validAnonymousLock(data)
-        && validAdultMetadata(data);
-    }
-
-    function validRecordCreateMetadata(data) {
-      return validRecordMetadata(data)
-        && validRecordCreateMode(data);
-    }
-
-    function validProfileMetadata(data) {
-      return (!data.keys().hasAny(["showEmail"]) || data.showEmail is bool)
+    function validProfileMetadata(data, userId) {
+      return data.keys().hasAny(["uid"])
+        && data.uid == userId
+        && optionalString(data, "email", 254)
+        && optionalString(data, "displayName", 120)
+        && optionalString(data, "country", 120)
+        && validOptionalAge(data, "age")
+        && optionalBool(data, "showAge")
+        && optionalBool(data, "showEmail")
+        && optionalBool(data, "showBiologicalSex")
         && (!data.keys().hasAny(["biologicalSex"])
           || data.biologicalSex in [
             "",
@@ -108,7 +320,8 @@ service cloud.firestore {
             "notListed"
           ])
         && (!data.keys().hasAny(["preferredLanguage"])
-          || data.preferredLanguage in ["en", "zh", "es"]);
+          || validLanguage(data.preferredLanguage))
+        && optionalString(data, "joinedAt", 32);
     }
 
     function validCustomTagCategory(category) {
@@ -136,11 +349,115 @@ service cloud.firestore {
         && data.slug.size() <= 120
         && data.name is string
         && data.name.size() >= 1
-        && data.name.size() <= 40
+        && data.name.size() <= 80
+        && optionalString(data, "name_zh", 80)
+        && optionalString(data, "name_es", 80)
         && validCustomTagCategory(data.category)
-        && (!data.keys().hasAny(["status"]) || data.status in ["active", "hidden"])
+        && (!data.keys().hasAny(["status"])
+          || data.status in ["active", "hidden", "pending_review"])
         && (!data.keys().hasAny(["custom"]) || data.custom == true)
-        && (!data.keys().hasAny(["shared"]) || data.shared == true);
+        && (!data.keys().hasAny(["shared"]) || data.shared == true)
+        && optionalString(data, "createdBy", 128)
+        && optionalString(data, "updatedBy", 128)
+        && optionalString(data, "lastUsedBy", 128);
+    }
+
+    function validImportMode(mode) {
+      return mode in ["auto", "date_headings", "blank_lines", "csv", "json"];
+    }
+
+    function validImportStatus(status) {
+      return status in [
+        "uploaded",
+        "parsing",
+        "ai_tagging",
+        "review_ready",
+        "importing",
+        "imported",
+        "completed_with_errors",
+        "failed"
+      ];
+    }
+
+    function validImportBatchData(data) {
+      return data.keys().hasAll(["ownerId", "status"])
+        && data.ownerId is string
+        && validImportStatus(data.status)
+        && (!data.keys().hasAny(["privacyDefault"])
+          || data.privacyDefault == "private")
+        && (!data.keys().hasAny(["defaultVisibility"])
+          || data.defaultVisibility == "private")
+        && optionalString(data, "id", 128)
+        && optionalString(data, "originalFileName", 240)
+        && optionalString(data, "originalFileType", 120)
+        && optionalNumber(data, "originalFileSize", 0, 6 * 1024 * 1024)
+        && optionalString(data, "originalStoragePath", 512)
+        && optionalMap(data, "storageUploadError")
+        && (!data.keys().hasAny(["parserMode"])
+          || validImportMode(data.parserMode))
+        && (!data.keys().hasAny(["sourceFormat"])
+          || validImportMode(data.sourceFormat))
+        && optionalString(data, "parserVersion", 80)
+        && optionalString(data, "autoTaggerVersion", 80)
+        && optionalNumber(data, "dreamCount", 0, 250)
+        && optionalNumber(data, "selectedCount", 0, 250)
+        && optionalNumber(data, "draftCount", 0, 250)
+        && optionalNumber(data, "approvedDraftCount", 0, 250)
+        && optionalNumber(data, "importedCount", 0, 250)
+        && optionalNumber(data, "failedCount", 0, 250)
+        && optionalNumber(data, "importedRecordCount", 0, 250);
+    }
+
+    function validDraftStatus(status) {
+      return status in ["draft", "review_ready", "importing", "imported", "failed"];
+    }
+
+    function validImportDraftData(data, batchId) {
+      return data.keys().hasAll(["ownerId", "importBatchId", "cleanedText"])
+        && data.ownerId is string
+        && data.importBatchId == batchId
+        && data.cleanedText is string
+        && data.cleanedText.size() >= 1
+        && data.cleanedText.size() <= 120000
+        && optionalString(data, "id", 128)
+        && optionalString(data, "rawText", 120000)
+        && optionalString(data, "detectedDate", 32)
+        && validOptionalDreamDateStatusField(data, "dreamDateStatus")
+        && optionalString(data, "detectedTitle", 220)
+        && optionalString(data, "suggestedTitle", 220)
+        && optionalString(data, "title", 220)
+        && optionalString(data, "titleSource", 80)
+        && optionalNumber(data, "titleConfidence", 0, 1)
+        && validOptionalLanguageField(data, "originalLanguage")
+        && optionalList(data, "selectedTagSlugs", 120)
+        && optionalList(data, "suggestedTags", 120)
+        && optionalString(data, "tagsSource", 80)
+        && optionalBool(data, "tagsReviewedByUser")
+        && optionalBool(data, "approved")
+        && optionalBool(data, "needsUserReview")
+        && optionalNumber(data, "boundaryConfidence", 0, 1)
+        && optionalString(data, "boundaryReason", 160)
+        && optionalNullableNumber(data, "orderIndex", 0, 1000000)
+        && optionalNullableNumber(data, "sourceOrderIndex", 0, 1000000)
+        && optionalNullableNumber(data, "sourceLineStart", 0, 10000000)
+        && optionalNullableNumber(data, "sourceLineEnd", 0, 10000000)
+        && (!data.keys().hasAny(["status"]) || validDraftStatus(data.status))
+        && optionalString(data, "importedRecordId", 128)
+        && optionalString(data, "importError", 1000);
+    }
+
+    function validSavedRecordReference(data, userId) {
+      return data.keys().hasAll(["ownerId"])
+        && data.ownerId == userId
+        && optionalString(data, "recordId", 128)
+        && optionalString(data, "title", 220)
+        && optionalString(data, "text", 120000)
+        && optionalString(data, "originalText", 120000)
+        && optionalList(data, "tags", 160)
+        && optionalBool(data, "isPublic")
+        && (!data.keys().hasAny(["visibility"]) || validVisibility(data.visibility))
+        && (!data.keys().hasAny(["sharingMode"]) || validSharingMode(data.sharingMode))
+        && validAdultMetadata(data);
     }
 
     match /Records/{recordId} {
@@ -151,53 +468,91 @@ service cloud.firestore {
         && validRecordCreateMetadata(request.resource.data);
 
       allow update: if isOwner(resource.data.ownerId)
-        && isNotAnonymousLocked(resource.data)
         && request.resource.data.ownerId == resource.data.ownerId
         && anonymousLockUnchanged()
         && validRecordMetadata(request.resource.data);
 
-      allow delete: if isOwner(resource.data.ownerId)
-        && isNotAnonymousLocked(resource.data);
+      allow delete: if isOwner(resource.data.ownerId);
+    }
+
+    match /ImportBatches/{batchId} {
+      allow read, delete: if isOwner(resource.data.ownerId);
+
+      allow create: if isOwner(request.resource.data.ownerId)
+        && validImportBatchData(request.resource.data);
+
+      allow update: if isOwner(resource.data.ownerId)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && validImportBatchData(request.resource.data);
+
+      match /DraftDreams/{draftId} {
+        allow read, delete: if isOwner(resource.data.ownerId);
+
+        allow create: if isOwner(request.resource.data.ownerId)
+          && validImportDraftData(request.resource.data, batchId);
+
+        allow update: if isOwner(resource.data.ownerId)
+          && request.resource.data.ownerId == resource.data.ownerId
+          && validImportDraftData(request.resource.data, batchId);
+      }
     }
 
     match /customTags/{tagId} {
       allow read: if true;
+
       allow create, update: if isSignedIn()
         && validCustomTagData(request.resource.data, tagId);
+
       allow delete: if false;
     }
 
     match /users/{userId} {
       allow read, delete: if isSignedIn() && request.auth.uid == userId;
+
       allow create, update: if isSignedIn()
         && request.auth.uid == userId
-        && validProfileMetadata(request.resource.data);
+        && validProfileMetadata(request.resource.data, userId);
 
       match /savedRecords/{recordId} {
         allow read, delete: if isSignedIn() && request.auth.uid == userId;
+
         allow create, update: if isSignedIn()
           && request.auth.uid == userId
-          && validRecordMetadata(request.resource.data);
+          && validSavedRecordReference(request.resource.data, userId);
       }
 
       match /following/{recorderId} {
         allow read, delete: if isSignedIn() && request.auth.uid == userId;
+
         allow create, update: if isSignedIn()
           && request.auth.uid == userId
           && request.resource.data.ownerId == userId
-          && request.resource.data.recorderId == recorderId;
+          && request.resource.data.recorderId == recorderId
+          && optionalString(request.resource.data, "displayName", 120)
+          && optionalString(request.resource.data, "email", 254);
       }
 
       match /collections/{collectionId} {
-        allow read, create, update, delete: if isSignedIn() && request.auth.uid == userId;
+        allow read, delete: if isSignedIn() && request.auth.uid == userId;
+
+        allow create, update: if isSignedIn()
+          && request.auth.uid == userId
+          && request.resource.data.ownerId == userId
+          && request.resource.data.collectionId == collectionId
+          && optionalString(request.resource.data, "name", 120);
 
         match /records/{recordId} {
           allow read, delete: if isSignedIn() && request.auth.uid == userId;
+
           allow create, update: if isSignedIn()
             && request.auth.uid == userId
-            && validRecordMetadata(request.resource.data);
+            && validSavedRecordReference(request.resource.data, userId);
         }
       }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
