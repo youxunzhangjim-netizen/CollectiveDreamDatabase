@@ -636,7 +636,6 @@ export default function CollectiveDreamDashboard({
   const [sortMode, setSortMode] = useState("newest");
   const [activeSection, setActiveSection] = useState("explore");
   const [expandedPanels, setExpandedPanels] = useState({
-    pathways: false,
     patterns: false,
     research: false,
     filters: false,
@@ -1006,8 +1005,6 @@ export default function CollectiveDreamDashboard({
         <HomePathways
           copy={copy}
           activeSection={activeSection}
-          expanded={expandedPanels.pathways}
-          onToggle={() => togglePanel("pathways")}
           onSelectSection={handleHomeSection}
         />
 
@@ -1783,7 +1780,7 @@ function HeroPanel({
   );
 }
 
-function HomePathways({ copy, activeSection, expanded, onToggle, onSelectSection }) {
+function HomePathways({ copy, activeSection, onSelectSection }) {
   const sections = copy.homeSections || [];
   const sectionModes = ["record", "explore", "patterns", "dream-map", "research"];
 
@@ -1801,54 +1798,49 @@ function HomePathways({ copy, activeSection, expanded, onToggle, onSelectSection
             {copy.audienceText}
           </p>
         </div>
-        <CollapseToggle expanded={expanded} copy={copy} onClick={onToggle} />
       </div>
 
-      {expanded && (
-        <>
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <AudienceCard
-              title={copy.dreamerAudienceTitle}
-              text={copy.dreamerAudienceText}
-              accent="cyan"
-            />
-            <AudienceCard
-              title={copy.researcherAudienceTitle}
-              text={copy.researcherAudienceText}
-              accent="fuchsia"
-            />
-          </div>
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <AudienceCard
+          title={copy.dreamerAudienceTitle}
+          text={copy.dreamerAudienceText}
+          accent="cyan"
+        />
+        <AudienceCard
+          title={copy.researcherAudienceTitle}
+          text={copy.researcherAudienceText}
+          accent="fuchsia"
+        />
+      </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {sections.map((section, index) => {
-              const mode = sectionModes[index];
-              const active = activeSection === mode;
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {sections.map((section, index) => {
+          const mode = sectionModes[index];
+          const active = activeSection === mode;
 
-              return (
-                <button
-                  key={section.title}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => onSelectSection?.(section, index)}
-                  className={[
-                    "min-w-0 rounded-2xl border p-4 text-left transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]",
-                    active
-                      ? "border-cyan-300/35 bg-cyan-300/10 shadow-[0_0_28px_rgba(34,211,238,.08)]"
-                      : "border-white/10 bg-black/30",
-                  ].join(" ")}
-                >
-                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70 sm:tracking-[0.2em]">
-                    {section.title}
-                  </p>
-                  <p className="cdo-mobile-readable-text mt-3 text-sm leading-6 text-zinc-400">
-                    {section.text}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
+          return (
+            <button
+              key={section.title}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onSelectSection?.(section, index)}
+              className={[
+                "min-w-0 rounded-2xl border p-4 text-left transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]",
+                active
+                  ? "border-cyan-300/35 bg-cyan-300/10 shadow-[0_0_28px_rgba(34,211,238,.08)]"
+                  : "border-white/10 bg-black/30",
+              ].join(" ")}
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70 sm:tracking-[0.2em]">
+                {section.title}
+              </p>
+              <p className="cdo-mobile-readable-text mt-3 text-sm leading-6 text-zinc-400">
+                {section.text}
+              </p>
+            </button>
+          );
+        })}
+      </div>
     </section>
   );
 }
