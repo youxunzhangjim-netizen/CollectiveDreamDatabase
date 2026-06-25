@@ -58,7 +58,16 @@ const IMPORT_COPY = {
     titleLabel: "Title",
     textLabel: "Dream text",
     dateLabel: "Dream date",
+    timeLabel: "Clock time",
+    periodLabel: "Time of day",
     unknownDate: "Date unknown",
+    noPeriod: "Not sure",
+    periodOptions: {
+      morning: "Morning",
+      afternoon: "Afternoon",
+      evening: "Evening",
+      night: "Night",
+    },
     language: "Language",
     boundary: "Boundary confidence",
     sourceLines: "Source lines",
@@ -81,6 +90,7 @@ const IMPORT_COPY = {
     importNeedsDrafts: "Select at least one dream to import.",
     importStarted: "Importing private dream records...",
     importComplete: ({ count }) => `${count} private dreams imported.` ,
+    translationComplete: ({ count }) => `${count} diary versions attached as recorder translations.`,
     importErrors: ({ count }) => `${count} drafts could not be imported. Review the messages and try again.`,
     storageWarning:
       "Original file storage was not available, but parsed private records can still be saved.",
@@ -302,6 +312,107 @@ const MODE_OPTIONS = [
   DIARY_IMPORT_MODES.JSON,
 ];
 
+const DREAM_PERIOD_OPTIONS = ["morning", "afternoon", "evening", "night"];
+const DREAM_SEQUENCE_OPTIONS = [1, 2, 3, 4, 5, 6];
+
+const IMPORT_TIME_COPY = {
+  en: {
+    timeLabel: "Clock time",
+    periodLabel: "Time of day",
+    sequenceLabel: "Dream order",
+    noPeriod: "Not sure",
+    translationComplete: ({ count }) =>
+      `${count} diary versions attached as recorder translations.`,
+    formatTitle: "Diary upload format",
+    formatText:
+      "Best for translation linking: include dreamDate plus either dreamTime or dreamPeriod, and keep dreamSequence as 1 unless it is the second or later dream in that same period.",
+    formatColumns:
+      "CSV columns: date,time,period,sequence,language,title,text,adultContent",
+    promptTitle: "Copyable AI formatting prompt",
+    promptText:
+      "Convert my dream diary into CSV for import. Do not invent, beautify, summarize, moralize, censor, or rewrite dream content. Preserve first-person wording and original details. Only structure the diary into columns: date,time,period,sequence,language,title,text,adultContent. Use date as YYYY-MM-DD when known, time as HH:mm when known, period as morning/afternoon/evening/night when stated, sequence as 1 by default unless the diary clearly says second/third dream in the same period, language as en/zh/es, title blank if unclear, adultContent true only when explicit adult content appears. Keep the text column as close to the original diary words as possible.",
+    copyPrompt: "Copy prompt",
+    copiedPrompt: "Copied",
+    periods: {
+      morning: "Morning",
+      afternoon: "Afternoon",
+      evening: "Evening",
+      night: "Night",
+    },
+    sequences: {
+      1: "First dream",
+      2: "Second dream",
+      3: "Third dream",
+      4: "Fourth dream",
+      5: "Fifth dream",
+      6: "Sixth dream",
+    },
+  },
+  zh: {
+    timeLabel: "夢境時間",
+    periodLabel: "時段",
+    sequenceLabel: "第幾個夢",
+    noPeriod: "不確定",
+    translationComplete: ({ count }) => `已連結 ${count} 份不同語言日記版本。`,
+    formatTitle: "日記上傳格式",
+    formatText:
+      "若要連結不同語言版本，最好提供夢境日期，並填入精確時間或時段；同一時段若沒有特別說明，夢序預設為第一個夢。",
+    formatColumns:
+      "CSV 欄位：date,time,period,sequence,language,title,text,adultContent",
+    promptTitle: "可複製的 AI 格式整理提示詞",
+    promptText:
+      "請把我的夢境日記整理成可匯入的 CSV。不要創造、修飾、摘要、美化、道德化、審查或改寫夢境內容。保留第一人稱與原始細節。只把日記整理成欄位：date,time,period,sequence,language,title,text,adultContent。date 用 YYYY-MM-DD；time 若知道用 HH:mm；period 只用 morning/afternoon/evening/night；若同一時段沒有明確說第幾個夢，sequence 預設為 1；language 用 en/zh/es；title 不清楚就留空；adultContent 只有明確成人內容才填 true。text 欄位要盡量保留原本日記文字。",
+    copyPrompt: "複製提示詞",
+    copiedPrompt: "已複製",
+    periods: {
+      morning: "早晨",
+      afternoon: "下午",
+      evening: "傍晚",
+      night: "夜晚",
+    },
+    sequences: {
+      1: "第一個夢",
+      2: "第二個夢",
+      3: "第三個夢",
+      4: "第四個夢",
+      5: "第五個夢",
+      6: "第六個夢",
+    },
+  },
+  es: {
+    timeLabel: "Hora",
+    periodLabel: "Momento del dia",
+    sequenceLabel: "Orden del sueno",
+    noPeriod: "No seguro",
+    translationComplete: ({ count }) =>
+      `${count} versiones del diario vinculadas como traducciones del autor.`,
+    formatTitle: "Formato de subida del diario",
+    formatText:
+      "Para vincular versiones traducidas: incluye dreamDate y dreamTime o dreamPeriod; deja dreamSequence en 1 salvo que sea el segundo o tercer sueno del mismo momento.",
+    formatColumns:
+      "Columnas CSV: date,time,period,sequence,language,title,text,adultContent",
+    promptTitle: "Prompt copiable para IA",
+    promptText:
+      "Convierte mi diario de suenos en CSV para importar. No inventes, embellezcas, resumas, moralices, censures ni reescribas el contenido del sueno. Conserva la primera persona y los detalles originales. Solo organiza el diario en columnas: date,time,period,sequence,language,title,text,adultContent. Usa date como YYYY-MM-DD cuando se conozca, time como HH:mm cuando se conozca, period como morning/afternoon/evening/night cuando aparezca, sequence como 1 por defecto salvo que el diario diga claramente segundo/tercer sueno en el mismo periodo, language como en/zh/es, title vacio si no esta claro, adultContent true solo si hay contenido adulto explicito. Mantén la columna text lo mas cercana posible a las palabras originales.",
+    copyPrompt: "Copiar prompt",
+    copiedPrompt: "Copiado",
+    periods: {
+      morning: "Manana",
+      afternoon: "Tarde",
+      evening: "Atardecer",
+      night: "Noche",
+    },
+    sequences: {
+      1: "Primer sueno",
+      2: "Segundo sueno",
+      3: "Tercer sueno",
+      4: "Cuarto sueno",
+      5: "Quinto sueno",
+      6: "Sexto sueno",
+    },
+  },
+};
+
 export default function ImportDreamDiaryPage({
   language = "zh",
   setLanguage = () => {},
@@ -320,6 +431,8 @@ export default function ImportDreamDiaryPage({
   const [error, setError] = useState("");
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
+  const [promptCopied, setPromptCopied] = useState(false);
+  const timeCopy = getImportTimeCopy(language);
 
   const selectedCount = useMemo(
     () => drafts.filter((draft) => draft.selected !== false).length,
@@ -465,6 +578,17 @@ export default function ImportDreamDiaryPage({
     });
   }
 
+  async function copyFormatPrompt() {
+    setPromptCopied(false);
+    try {
+      await navigator.clipboard.writeText(timeCopy.promptText);
+      setPromptCopied(true);
+      window.setTimeout(() => setPromptCopied(false), 1800);
+    } catch {
+      setError(timeCopy.promptText);
+    }
+  }
+
   async function handleImportSelected() {
     setError("");
     setNotice(copy.importStarted);
@@ -503,12 +627,19 @@ export default function ImportDreamDiaryPage({
       });
 
       setResult(importResult);
-      setNotice(copy.importComplete({ count: importResult.importedRecords.length }));
+      const translationCount = importResult.linkedTranslationRecords?.length || 0;
+      const translationNotice =
+        translationCount > 0
+          ? ` ${getImportTimeCopy(language).translationComplete({ count: translationCount })}`
+          : "";
+      setNotice(
+        `${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice}`
+      );
       if (importResult.failedDrafts.length > 0) {
         setError(copy.importErrors({ count: importResult.failedDrafts.length }));
       }
       if (importResult.storageUploadError) {
-        setNotice(`${copy.importComplete({ count: importResult.importedRecords.length })} ${copy.storageWarning}`);
+        setNotice(`${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice} ${copy.storageWarning}`);
       }
     } catch (importError) {
       setError(importError?.message || copy.importFailed);
@@ -519,10 +650,10 @@ export default function ImportDreamDiaryPage({
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#030407] text-zinc-100 selection:bg-cyan-300/30 selection:text-cyan-50">
+    <main className="relative min-h-screen w-full max-w-full overflow-x-hidden bg-[#030407] text-zinc-100 selection:bg-cyan-300/30 selection:text-cyan-50">
       <ImportBackground />
 
-      <div className="relative mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+      <div className="relative mx-auto w-full max-w-7xl overflow-x-hidden px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
         <header className="mb-5 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <button type="button" onClick={onOpenDatabase} className="group flex min-w-0 items-center gap-3 self-start">
             <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)] sm:h-10 sm:w-10">
@@ -634,6 +765,33 @@ export default function ImportDreamDiaryPage({
             >
               {copy.parseButton}
             </button>
+
+            <section className="mt-4 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
+              <p className="font-mono text-xs uppercase tracking-[0.22em] text-fuchsia-100">
+                {timeCopy.formatTitle}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                {timeCopy.formatText}
+              </p>
+              <code className="mt-3 block overflow-x-auto rounded-xl border border-white/10 bg-black/45 p-3 font-mono text-[11px] leading-5 text-cyan-100">
+                {timeCopy.formatColumns}
+              </code>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                  {timeCopy.promptTitle}
+                </p>
+                <button
+                  type="button"
+                  onClick={copyFormatPrompt}
+                  className="rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15"
+                >
+                  {promptCopied ? timeCopy.copiedPrompt : timeCopy.copyPrompt}
+                </button>
+              </div>
+              <p className="mt-3 max-h-28 overflow-y-auto rounded-xl border border-white/10 bg-black/30 p-3 text-xs leading-5 text-zinc-400">
+                {timeCopy.promptText}
+              </p>
+            </section>
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-zinc-950/65 p-5 backdrop-blur">
@@ -714,6 +872,7 @@ export default function ImportDreamDiaryPage({
 function DraftCard({ draft, index, language, copy, onUpdate, onToggleTag, onDelete, onSplit, onMergePrevious }) {
   const selectedTagSet = new Set(draft.selectedTagSlugs || []);
   const confidence = Math.round(Number(draft.boundaryConfidence || 0) * 100);
+  const timeCopy = getImportTimeCopy(language);
 
   return (
     <article className="rounded-3xl border border-white/10 bg-zinc-950/70 p-5 shadow-[0_14px_48px_rgba(0,0,0,.28)] backdrop-blur">
@@ -734,7 +893,7 @@ function DraftCard({ draft, index, language, copy, onUpdate, onToggleTag, onDele
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <label className="block xl:col-span-2">
           <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">{copy.titleLabel}</span>
           <input
@@ -753,6 +912,43 @@ function DraftCard({ draft, index, language, copy, onUpdate, onToggleTag, onDele
             className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
           />
           {!draft.detectedDate && <p className="mt-2 text-xs text-zinc-500">{copy.unknownDate}</p>}
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">{timeCopy.timeLabel}</span>
+          <input
+            type="time"
+            value={draft.dreamTime || draft.detectedTime || ""}
+            onChange={(event) => onUpdate({ dreamTime: event.target.value, detectedTime: event.target.value })}
+            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">{timeCopy.periodLabel}</span>
+          <select
+            value={draft.dreamPeriod || ""}
+            onChange={(event) => onUpdate({ dreamPeriod: event.target.value })}
+            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+          >
+            <option value="">{timeCopy.noPeriod}</option>
+            {DREAM_PERIOD_OPTIONS.map((period) => (
+              <option key={period} value={period}>{timeCopy.periods[period]}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">{timeCopy.sequenceLabel}</span>
+          <select
+            value={draft.dreamSequence || 1}
+            onChange={(event) => onUpdate({ dreamSequence: Number(event.target.value) })}
+            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+          >
+            {DREAM_SEQUENCE_OPTIONS.map((sequence) => (
+              <option key={sequence} value={sequence}>{timeCopy.sequences[sequence]}</option>
+            ))}
+          </select>
         </label>
 
         <label className="block">
@@ -830,6 +1026,10 @@ function DraftCard({ draft, index, language, copy, onUpdate, onToggleTag, onDele
 function getTitleSourceLabel(copy, source) {
   const key = String(source || "untitled");
   return copy.titleSourceLabels?.[key] || key.replaceAll("_", " ");
+}
+
+function getImportTimeCopy(language) {
+  return IMPORT_TIME_COPY[normalizeLanguage(language)] || IMPORT_TIME_COPY.zh;
 }
 
 function InfoNotice({ title, text, tone = "cyan" }) {

@@ -8,6 +8,7 @@ import {
 } from "../lib/recordsService.js";
 import {
   getLanguageName,
+  LANGUAGE_OPTIONS,
   normalizeLanguage,
 } from "../lib/language.js";
 import {
@@ -37,6 +38,87 @@ const EDITABLE_TAG_SLUGS = new Set(
 const EDITABLE_TAG_CATEGORIES = new Set(
   RECORDER_TAG_GROUPS.map((group) => group.category)
 );
+
+const DREAM_PERIOD_OPTIONS = ["morning", "afternoon", "evening", "night"];
+const DREAM_SEQUENCE_OPTIONS = [1, 2, 3, 4, 5, 6];
+
+const DETAIL_TIME_COPY = {
+  en: {
+    dreamTime: "Dream time",
+    dreamPeriod: "Time of day",
+    noPeriod: "Not sure",
+    dreamSequence: "Dream order in this period",
+    translationsTitle: "Recorder-provided language versions",
+    translationsHelp:
+      "Only versions written or approved by the recorder are shown to readers in other interface languages.",
+    translationTitle: "Translated outline / main idea",
+    translationText: "Translated dream words",
+    periods: {
+      morning: "Morning",
+      afternoon: "Afternoon",
+      evening: "Evening",
+      night: "Night",
+    },
+    sequences: {
+      1: "First dream",
+      2: "Second dream",
+      3: "Third dream",
+      4: "Fourth dream",
+      5: "Fifth dream",
+      6: "Sixth dream",
+    },
+  },
+  zh: {
+    dreamTime: "夢境時間",
+    dreamPeriod: "時段",
+    noPeriod: "不確定",
+    dreamSequence: "此時段第幾個夢",
+    translationsTitle: "記錄者提供的其他語言版本",
+    translationsHelp:
+      "只有記錄者親自撰寫或確認的語言版本，才會在其他介面語言中顯示給讀者。",
+    translationTitle: "翻譯版大綱主旨",
+    translationText: "翻譯版夢境文字",
+    periods: {
+      morning: "早晨",
+      afternoon: "下午",
+      evening: "傍晚",
+      night: "夜晚",
+    },
+    sequences: {
+      1: "第一個夢",
+      2: "第二個夢",
+      3: "第三個夢",
+      4: "第四個夢",
+      5: "第五個夢",
+      6: "第六個夢",
+    },
+  },
+  es: {
+    dreamTime: "Hora del sueno",
+    dreamPeriod: "Momento del dia",
+    noPeriod: "No seguro",
+    dreamSequence: "Orden del sueno en este momento",
+    translationsTitle: "Versiones en otros idiomas del registrador",
+    translationsHelp:
+      "Solo las versiones escritas o aprobadas por el registrador se muestran en otros idiomas.",
+    translationTitle: "Esquema traducido",
+    translationText: "Texto traducido del sueno",
+    periods: {
+      morning: "Manana",
+      afternoon: "Tarde",
+      evening: "Atardecer",
+      night: "Noche",
+    },
+    sequences: {
+      1: "Primer sueno",
+      2: "Segundo sueno",
+      3: "Tercer sueno",
+      4: "Cuarto sueno",
+      5: "Quinto sueno",
+      6: "Sexto sueno",
+    },
+  },
+};
 
 const DETAIL_COPY = {
   en: {
@@ -330,6 +412,14 @@ export default function DreamRecordPage({
   const [dreamDateStatus, setDreamDateStatus] = useState(
     normalizedRecord.dreamDateStatus
   );
+  const [dreamTime, setDreamTime] = useState(normalizedRecord.dreamTime || "");
+  const [dreamPeriod, setDreamPeriod] = useState(normalizedRecord.dreamPeriod || "");
+  const [dreamSequence, setDreamSequence] = useState(
+    normalizedRecord.dreamSequence || 1
+  );
+  const [translationDrafts, setTranslationDrafts] = useState(() =>
+    getTranslationDraftsFromRecord(normalizedRecord)
+  );
   const [ageAtDream, setAgeAtDream] = useState(normalizedRecord.ageAtDream || "");
   const [adultContent, setAdultContent] = useState(
     isAdultRecord(normalizedRecord)
@@ -355,9 +445,10 @@ export default function DreamRecordPage({
   const [collecting, setCollecting] = useState(false);
   const [sharingSaving, setSharingSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const title = getOriginalRecordTitle(normalizedRecord);
-  const body = getOriginalRecordText(normalizedRecord);
+  const title = getDisplayRecordTitle(normalizedRecord, language);
+  const body = getDisplayRecordText(normalizedRecord, language);
   const originalLanguage = normalizeLanguage(normalizedRecord.originalLanguage);
+  const timeCopy = DETAIL_TIME_COPY[normalizeLanguage(language)] || DETAIL_TIME_COPY.zh;
   const adultRecord = isAdultRecord(normalizedRecord);
   const ageVerifiedAdult = Number(profile?.age || 0) >= 18;
   const adultAllowed = !adultRecord || ageVerifiedAdult || adultConfirmed;
@@ -405,6 +496,10 @@ export default function DreamRecordPage({
     setDreamTextDraft(normalizedRecord.originalText || "");
     setDreamDate(normalizedRecord.dreamDate || "");
     setDreamDateStatus(normalizedRecord.dreamDateStatus);
+    setDreamTime(normalizedRecord.dreamTime || "");
+    setDreamPeriod(normalizedRecord.dreamPeriod || "");
+    setDreamSequence(normalizedRecord.dreamSequence || 1);
+    setTranslationDrafts(getTranslationDraftsFromRecord(normalizedRecord));
     setAgeAtDream(normalizedRecord.ageAtDream || "");
     setAdultContent(isAdultRecord(normalizedRecord));
     setRecordIdentityMode(normalizedRecord.recordIdentityMode);
@@ -471,6 +566,16 @@ export default function DreamRecordPage({
     );
   }
 
+  function updateTranslationDraft(languageCode, field, value) {
+    setTranslationDrafts((current) => ({
+      ...current,
+      [languageCode]: {
+        ...(current[languageCode] || {}),
+        [field]: value,
+      },
+    }));
+  }
+
   async function handleCollect() {
     if (!currentUser?.uid) {
       setStatus(copy.signInToCollect);
@@ -520,6 +625,10 @@ export default function DreamRecordPage({
         originalLanguage,
         dreamDate,
         dreamDateStatus,
+        dreamTime,
+        dreamPeriod,
+        dreamSequence,
+        translations: translationDrafts,
         ageAtDream,
         adultContent,
         minimumViewerAge: adultContent ? 18 : 0,
@@ -538,6 +647,10 @@ export default function DreamRecordPage({
           originalLanguage,
           dreamDate,
           dreamDateStatus,
+          dreamTime,
+          dreamPeriod,
+          dreamSequence,
+          translations: translationDrafts,
           ageAtDream,
           adultContent,
           minimumViewerAge: adultContent ? 18 : 0,
@@ -798,6 +911,52 @@ export default function DreamRecordPage({
                       className="min-h-48 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-7 text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                     />
                   </label>
+                  <section className="mb-3 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
+                    <p className="font-mono text-xs uppercase tracking-[0.22em] text-fuchsia-100">
+                      {timeCopy.translationsTitle}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-zinc-400">
+                      {timeCopy.translationsHelp}
+                    </p>
+                    <div className="mt-4 space-y-4">
+                      {LANGUAGE_OPTIONS.filter(
+                        (option) => option.value !== originalLanguage
+                      ).map((option) => (
+                        <div
+                          key={option.value}
+                          className="rounded-2xl border border-white/10 bg-black/25 p-4"
+                        >
+                          <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                            {getLanguageName(option.value, language)}
+                          </p>
+                          <label className="block">
+                            <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                              {timeCopy.translationTitle}
+                            </span>
+                            <input
+                              value={translationDrafts[option.value]?.title || ""}
+                              onChange={(event) =>
+                                updateTranslationDraft(option.value, "title", event.target.value)
+                              }
+                              className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                            />
+                          </label>
+                          <label className="mt-3 block">
+                            <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                              {timeCopy.translationText}
+                            </span>
+                            <textarea
+                              value={translationDrafts[option.value]?.dreamText || ""}
+                              onChange={(event) =>
+                                updateTranslationDraft(option.value, "dreamText", event.target.value)
+                              }
+                              className="min-h-32 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-7 text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                            />
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                   <label className="mb-3 block">
                     <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                       {copy.dreamDate}
@@ -859,6 +1018,54 @@ export default function DreamRecordPage({
                       </button>
                     </div>
                   </label>
+                  <div className="mb-3 grid gap-3 md:grid-cols-3">
+                    <label className="block">
+                      <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                        {timeCopy.dreamTime}
+                      </span>
+                      <input
+                        type="time"
+                        value={dreamTime}
+                        onChange={(event) => setDreamTime(event.target.value)}
+                        className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                        {timeCopy.dreamPeriod}
+                      </span>
+                      <select
+                        value={dreamPeriod}
+                        onChange={(event) => setDreamPeriod(event.target.value)}
+                        className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                      >
+                        <option value="">{timeCopy.noPeriod}</option>
+                        {DREAM_PERIOD_OPTIONS.map((period) => (
+                          <option key={period} value={period}>
+                            {timeCopy.periods[period]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                        {timeCopy.dreamSequence}
+                      </span>
+                      <select
+                        value={dreamSequence}
+                        onChange={(event) => setDreamSequence(Number(event.target.value))}
+                        className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                      >
+                        {DREAM_SEQUENCE_OPTIONS.map((sequence) => (
+                          <option key={sequence} value={sequence}>
+                            {timeCopy.sequences[sequence]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                   <label className="block">
                     <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                       {copy.ageAtDream}
@@ -1068,6 +1275,8 @@ function normalizeDreamRecord(record) {
     textEn,
     textZh,
     textEs,
+    translationLanguages: normalizeTranslationLanguages(record?.translationLanguages),
+    translationSource: record?.translationSource || "",
     images,
     dreamImages: images,
     imageUrls,
@@ -1079,6 +1288,12 @@ function normalizeDreamRecord(record) {
     dreamDate,
     dreamDateStatus,
     dream_date_status: dreamDateStatus,
+    dreamTime: normalizeDreamTime(record?.dreamTime || record?.dream_time),
+    dream_time: normalizeDreamTime(record?.dreamTime || record?.dream_time),
+    dreamPeriod: normalizeDreamPeriod(record?.dreamPeriod || record?.dream_period),
+    dream_period: normalizeDreamPeriod(record?.dreamPeriod || record?.dream_period),
+    dreamSequence: normalizeDreamSequence(record?.dreamSequence || record?.dream_sequence),
+    dream_sequence: normalizeDreamSequence(record?.dreamSequence || record?.dream_sequence),
     ageAtDream: record?.ageAtDream || "",
     ownerId: record?.ownerId || record?.creatorId || "",
     anonymousLocked: Boolean(record?.anonymousLocked),
@@ -1183,6 +1398,20 @@ function getOriginalRecordTitle(record) {
   );
 }
 
+function getDisplayRecordTitle(record, language) {
+  const requestedLanguage = normalizeLanguage(language);
+  const originalLanguage = normalizeLanguage(record.originalLanguage);
+
+  if (
+    requestedLanguage !== originalLanguage &&
+    hasRecorderTranslation(record, requestedLanguage)
+  ) {
+    return getLanguageSpecificRecordValue(record, "title", requestedLanguage) || "";
+  }
+
+  return getOriginalRecordTitle(record);
+}
+
 function getOriginalRecordText(record) {
   const originalLanguage = normalizeLanguage(record.originalLanguage);
 
@@ -1191,6 +1420,54 @@ function getOriginalRecordText(record) {
     getLanguageSpecificRecordValue(record, "text", originalLanguage) ||
     record.text ||
     ""
+  );
+}
+
+function getDisplayRecordText(record, language) {
+  const requestedLanguage = normalizeLanguage(language);
+  const originalLanguage = normalizeLanguage(record.originalLanguage);
+
+  if (
+    requestedLanguage !== originalLanguage &&
+    hasRecorderTranslation(record, requestedLanguage)
+  ) {
+    return getLanguageSpecificRecordValue(record, "text", requestedLanguage) || "";
+  }
+
+  return getOriginalRecordText(record);
+}
+
+function hasRecorderTranslation(record, language) {
+  return normalizeTranslationLanguages(record.translationLanguages).includes(
+    normalizeLanguage(language)
+  );
+}
+
+function normalizeTranslationLanguages(value) {
+  if (!Array.isArray(value)) return [];
+
+  return [...new Set(value.map(normalizeLanguage))];
+}
+
+function getTranslationDraftsFromRecord(record) {
+  return Object.fromEntries(
+    LANGUAGE_OPTIONS.map((option) => [
+      option.value,
+      {
+        title:
+          option.value === normalizeLanguage(record.originalLanguage)
+            ? ""
+            : hasRecorderTranslation(record, option.value)
+              ? getLanguageSpecificRecordValue(record, "title", option.value)
+              : "",
+        dreamText:
+          option.value === normalizeLanguage(record.originalLanguage)
+            ? ""
+            : hasRecorderTranslation(record, option.value)
+              ? getLanguageSpecificRecordValue(record, "text", option.value)
+              : "",
+      },
+    ])
   );
 }
 
@@ -1267,10 +1544,15 @@ function mergeRecordEdits(record, updates) {
     updates.dreamText,
     excerpt
   );
+  const translationFields = buildLocalTranslationFields(
+    updates.translations,
+    updates.originalLanguage
+  );
 
   return {
     ...record,
     ...languageFields,
+    ...translationFields,
     originalLanguage: updates.originalLanguage,
     originalTitle: updates.title,
     originalText: updates.dreamText,
@@ -1282,6 +1564,12 @@ function mergeRecordEdits(record, updates) {
     dream_date: updates.dreamDate || "",
     dreamDateStatus: updates.dreamDateStatus,
     dream_date_status: updates.dreamDateStatus,
+    dreamTime: normalizeDreamTime(updates.dreamTime),
+    dream_time: normalizeDreamTime(updates.dreamTime),
+    dreamPeriod: normalizeDreamPeriod(updates.dreamPeriod),
+    dream_period: normalizeDreamPeriod(updates.dreamPeriod),
+    dreamSequence: normalizeDreamSequence(updates.dreamSequence),
+    dream_sequence: normalizeDreamSequence(updates.dreamSequence),
     ageAtDream:
       updates.ageAtDream === "" || updates.ageAtDream == null
         ? ""
@@ -1357,6 +1645,53 @@ function buildLocalLanguageFields(language, title, text, excerpt) {
     excerptEn: excerpt,
     excerpt_en: excerpt,
   };
+}
+
+function buildLocalTranslationFields(translations, originalLanguage) {
+  const fields = {};
+  const translationLanguages = [];
+  const normalizedOriginalLanguage = normalizeLanguage(originalLanguage);
+
+  Object.entries(translations || {}).forEach(([language, value]) => {
+    const normalizedLanguage = normalizeLanguage(language);
+    if (normalizedLanguage === normalizedOriginalLanguage) return;
+
+    const title = String(value?.title || "").trim();
+    const text = String(value?.dreamText || value?.text || "").trim();
+    if (!title && !text) return;
+
+    Object.assign(
+      fields,
+      buildLocalLanguageFields(normalizedLanguage, title, text, createLocalExcerpt(text || title))
+    );
+    translationLanguages.push(normalizedLanguage);
+  });
+
+  return {
+    ...fields,
+    translationLanguages: [...new Set(translationLanguages)],
+    translationSource: translationLanguages.length > 0 ? "recorder_provided" : "",
+  };
+}
+
+function normalizeDreamTime(value) {
+  const rawValue = String(value || "").trim();
+  const match = rawValue.match(/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/);
+  if (!match) return "";
+
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
+function normalizeDreamPeriod(value) {
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  return DREAM_PERIOD_OPTIONS.includes(normalizedValue) ? normalizedValue : "";
+}
+
+function normalizeDreamSequence(value) {
+  const parsed = Number(value || 1);
+  if (!Number.isFinite(parsed)) return 1;
+
+  return Math.max(1, Math.min(12, Math.round(parsed)));
 }
 
 function createLocalExcerpt(text) {

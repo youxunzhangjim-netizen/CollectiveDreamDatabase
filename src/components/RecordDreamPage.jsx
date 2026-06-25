@@ -16,7 +16,7 @@ import {
   validateDreamImageFile,
 } from "../lib/dreamImageService.js";
 import { auth } from "../lib/firebaseClient.js";
-import { LANGUAGE_OPTIONS } from "../lib/language.js";
+import { getLanguageName, LANGUAGE_OPTIONS, normalizeLanguage } from "../lib/language.js";
 import { fetchSharedCustomTags } from "../lib/customTagsService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import { createDreamRecord } from "../lib/recordsService.js";
@@ -29,6 +29,90 @@ import {
   tagExists,
 } from "../lib/tagTaxonomy.js";
 import LanguageMenu from "./LanguageMenu.jsx";
+
+const DREAM_PERIOD_OPTIONS = ["morning", "afternoon", "evening", "night"];
+const DREAM_SEQUENCE_OPTIONS = [1, 2, 3, 4, 5, 6];
+
+const RECORDER_TIME_COPY = {
+  en: {
+    dreamTime: "Dream time",
+    dreamTimeHelp: "Optional clock time. Leave blank if unknown.",
+    dreamPeriod: "Time of day",
+    dreamPeriodNone: "Not sure",
+    dreamSequence: "Dream order in this period",
+    translationsTitle: "Recorder-provided language versions",
+    translationsHelp:
+      "Optional. If you personally provide another language version, readers using that language will see it instead of the original.",
+    translationTitle: "Translated outline / main idea",
+    translationText: "Translated dream words",
+    periods: {
+      morning: "Morning",
+      afternoon: "Afternoon",
+      evening: "Evening",
+      night: "Night",
+    },
+    sequences: {
+      1: "First dream",
+      2: "Second dream",
+      3: "Third dream",
+      4: "Fourth dream",
+      5: "Fifth dream",
+      6: "Sixth dream",
+    },
+  },
+  zh: {
+    dreamTime: "夢境時間",
+    dreamTimeHelp: "可選填精確時間；不記得可留空。",
+    dreamPeriod: "時段",
+    dreamPeriodNone: "不確定",
+    dreamSequence: "此時段第幾個夢",
+    translationsTitle: "記錄者提供的其他語言版本",
+    translationsHelp:
+      "選填。若你親自提供其他語言版本，使用該語言的讀者會看到此版本，而不是自動翻譯。",
+    translationTitle: "翻譯版大綱主旨",
+    translationText: "翻譯版夢境文字",
+    periods: {
+      morning: "早晨",
+      afternoon: "下午",
+      evening: "傍晚",
+      night: "夜晚",
+    },
+    sequences: {
+      1: "第一個夢",
+      2: "第二個夢",
+      3: "第三個夢",
+      4: "第四個夢",
+      5: "第五個夢",
+      6: "第六個夢",
+    },
+  },
+  es: {
+    dreamTime: "Hora del sueno",
+    dreamTimeHelp: "Hora exacta opcional. Dejala vacia si no la recuerdas.",
+    dreamPeriod: "Momento del dia",
+    dreamPeriodNone: "No seguro",
+    dreamSequence: "Orden del sueno en este momento",
+    translationsTitle: "Versiones en otros idiomas del registrador",
+    translationsHelp:
+      "Opcional. Si proporcionas otra version, los lectores en ese idioma veran esa version en lugar del original.",
+    translationTitle: "Esquema traducido",
+    translationText: "Texto traducido del sueno",
+    periods: {
+      morning: "Manana",
+      afternoon: "Tarde",
+      evening: "Atardecer",
+      night: "Noche",
+    },
+    sequences: {
+      1: "Primer sueno",
+      2: "Segundo sueno",
+      3: "Tercer sueno",
+      4: "Cuarto sueno",
+      5: "Quinto sueno",
+      6: "Sexto sueno",
+    },
+  },
+};
 
 const RECORD_COPY = {
   en: {
@@ -373,7 +457,11 @@ export default function RecordDreamPage({
   const [title, setTitle] = useState("");
   const [dreamDate, setDreamDate] = useState(today);
   const [dreamDateStatus, setDreamDateStatus] = useState("known");
+  const [dreamTime, setDreamTime] = useState("");
+  const [dreamPeriod, setDreamPeriod] = useState("");
+  const [dreamSequence, setDreamSequence] = useState(1);
   const [originalLanguage, setOriginalLanguage] = useState(language || "zh");
+  const [translations, setTranslations] = useState({});
   const [ageAtDream, setAgeAtDream] = useState("");
   const [adultContent, setAdultContent] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
@@ -394,6 +482,7 @@ export default function RecordDreamPage({
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
   const accountBacked = Boolean(currentUser?.uid && !currentUser.isAnonymous);
+  const timeCopy = RECORDER_TIME_COPY[normalizeLanguage(language)] || RECORDER_TIME_COPY.zh;
   const imagePreviews = useMemo(
     () =>
       imageFiles.map((file) => ({
@@ -483,6 +572,16 @@ export default function RecordDreamPage({
     setCustomTagEntries((current) =>
       current.filter((item) => item.category !== category || item.label !== label)
     );
+  }
+
+  function updateTranslation(languageCode, field, value) {
+    setTranslations((current) => ({
+      ...current,
+      [languageCode]: {
+        ...(current[languageCode] || {}),
+        [field]: value,
+      },
+    }));
   }
 
   function handleImageSelection(event) {
@@ -644,7 +743,11 @@ export default function RecordDreamPage({
           title,
           dreamDate,
           dreamDateStatus,
+          dreamTime,
+          dreamPeriod,
+          dreamSequence,
           originalLanguage,
+          translations,
           ageAtDream,
           adultContent,
           imageFiles,
@@ -824,6 +927,56 @@ export default function RecordDreamPage({
 
                 <label className="block">
                   <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    {timeCopy.dreamTime}
+                  </span>
+                  <input
+                    type="time"
+                    value={dreamTime}
+                    onChange={(event) => setDreamTime(event.target.value)}
+                    className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                  />
+                  <p className="mt-2 text-xs leading-5 text-zinc-500">
+                    {timeCopy.dreamTimeHelp}
+                  </p>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    {timeCopy.dreamPeriod}
+                  </span>
+                  <select
+                    value={dreamPeriod}
+                    onChange={(event) => setDreamPeriod(event.target.value)}
+                    className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                  >
+                    <option value="">{timeCopy.dreamPeriodNone}</option>
+                    {DREAM_PERIOD_OPTIONS.map((period) => (
+                      <option key={period} value={period}>
+                        {timeCopy.periods[period]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    {timeCopy.dreamSequence}
+                  </span>
+                  <select
+                    value={dreamSequence}
+                    onChange={(event) => setDreamSequence(Number(event.target.value))}
+                    className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                  >
+                    {DREAM_SEQUENCE_OPTIONS.map((sequence) => (
+                      <option key={sequence} value={sequence}>
+                        {timeCopy.sequences[sequence]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                     {copy.originalLanguage}
                   </span>
                   <select
@@ -853,6 +1006,53 @@ export default function RecordDreamPage({
                   />
                 </label>
               </div>
+
+              <section className="rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
+                <p className="font-mono text-xs uppercase tracking-[0.22em] text-fuchsia-100">
+                  {timeCopy.translationsTitle}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                  {timeCopy.translationsHelp}
+                </p>
+                <div className="mt-4 space-y-4">
+                  {LANGUAGE_OPTIONS.filter(
+                    (option) => option.value !== normalizeLanguage(originalLanguage)
+                  ).map((option) => (
+                    <div
+                      key={option.value}
+                      className="rounded-2xl border border-white/10 bg-black/25 p-4"
+                    >
+                      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                        {getLanguageName(option.value, language)}
+                      </p>
+                      <label className="block">
+                        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          {timeCopy.translationTitle}
+                        </span>
+                        <input
+                          value={translations[option.value]?.title || ""}
+                          onChange={(event) =>
+                            updateTranslation(option.value, "title", event.target.value)
+                          }
+                          className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                        />
+                      </label>
+                      <label className="mt-3 block">
+                        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                          {timeCopy.translationText}
+                        </span>
+                        <textarea
+                          value={translations[option.value]?.dreamText || ""}
+                          onChange={(event) =>
+                            updateTranslation(option.value, "dreamText", event.target.value)
+                          }
+                          className="min-h-36 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-7 text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                        />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
               <section className="rounded-2xl border border-cyan-300/15 bg-black/25 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -48,6 +48,8 @@ export const DREAM_SHARING_MODES = {
   STATS_ONLY: "stats_only",
 };
 
+export const DREAM_PERIODS = ["morning", "afternoon", "evening", "night"];
+
 const PUBLIC_SHARING_MODES = new Set([
   DREAM_SHARING_MODES.PUBLIC_ANONYMOUS,
   DREAM_SHARING_MODES.PUBLIC_PSEUDONYM,
@@ -140,6 +142,10 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   );
   const dreamDate =
     dreamDateStatus === DREAM_DATE_STATUS.KNOWN ? submittedDreamDate : "";
+  const dreamTime = normalizeDreamTime(draft?.dreamTime || draft?.dream_time);
+  const dreamPeriod = normalizeDreamPeriod(draft?.dreamPeriod || draft?.dream_period);
+  const dreamSequence = normalizeDreamSequence(draft?.dreamSequence || draft?.dream_sequence);
+  const dreamDateTime = buildDreamDateTime(dreamDate, dreamTime);
   const ageAtDream =
     draft?.ageAtDream === "" || draft?.ageAtDream == null
       ? ""
@@ -189,6 +195,10 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     dreamText,
     excerpt
   );
+  const translationFields = buildRecorderTranslationFields(
+    draft?.translations || draft?.translationVersions,
+    originalLanguage
+  );
   const coreRecord = {
     id: recordRef.id,
     dream_id: recordRef.id,
@@ -212,10 +222,19 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     dream_text: dreamText,
     excerpt,
     ...languageFields,
+    ...translationFields,
     dreamDate,
     dream_date: dreamDate,
     dreamDateStatus,
     dream_date_status: dreamDateStatus,
+    dreamTime,
+    dream_time: dreamTime,
+    dreamPeriod,
+    dream_period: dreamPeriod,
+    dreamSequence,
+    dream_sequence: dreamSequence,
+    dreamDateTime,
+    dream_date_time: dreamDateTime,
     ageAtDream: Number.isFinite(ageAtDream) ? ageAtDream : "",
     recordIdentityMode,
     attributionMode: recordIdentityMode,
@@ -514,6 +533,8 @@ function normalizeRecordReference(record) {
       record?.originalText ||
       record?.original_text ||
       getLanguageSpecificValue(record, "text", originalLanguage),
+    translationLanguages: normalizeTranslationLanguages(record?.translationLanguages),
+    translationSource: record?.translationSource || "",
     images,
     dreamImages: images,
     imageUrls,
@@ -525,6 +546,19 @@ function normalizeRecordReference(record) {
     dreamDate,
     dreamDateStatus,
     dream_date_status: dreamDateStatus,
+    dreamTime: normalizeDreamTime(record?.dreamTime || record?.dream_time),
+    dream_time: normalizeDreamTime(record?.dreamTime || record?.dream_time),
+    dreamPeriod: normalizeDreamPeriod(record?.dreamPeriod || record?.dream_period),
+    dream_period: normalizeDreamPeriod(record?.dreamPeriod || record?.dream_period),
+    dreamSequence: normalizeDreamSequence(record?.dreamSequence || record?.dream_sequence),
+    dream_sequence: normalizeDreamSequence(record?.dreamSequence || record?.dream_sequence),
+    dreamDateTime:
+      record?.dreamDateTime ||
+      record?.dream_date_time ||
+      buildDreamDateTime(
+        dreamDate,
+        normalizeDreamTime(record?.dreamTime || record?.dream_time)
+      ),
     creatorId: record?.ownerId || record?.creatorId || "",
     authorName: record?.authorName || record?.creatorDisplayName || "",
     recordIdentityMode,
@@ -658,6 +692,66 @@ function buildOriginalLanguageFields(language, title, text, excerpt) {
     excerptEn: excerpt,
     excerpt_en: excerpt,
   };
+}
+
+function buildRecorderTranslationFields(translations, originalLanguage) {
+  const normalizedOriginalLanguage = normalizeLanguage(originalLanguage);
+  const fields = {};
+  const translationLanguages = [];
+  const translationMap =
+    translations && typeof translations === "object" && !Array.isArray(translations)
+      ? translations
+      : {};
+
+  for (const [language, value] of Object.entries(translationMap)) {
+    const normalizedLanguage = normalizeLanguage(language);
+    if (normalizedLanguage === normalizedOriginalLanguage) continue;
+
+    const text = String(value?.dreamText || value?.text || value?.originalText || "").trim();
+    const title = String(value?.title || "").trim();
+    if (!text && !title) continue;
+
+    const excerpt = createExcerpt(text || title);
+    Object.assign(fields, buildOriginalLanguageFields(normalizedLanguage, title, text, excerpt));
+    translationLanguages.push(normalizedLanguage);
+  }
+
+  if (translationLanguages.length > 0) {
+    fields.translationLanguages = [...new Set(translationLanguages)];
+    fields.translationSource = "recorder_provided";
+  }
+
+  return fields;
+}
+
+function normalizeTranslationLanguages(value) {
+  if (!Array.isArray(value)) return [];
+
+  return [...new Set(value.map(normalizeLanguage))];
+}
+
+function normalizeDreamTime(value) {
+  const rawValue = String(value || "").trim();
+  const match = rawValue.match(/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/);
+  if (!match) return "";
+
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
+function normalizeDreamPeriod(value) {
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  return DREAM_PERIODS.includes(normalizedValue) ? normalizedValue : "";
+}
+
+function normalizeDreamSequence(value) {
+  const parsed = Number(value || 1);
+  if (!Number.isFinite(parsed)) return 1;
+
+  return Math.max(1, Math.min(12, Math.round(parsed)));
+}
+
+function buildDreamDateTime(dreamDate, dreamTime) {
+  return dreamDate && dreamTime ? `${dreamDate}T${dreamTime}` : "";
 }
 
 function normalizeOptionalTitle(title, dreamText) {
@@ -906,6 +1000,46 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     metadata.dream_date_status = dreamDateStatus;
   }
 
+  if (
+    "dreamTime" in updates ||
+    "dreamPeriod" in updates ||
+    "dreamSequence" in updates ||
+    "dreamDate" in updates
+  ) {
+    const dreamTime = normalizeDreamTime(updates.dreamTime || updates.dream_time);
+    const dreamPeriod = normalizeDreamPeriod(updates.dreamPeriod || updates.dream_period);
+    const dreamSequence = normalizeDreamSequence(
+      updates.dreamSequence || updates.dream_sequence
+    );
+    const effectiveDreamDate =
+      "dreamDate" in metadata
+        ? metadata.dreamDate
+        : String(updates.dreamDate || "").trim();
+
+    metadata.dreamTime = dreamTime;
+    metadata.dream_time = dreamTime;
+    metadata.dreamPeriod = dreamPeriod;
+    metadata.dream_period = dreamPeriod;
+    metadata.dreamSequence = dreamSequence;
+    metadata.dream_sequence = dreamSequence;
+    metadata.dreamDateTime = buildDreamDateTime(effectiveDreamDate, dreamTime);
+    metadata.dream_date_time = metadata.dreamDateTime;
+  }
+
+  if ("translations" in updates || "translationVersions" in updates) {
+    const originalLanguage = normalizeLanguage(updates.originalLanguage || "zh");
+    const translationFields = buildRecorderTranslationFields(
+      updates.translations || updates.translationVersions,
+      originalLanguage
+    );
+
+    metadata.translationLanguages = translationFields.translationLanguages || [];
+    metadata.translationSource =
+      metadata.translationLanguages.length > 0 ? "recorder_provided" : "";
+
+    Object.assign(metadata, translationFields);
+  }
+
   if ("ageAtDream" in updates) {
     metadata.ageAtDream =
       updates.ageAtDream === "" || updates.ageAtDream == null
@@ -968,4 +1102,61 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
       () => {}
     );
   }
+}
+
+export async function addRecorderTranslationToRecord(currentUser, recordId, translation) {
+  if (!currentUser?.uid || !recordId) return null;
+
+  const recordRef = doc(requireFirestore(), "Records", recordId);
+  const snapshot = await getDoc(recordRef);
+
+  if (!snapshot.exists()) {
+    throw new Error("The original dream record was not found.");
+  }
+
+  const existingRecord = { id: snapshot.id, ...snapshot.data() };
+
+  if (existingRecord.ownerId !== currentUser.uid) {
+    throw new Error("Only the owner can attach translation versions to this dream.");
+  }
+
+  const originalLanguage = normalizeLanguage(existingRecord.originalLanguage || "zh");
+  const translationLanguage = normalizeLanguage(
+    translation?.language || translation?.originalLanguage || "en"
+  );
+
+  if (translationLanguage === originalLanguage) {
+    throw new Error("This language is already the original dream language.");
+  }
+
+  const dreamText = String(
+    translation?.dreamText || translation?.originalText || translation?.text || ""
+  ).trim();
+  const title = String(translation?.title || "").trim();
+
+  if (!dreamText && !title) {
+    throw new Error("A translation version needs title or dream words.");
+  }
+
+  const excerpt = createExcerpt(dreamText || title);
+  const translationLanguages = new Set(
+    normalizeTranslationLanguages(existingRecord.translationLanguages)
+  );
+  translationLanguages.add(translationLanguage);
+
+  const metadata = {
+    ...buildOriginalLanguageFields(translationLanguage, title, dreamText, excerpt),
+    translationLanguages: [...translationLanguages],
+    translationSource: "recorder_provided",
+    updatedAt: serverTimestamp(),
+  };
+
+  await setDoc(recordRef, metadata, { merge: true });
+
+  return {
+    ...existingRecord,
+    ...metadata,
+    id: recordId,
+    updatedAt: new Date().toISOString(),
+  };
 }

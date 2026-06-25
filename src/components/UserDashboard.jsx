@@ -974,6 +974,8 @@ function normalizeRecordItem(item, index) {
         "text",
         originalLanguage
       ),
+    translationLanguages: normalizeTranslationLanguages(item.translationLanguages),
+    translationSource: item.translationSource || "",
     title,
     titleEn,
     titleZh,
@@ -992,6 +994,12 @@ function normalizeRecordItem(item, index) {
     dreamDate,
     dreamDateStatus,
     dream_date_status: dreamDateStatus,
+    dreamTime: normalizeDreamTime(item.dreamTime || item.dream_time),
+    dream_time: normalizeDreamTime(item.dreamTime || item.dream_time),
+    dreamPeriod: normalizeDreamPeriod(item.dreamPeriod || item.dream_period),
+    dream_period: normalizeDreamPeriod(item.dreamPeriod || item.dream_period),
+    dreamSequence: normalizeDreamSequence(item.dreamSequence || item.dream_sequence),
+    dream_sequence: normalizeDreamSequence(item.dreamSequence || item.dream_sequence),
     ageAtDream: item.ageAtDream || "",
     ownerId: item.ownerId || item.creatorId || "",
     creatorId: item.creatorId || item.ownerId || "",
@@ -1067,6 +1075,28 @@ function formatRecordDate(value) {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
 
   return "";
+}
+
+function normalizeDreamTime(value) {
+  const rawValue = String(value || "").trim();
+  const match = rawValue.match(/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/);
+  if (!match) return "";
+
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
+function normalizeDreamPeriod(value) {
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  return ["morning", "afternoon", "evening", "night"].includes(normalizedValue)
+    ? normalizedValue
+    : "";
+}
+
+function normalizeDreamSequence(value) {
+  const parsed = Number(value || 1);
+  if (!Number.isFinite(parsed)) return 1;
+
+  return Math.max(1, Math.min(12, Math.round(parsed)));
 }
 
 function getRecordDateDisplay(item, copy) {
@@ -1526,8 +1556,8 @@ function TabButton({ active, children, onClick }) {
 function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locked = false }) {
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const style = ACCENT_STYLES[item.accent] || ACCENT_STYLES.cyan;
-  const title = getOriginalItemTitle(item);
-  const body = getOriginalItemText(item);
+  const title = getDisplayItemTitle(item, language);
+  const body = getDisplayItemText(item, language);
   const showThumbnail = Boolean(item.thumbnailUrl && !thumbnailFailed);
 
   return (
@@ -1608,6 +1638,20 @@ function getOriginalItemTitle(item) {
   );
 }
 
+function getDisplayItemTitle(item, language) {
+  const requestedLanguage = normalizeLanguage(language);
+  const originalLanguage = normalizeLanguage(item.originalLanguage);
+
+  if (
+    requestedLanguage !== originalLanguage &&
+    hasRecorderTranslation(item, requestedLanguage)
+  ) {
+    return getLanguageSpecificRecordValue(item, "title", requestedLanguage) || "";
+  }
+
+  return getOriginalItemTitle(item);
+}
+
 function getOriginalItemText(item) {
   const originalLanguage = normalizeLanguage(item.originalLanguage);
 
@@ -1617,6 +1661,32 @@ function getOriginalItemText(item) {
     item.text ||
     ""
   );
+}
+
+function getDisplayItemText(item, language) {
+  const requestedLanguage = normalizeLanguage(language);
+  const originalLanguage = normalizeLanguage(item.originalLanguage);
+
+  if (
+    requestedLanguage !== originalLanguage &&
+    hasRecorderTranslation(item, requestedLanguage)
+  ) {
+    return getLanguageSpecificRecordValue(item, "text", requestedLanguage) || "";
+  }
+
+  return getOriginalItemText(item);
+}
+
+function hasRecorderTranslation(record, language) {
+  return normalizeTranslationLanguages(record.translationLanguages).includes(
+    normalizeLanguage(language)
+  );
+}
+
+function normalizeTranslationLanguages(value) {
+  if (!Array.isArray(value)) return [];
+
+  return [...new Set(value.map(normalizeLanguage))];
 }
 
 function getItemAuthorName(item, copy) {

@@ -792,11 +792,14 @@ export default function CollectiveDreamDashboard({
               dream.originalTitle,
               dream.originalText,
               getLanguageName(dream.originalLanguage, language),
-              getDreamTitle(dream),
+              getDreamTitle(dream, language),
+              getDreamTitle(dream, dream.originalLanguage),
               dream.excerpt,
-              getDreamExcerpt(dream),
+              getDreamExcerpt(dream, language),
+              getDreamExcerpt(dream, dream.originalLanguage),
               dream.dream_text,
-              getDreamText(dream),
+              getDreamText(dream, language),
+              getDreamText(dream, dream.originalLanguage),
               dream.pseudo_id,
               dreamTagNames,
               dreamTagSlugs.join(" "),
@@ -821,8 +824,8 @@ export default function CollectiveDreamDashboard({
         }
 
         if (sortMode === "title") {
-          return getDreamTitle(a).localeCompare(
-            getDreamTitle(b),
+          return getDreamTitle(a, language).localeCompare(
+            getDreamTitle(b, language),
             language === "zh" ? "zh-Hant" : language === "es" ? "es" : "en"
           );
         }
@@ -1149,19 +1152,39 @@ function normalizeDreamCard(row) {
       row.original_excerpt ||
       getLanguageSpecificValue(row, "excerpt", originalLanguage) ||
       createExcerpt(originalText),
+    translationLanguages: normalizeTranslationLanguages(row.translationLanguages),
+    translationSource: row.translationSource || "",
     title: row.title || "",
+    titleEn: row.titleEn || row.title_en || "",
+    title_en: row.title_en || row.titleEn || "",
+    titleZh: row.titleZh || row.title_zh || "",
     title_zh: row.title_zh || row.titleZh,
+    titleEs: row.titleEs || row.title_es || "",
     title_es: row.title_es || row.titleEs,
     excerpt,
+    excerptEn: row.excerptEn || row.excerpt_en || "",
+    excerpt_en: row.excerpt_en || row.excerptEn || "",
+    excerptZh: row.excerptZh || row.excerpt_zh || "",
     excerpt_zh: row.excerpt_zh || row.excerptZh,
+    excerptEs: row.excerptEs || row.excerpt_es || "",
     excerpt_es: row.excerpt_es || row.excerptEs,
     dream_text: row.dream_text || row.dreamText || row.text || row.originalText,
-    dream_text_zh: row.dream_text_zh || row.dreamTextZh,
-    dream_text_es: row.dream_text_es || row.dreamTextEs,
+    dream_text_en: row.dream_text_en || row.dreamTextEn || row.textEn || row.text_en || "",
+    textEn: row.textEn || row.dream_text_en || row.text_en || "",
+    dream_text_zh: row.dream_text_zh || row.dreamTextZh || row.textZh || row.text_zh || "",
+    textZh: row.textZh || row.dream_text_zh || row.text_zh || "",
+    dream_text_es: row.dream_text_es || row.dreamTextEs || row.textEs || row.text_es || "",
+    textEs: row.textEs || row.dream_text_es || row.text_es || "",
     dream_date: dreamDate,
     dreamDate,
     dreamDateStatus,
     dream_date_status: dreamDateStatus,
+    dreamTime: normalizeDreamTime(row.dreamTime || row.dream_time),
+    dream_time: normalizeDreamTime(row.dreamTime || row.dream_time),
+    dreamPeriod: normalizeDreamPeriod(row.dreamPeriod || row.dream_period),
+    dream_period: normalizeDreamPeriod(row.dreamPeriod || row.dream_period),
+    dreamSequence: normalizeDreamSequence(row.dreamSequence || row.dream_sequence),
+    dream_sequence: normalizeDreamSequence(row.dreamSequence || row.dream_sequence),
     adultContent,
     minimumViewerAge: row.minimumViewerAge || row.minimum_viewer_age || (adultContent ? 18 : 0),
     images,
@@ -1199,8 +1222,16 @@ function isAdultDream(dream) {
   );
 }
 
-function getDreamTitle(dream) {
+function getDreamTitle(dream, language = "") {
+  const requestedLanguage = normalizeLanguage(language || dream.originalLanguage);
   const originalLanguage = normalizeLanguage(dream.originalLanguage);
+
+  if (
+    requestedLanguage !== originalLanguage &&
+    hasRecorderTranslation(dream, requestedLanguage)
+  ) {
+    return getLanguageSpecificValue(dream, "title", requestedLanguage) || "";
+  }
 
   return (
     dream.originalTitle ||
@@ -1210,17 +1241,39 @@ function getDreamTitle(dream) {
   );
 }
 
-function getDreamExcerpt(dream) {
+function getDreamExcerpt(dream, language = "") {
+  const requestedLanguage = normalizeLanguage(language || dream.originalLanguage);
+  const originalLanguage = normalizeLanguage(dream.originalLanguage);
+
+  if (
+    requestedLanguage !== originalLanguage &&
+    hasRecorderTranslation(dream, requestedLanguage)
+  ) {
+    return (
+      getLanguageSpecificValue(dream, "excerpt", requestedLanguage) ||
+      createExcerpt(getDreamText(dream, requestedLanguage)) ||
+      ""
+    );
+  }
+
   return (
     dream.originalExcerpt ||
-    createExcerpt(getDreamText(dream)) ||
+    createExcerpt(getDreamText(dream, originalLanguage)) ||
     dream.excerpt ||
     ""
   );
 }
 
-function getDreamText(dream) {
+function getDreamText(dream, language = "") {
+  const requestedLanguage = normalizeLanguage(language || dream.originalLanguage);
   const originalLanguage = normalizeLanguage(dream.originalLanguage);
+
+  if (
+    requestedLanguage !== originalLanguage &&
+    hasRecorderTranslation(dream, requestedLanguage)
+  ) {
+    return getLanguageSpecificValue(dream, "dream_text", requestedLanguage) || "";
+  }
 
   return (
     dream.originalText ||
@@ -1229,6 +1282,18 @@ function getDreamText(dream) {
     dream.text ||
     ""
   );
+}
+
+function hasRecorderTranslation(record, language) {
+  return normalizeTranslationLanguages(record.translationLanguages).includes(
+    normalizeLanguage(language)
+  );
+}
+
+function normalizeTranslationLanguages(value) {
+  if (!Array.isArray(value)) return [];
+
+  return [...new Set(value.map(normalizeLanguage))];
 }
 
 function getDreamAuthorName(dream, copy) {
@@ -1262,6 +1327,28 @@ function getLanguageSpecificValue(record, field, language) {
 
   const keys = fieldMap[field]?.[normalizedLanguage] || [];
   return keys.map((key) => record?.[key]).find(Boolean) || "";
+}
+
+function normalizeDreamTime(value) {
+  const rawValue = String(value || "").trim();
+  const match = rawValue.match(/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/);
+  if (!match) return "";
+
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
+function normalizeDreamPeriod(value) {
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  return ["morning", "afternoon", "evening", "night"].includes(normalizedValue)
+    ? normalizedValue
+    : "";
+}
+
+function normalizeDreamSequence(value) {
+  const parsed = Number(value || 1);
+  if (!Number.isFinite(parsed)) return 1;
+
+  return Math.max(1, Math.min(12, Math.round(parsed)));
 }
 
 function createExcerpt(value) {
@@ -2428,7 +2515,7 @@ function ObservationCard({
   const guestAdultGate = adultDream && !adultAccessible && !isAgeVerifiedAdult;
   const displayTitle = guestAdultGate
     ? copy.adultRestrictedTitle
-    : getDreamTitle(dream);
+    : getDreamTitle(dream, language);
   const canShowThumbnail = Boolean(canSeeImages && getPrimaryDreamImageUrl(dream));
   const recorderId = getRecorderId(dream);
   const canShowFollow =
@@ -2463,8 +2550,8 @@ function ObservationCard({
       ...dream,
       id: dream.dream_id,
       originalLanguage: normalizeLanguage(dream.originalLanguage),
-      originalTitle: dream.originalTitle || getDreamTitle(dream),
-      originalText: dream.originalText || getDreamText(dream),
+      originalTitle: dream.originalTitle || getDreamTitle(dream, dream.originalLanguage),
+      originalText: dream.originalText || getDreamText(dream, dream.originalLanguage),
       recordIdentityMode: dream.recordIdentityMode || "anonymous",
       adultContent: adultDream,
       minimumViewerAge: adultDream ? 18 : 0,
@@ -2512,8 +2599,8 @@ function ObservationCard({
           ...dream,
           id: dream.dream_id,
           originalLanguage: normalizeLanguage(dream.originalLanguage),
-          originalTitle: dream.originalTitle || getDreamTitle(dream),
-          originalText: dream.originalText || getDreamText(dream),
+          originalTitle: dream.originalTitle || getDreamTitle(dream, dream.originalLanguage),
+          originalText: dream.originalText || getDreamText(dream, dream.originalLanguage),
           recordIdentityMode: dream.recordIdentityMode || "anonymous",
           adultContent: adultDream,
           minimumViewerAge: adultDream ? 18 : 0,
@@ -2575,7 +2662,7 @@ function ObservationCard({
         )}
 
         <p className="mt-3 text-sm leading-7 text-zinc-300">
-          {guestAdultGate ? copy.adultGuestPrompt : getDreamExcerpt(dream)}
+          {guestAdultGate ? copy.adultGuestPrompt : getDreamExcerpt(dream, language)}
         </p>
 
         {!guestAdultGate && dream.recordIdentityMode === "account" && (
@@ -2709,7 +2796,7 @@ function ObservationThumbnail({ dream, language, copy, canSeeImages }) {
     <div className="relative h-48 overflow-hidden border-b border-white/10 bg-black">
       <img
         src={imageUrl}
-        alt={`${copy.generatedImageAlt} ${getDreamTitle(dream)}`}
+        alt={`${copy.generatedImageAlt} ${getDreamTitle(dream, language)}`}
         className="h-full w-full object-cover opacity-90"
         onError={() => setImageFailed(true)}
       />

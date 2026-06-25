@@ -7,7 +7,12 @@ import {
 import { ref as storageRef, uploadBytes } from "firebase/storage";
 import { db, isFirebaseConfigured, isFirebaseStorageConfigured, storage } from "./firebaseClient.js";
 import { normalizeLanguage } from "./language.js";
-import { createDreamRecord } from "./recordsService.js";
+import {
+  addRecorderTranslationToRecord,
+  createDreamRecord,
+  DREAM_PERIODS,
+  fetchOwnedRecords,
+} from "./recordsService.js";
 import { getTagLabel, RECORD_TAGS } from "./tagTaxonomy.js";
 
 export const DIARY_FILE_ACCEPT = ".txt,.md,.markdown,.csv,.json,text/plain,text/markdown,text/csv,application/json";
@@ -242,13 +247,21 @@ export async function createDreamDiaryImport({
   });
 
   const importedRecords = [];
+  const linkedTranslationRecords = [];
   const failedDrafts = [];
+  const ownedRecords = await fetchOwnedRecords(currentUser).catch(() => []);
+  const matchableRecords = [...ownedRecords];
 
   for (const [selectedIndex, draft] of selectedDrafts.entries()) {
     const draftRef = doc(collection(firestore, "ImportBatches", batchRef.id, "DraftDreams"));
     const selectedTagSlugs = getSelectedTagSlugs(draft);
     const suggestedTags = normalizeSuggestedTags(draft.suggestedTags || draft.tagSuggestions || []);
     const title = getImportTitle(draft, selectedIndex);
+    const draftLanguage = normalizeLanguage(draft.originalLanguage || "en");
+    const dreamDate = draft.detectedDate || draft.dreamDate || "";
+    const dreamTime = normalizeDreamTime(draft.detectedTime || draft.dreamTime || "");
+    const dreamPeriod = normalizeDreamPeriod(draft.dreamPeriod || draft.dream_period);
+    const dreamSequence = normalizeDreamSequence(draft.dreamSequence || draft.dream_sequence);
 
     await setDoc(draftRef, {
       id: draftRef.id,
@@ -258,14 +271,18 @@ export async function createDreamDiaryImport({
       sourceOrderIndex: Number.isFinite(draft.sourceOrderIndex) ? draft.sourceOrderIndex : selectedIndex,
       rawText: String(draft.rawText || "").trim(),
       cleanedText: String(draft.cleanedText || draft.rawText || "").trim(),
-      detectedDate: draft.detectedDate || "",
-      dreamDateStatus: draft.dreamDateStatus || (draft.detectedDate ? "known" : "unknown"),
+      detectedDate: dreamDate,
+      detectedTime: dreamTime,
+      dreamTime,
+      dreamPeriod,
+      dreamSequence,
+      dreamDateStatus: draft.dreamDateStatus || (dreamDate ? "known" : "unknown"),
       detectedTitle: draft.detectedTitle || "",
       suggestedTitle: draft.suggestedTitle || "",
       title,
       titleSource: draft.titleSource || "import_review",
       titleConfidence: Number(draft.titleConfidence || 0),
-      originalLanguage: normalizeLanguage(draft.originalLanguage || "en"),
+      originalLanguage: draftLanguage,
       selectedTagSlugs,
       suggestedTags,
       tagsSource: draft.tagsSource || "rule_suggestions",
@@ -280,14 +297,59 @@ export async function createDreamDiaryImport({
     });
 
     try {
+      const translationTarget = findTranslationTarget(matchableRecords, {
+        ownerId: currentUser.uid,
+        dreamDate,
+        dreamTime,
+        dreamPeriod,
+        dreamSequence,
+        language: draftLanguage,
+      });
+
+      if (translationTarget) {
+        const record = await addRecorderTranslationToRecord(
+          currentUser,
+          translationTarget.id || translationTarget.dream_id || translationTarget.recordId,
+          {
+            language: draftLanguage,
+            title,
+            dreamText: String(draft.rawText || "").trim(),
+          }
+        );
+
+        linkedTranslationRecords.push(record);
+        const recordIndex = matchableRecords.findIndex(
+          (item) => getRecordId(item) === getRecordId(record)
+        );
+        if (recordIndex >= 0) {
+          matchableRecords.splice(recordIndex, 1, record);
+        } else {
+          matchableRecords.push(record);
+        }
+        await setDoc(
+          draftRef,
+          {
+            status: "imported",
+            importedRecordId: record.id || record.dream_id,
+            importedAsTranslation: true,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        continue;
+      }
+
       const record = await createDreamRecord(
         currentUser,
         {
           dreamText: String(draft.rawText || "").trim(),
           title,
-          dreamDate: draft.detectedDate || draft.dreamDate || "",
-          dreamDateStatus: draft.dreamDateStatus || (draft.detectedDate ? "known" : "unknown"),
-          originalLanguage: normalizeLanguage(draft.originalLanguage || "en"),
+          dreamDate,
+          dreamDateStatus: draft.dreamDateStatus || (dreamDate ? "known" : "unknown"),
+          dreamTime,
+          dreamPeriod,
+          dreamSequence,
+          originalLanguage: draftLanguage,
           ageAtDream: draft.ageAtDream || "",
           adultContent: Boolean(draft.adultContent),
           selectedTagSlugs,
@@ -316,6 +378,7 @@ export async function createDreamDiaryImport({
       );
 
       importedRecords.push(record);
+      matchableRecords.push(record);
       await setDoc(
         draftRef,
         {
@@ -344,6 +407,7 @@ export async function createDreamDiaryImport({
     {
       status: failedDrafts.length > 0 ? "completed_with_errors" : "imported",
       importedCount: importedRecords.length,
+      linkedTranslationCount: linkedTranslationRecords.length,
       failedCount: failedDrafts.length,
       completedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -354,9 +418,69 @@ export async function createDreamDiaryImport({
   return {
     batchId: batchRef.id,
     importedRecords,
+    linkedTranslationRecords,
     failedDrafts,
     storageUploadError,
   };
+}
+
+function findTranslationTarget(records, draft) {
+  if (!draft.ownerId || !draft.dreamDate) return null;
+
+  return records.find((record) => {
+    const recordLanguage = normalizeLanguage(record?.originalLanguage || "en");
+    if (recordLanguage === draft.language) return false;
+    if ((record?.ownerId || record?.creatorId || "") !== draft.ownerId) return false;
+    if (normalizeRecordDate(record?.dreamDate || record?.dream_date) !== draft.dreamDate) {
+      return false;
+    }
+    if (
+      normalizeDreamSequence(record?.dreamSequence || record?.dream_sequence) !==
+      normalizeDreamSequence(draft.dreamSequence)
+    ) {
+      return false;
+    }
+
+    const recordTime = normalizeDreamTime(record?.dreamTime || record?.dream_time);
+    const recordPeriod = normalizeDreamPeriod(record?.dreamPeriod || record?.dream_period);
+
+    if (draft.dreamTime && recordTime && draft.dreamTime === recordTime) return true;
+    if (draft.dreamPeriod && recordPeriod && draft.dreamPeriod === recordPeriod) return true;
+
+    return false;
+  });
+}
+
+function getRecordId(record) {
+  return record?.id || record?.dream_id || record?.recordId || "";
+}
+
+function normalizeRecordDate(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value.slice(0, 10);
+  if (typeof value.toDate === "function") return value.toDate().toISOString().slice(0, 10);
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return "";
+}
+
+function normalizeDreamTime(value) {
+  const rawValue = String(value || "").trim();
+  const match = rawValue.match(/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/);
+  if (!match) return "";
+
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
+function normalizeDreamPeriod(value) {
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  return DREAM_PERIODS.includes(normalizedValue) ? normalizedValue : "";
+}
+
+function normalizeDreamSequence(value) {
+  const parsed = Number(value || 1);
+  if (!Number.isFinite(parsed)) return 1;
+
+  return Math.max(1, Math.min(12, Math.round(parsed)));
 }
 
 function inferImportFormat(fileName, text, requestedMode) {
@@ -405,6 +529,15 @@ function parseJsonDiary(text, language) {
         "",
       title: entry?.title || entry?.name || "",
       date: entry?.dreamDate || entry?.dream_date || entry?.date || "",
+      time: entry?.dreamTime || entry?.dream_time || entry?.time || "",
+      period: entry?.dreamPeriod || entry?.dream_period || entry?.timeOfDay || entry?.time_of_day || "",
+      sequence:
+        entry?.dreamSequence ||
+        entry?.dream_sequence ||
+        entry?.sequence ||
+        entry?.orderInPeriod ||
+        entry?.order_in_period ||
+        1,
       language: normalizeLanguage(entry?.originalLanguage || entry?.language || language),
       adultContent: Boolean(entry?.adultContent || entry?.adult_content),
       boundaryConfidence: 0.95,
@@ -434,6 +567,9 @@ function parseCsvDiary(text, language) {
     const text = getByHeader(row, ["text", "dreamtext", "dream_text", "dream", "content", "body"], hasHeader ? -1 : row.length - 1);
     const title = getByHeader(row, ["title", "name", "heading"], hasHeader ? -1 : 1);
     const date = getByHeader(row, ["date", "dreamdate", "dream_date", "recordeddate", "recorded_date"], hasHeader ? -1 : 0);
+    const time = getByHeader(row, ["time", "dreamtime", "dream_time", "clocktime", "clock_time"], -1);
+    const period = getByHeader(row, ["period", "dreamperiod", "dream_period", "timeofday", "time_of_day"], -1);
+    const sequence = getByHeader(row, ["sequence", "dreamsequence", "dream_sequence", "order", "orderinperiod", "order_in_period"], -1);
     const entryLanguage = getByHeader(row, ["language", "originallanguage", "original_language"], -1);
     const adult = getByHeader(row, ["adult", "adultcontent", "adult_content", "isadult"], -1);
 
@@ -441,6 +577,9 @@ function parseCsvDiary(text, language) {
       text,
       title,
       date,
+      time,
+      period,
+      sequence,
       language: normalizeLanguage(entryLanguage || language),
       adultContent: ["true", "1", "yes", "y"].includes(String(adult || "").trim().toLowerCase()),
       boundaryConfidence: 0.9,
@@ -462,6 +601,9 @@ function parseTextByHeadings(text, language, requestedMode = DIARY_IMPORT_MODES.
     current = {
       lines: [],
       detectedDate: metadata.date || "",
+      detectedTime: metadata.time || "",
+      dreamPeriod: metadata.period || "",
+      dreamSequence: normalizeDreamSequence(metadata.sequence),
       detectedTitle: metadata.title || "",
       sourceLineStart: metadata.lineNumber || null,
       boundaryConfidence: metadata.confidence || 0.8,
@@ -478,6 +620,9 @@ function parseTextByHeadings(text, language, requestedMode = DIARY_IMPORT_MODES.
           text: body || current.detectedTitle,
           title: current.detectedTitle,
           date: current.detectedDate,
+          time: current.detectedTime,
+          period: current.dreamPeriod,
+          sequence: current.dreamSequence,
           language,
           boundaryConfidence: current.boundaryConfidence,
           boundaryReason: current.boundaryReason,
@@ -538,6 +683,9 @@ function parseTextByBlankBlocks(text, language) {
         text: heading?.inlineText ? [heading.inlineText, ...block.split("\n").slice(1)].join("\n") : block,
         title: heading?.title || "",
         date: heading?.date || extractDateFromText(block),
+        time: heading?.time || "",
+        period: heading?.period || "",
+        sequence: heading?.sequence || 1,
         language,
         boundaryConfidence: heading ? 0.78 : 0.55,
         boundaryReason: heading ? "blank_block_heading" : "blank_block",
@@ -549,6 +697,9 @@ function makeDraftFromParts({
   text,
   title = "",
   date = "",
+  time = "",
+  period = "",
+  sequence = 1,
   language = "en",
   adultContent = false,
   boundaryConfidence = 0.5,
@@ -558,12 +709,19 @@ function makeDraftFromParts({
 }) {
   const rawText = String(text || "").trim();
   const detectedDate = normalizeDetectedDate(date || extractDateFromText(rawText));
+  const detectedTime = normalizeDreamTime(time || extractTimeFromText(rawText));
+  const dreamPeriod = normalizeDreamPeriod(period);
+  const dreamSequence = normalizeDreamSequence(sequence);
   const detectedTitle = normalizeImportedTitle(title);
 
   return {
     rawText,
     detectedTitle,
     detectedDate,
+    detectedTime,
+    dreamTime: detectedTime,
+    dreamPeriod,
+    dreamSequence,
     dreamDateStatus: detectedDate ? "known" : "unknown",
     originalLanguage: normalizeLanguage(language),
     adultContent,
@@ -603,6 +761,10 @@ function enhanceDraft(draft, index, language, sourceFormat) {
     titleConfidence: suggestedTitleData.confidence,
     originalLanguage,
     detectedDate: draft.detectedDate || "",
+    detectedTime: normalizeDreamTime(draft.detectedTime || draft.dreamTime),
+    dreamTime: normalizeDreamTime(draft.dreamTime || draft.detectedTime),
+    dreamPeriod: normalizeDreamPeriod(draft.dreamPeriod || draft.dream_period),
+    dreamSequence: normalizeDreamSequence(draft.dreamSequence || draft.dream_sequence),
     dreamDateStatus: draft.dreamDateStatus || (draft.detectedDate ? "known" : "unknown"),
     adultContent: Boolean(draft.adultContent || highConfidenceDirectSlugs.includes("adult-content")),
     boundaryConfidence: Number(draft.boundaryConfidence || 0),
@@ -800,6 +962,8 @@ function detectDiaryHeading(line) {
   const markdownMatch = line.match(/^#{1,6}\s+(.+)$/u);
   const plainLine = markdownMatch ? markdownMatch[1].trim() : line;
   const date = extractDateFromText(plainLine, true);
+  const time = extractTimeFromText(plainLine, true);
+  const period = extractPeriodFromText(plainLine);
 
   if (date && plainLine.length <= 80) {
     const title = normalizeImportedTitle(
@@ -809,6 +973,8 @@ function detectDiaryHeading(line) {
     );
     return {
       date: date.value,
+      time: time?.value || "",
+      period: period?.value || "",
       title,
       confidence: 0.9,
       reason: "date_heading",
@@ -865,6 +1031,33 @@ function extractDateFromText(text, returnObject = false) {
   }
 
   return returnObject ? null : "";
+}
+
+function extractTimeFromText(text, returnObject = false) {
+  const value = String(text || "").trim();
+  const match = value.match(/\b([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\b/u);
+
+  if (!match) return returnObject ? null : "";
+
+  const normalized = `${match[1].padStart(2, "0")}:${match[2]}`;
+  return returnObject ? { value: normalized, original: match[0] } : normalized;
+}
+
+function extractPeriodFromText(text) {
+  const value = String(text || "");
+  const periodPatterns = [
+    { value: "morning", pattern: /\b(morning|am)\b|早上|上午|清晨|mañana/iu },
+    { value: "afternoon", pattern: /\b(afternoon|pm)\b|下午|午後|tarde/iu },
+    { value: "evening", pattern: /\b(evening)\b|傍晚|晚上|atardecer/iu },
+    { value: "night", pattern: /\b(night|late night)\b|夜晚|深夜|noche/iu },
+  ];
+
+  for (const item of periodPatterns) {
+    const match = value.match(item.pattern);
+    if (match) return { value: item.value, original: match[0] };
+  }
+
+  return null;
 }
 
 function normalizeDetectedDate(value) {
