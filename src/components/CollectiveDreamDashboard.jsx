@@ -2060,10 +2060,10 @@ function HomePathways({ copy, activeSection, onSelectSection }) {
                   : "border-white/10 bg-black/30",
               ].join(" ")}
             >
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70 sm:tracking-[0.2em]">
+              <h3 className="text-base font-semibold leading-snug text-zinc-50 sm:text-lg">
                 {section.title}
-              </p>
-              <p className="cdo-mobile-readable-text mt-4 text-sm leading-relaxed text-slate-300">
+              </h3>
+              <p className="cdo-mobile-readable-text mt-3 text-sm leading-relaxed text-slate-300">
                 {section.text}
               </p>
             </button>
@@ -2082,8 +2082,8 @@ function AudienceCard({ title, text, accent }) {
 
   return (
     <article className={`rounded-2xl border p-6 ${accentClass}`}>
-      <h3 className="text-lg font-semibold text-zinc-50">{title}</h3>
-      <p className="mt-4 text-sm leading-relaxed text-slate-300">{text}</p>
+      <h3 className="text-xl font-semibold leading-tight text-zinc-50">{title}</h3>
+      <p className="mt-3 text-[15px] font-medium leading-relaxed text-slate-300">{text}</p>
     </article>
   );
 }
@@ -2721,29 +2721,40 @@ function FilterPanel({
 
 function ObservationSortBar({ sortMode, setSortMode, totalItems, copy }) {
   return (
-    <section className="mb-5 flex flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-950/65 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-      <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
-        {copy.showingLabel} <span className="text-cyan-100">{totalItems}</span>
-      </p>
+    <section className="mb-5 rounded-2xl border border-white/10 bg-zinc-950/65 p-4 backdrop-blur sm:p-5">
+      <div className="mb-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
+        <h3 className="text-base font-semibold leading-snug text-zinc-50">
+          {copy.signalCoherence}
+        </h3>
+        <p className="mt-2 max-w-4xl text-sm font-medium leading-relaxed text-slate-300">
+          {copy.signalCoherenceInfo}
+        </p>
+      </div>
 
-      <label className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[18rem] sm:flex-row sm:items-center sm:justify-end">
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-          {copy.sortSelectLabel}
-        </span>
-        <select
-          value={sortMode}
-          onChange={(event) => setSortMode(event.target.value)}
-          className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20 sm:w-60"
-          aria-label={copy.sortSelectLabel}
-        >
-          <option value="newest">{copy.sortNewest}</option>
-          <option value="oldest">{copy.sortOldest}</option>
-          <option value="updated">{copy.sortUpdated}</option>
-          <option value="title">{copy.sortTitle}</option>
-          <option value="author">{copy.sortAuthor}</option>
-          <option value="coherence">{copy.sortCoherence}</option>
-        </select>
-      </label>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+          {copy.showingLabel} <span className="text-cyan-100">{totalItems}</span>
+        </p>
+
+        <label className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[18rem] sm:flex-row sm:items-center sm:justify-end">
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+            {copy.sortSelectLabel}
+          </span>
+          <select
+            value={sortMode}
+            onChange={(event) => setSortMode(event.target.value)}
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20 sm:w-60"
+            aria-label={copy.sortSelectLabel}
+          >
+            <option value="newest">{copy.sortNewest}</option>
+            <option value="oldest">{copy.sortOldest}</option>
+            <option value="updated">{copy.sortUpdated}</option>
+            <option value="title">{copy.sortTitle}</option>
+            <option value="author">{copy.sortAuthor}</option>
+            <option value="coherence">{copy.sortCoherence}</option>
+          </select>
+        </label>
+      </div>
     </section>
   );
 }
@@ -3071,7 +3082,7 @@ function ObservationCard({
           </div>
         )}
 
-        <div className="mt-6 border-t border-white/10 pt-5" title={copy.signalCoherenceInfo}>
+        <div className="mt-6 border-t border-white/10 pt-5">
           <div className="mb-2 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.18em]">
             <span className="text-zinc-500">{copy.signalCoherence}</span>
             <span className="text-cyan-100">{dream.signal_coherence}%</span>
@@ -3083,9 +3094,6 @@ function ObservationCard({
               style={{ width: `${dream.signal_coherence}%` }}
             />
           </div>
-          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-500">
-            {copy.signalCoherenceInfo}
-          </p>
           <button
             type="button"
             onClick={handleCollect}
