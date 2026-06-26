@@ -195,6 +195,8 @@ const DETAIL_COPY = {
     metadataSaved: "Dream metadata saved",
     signInToCollect: "Sign in to collect this dream",
     recorderRulesTitle: "Recording Standards",
+    recorderRulesCollapse: "Collapse",
+    recorderRulesExpand: "Show standards",
     recorderRules: [
       "Record only dreams you personally observed or were clearly allowed to record.",
       "First-person wording such as I, me, and my is allowed and does not count as exposing a private real name.",
@@ -280,6 +282,8 @@ const DETAIL_COPY = {
     metadataSaved: "夢境資料已儲存",
     signInToCollect: "登入後可收藏此夢境",
     recorderRulesTitle: "記錄標準",
+    recorderRulesCollapse: "收合",
+    recorderRulesExpand: "展開標準",
     recorderRules: [
       "只記錄你親自經歷，或已獲得同意可歸檔的夢境。",
       "可以使用「我」、「我的」等第一人稱，這不算暴露私人真實姓名。",
@@ -370,6 +374,8 @@ const DETAIL_COPY = {
     metadataSaved: "Metadatos guardados",
     signInToCollect: "Inicia sesión para coleccionar este sueño",
     recorderRulesTitle: "Reglas de registro",
+    recorderRulesCollapse: "Contraer",
+    recorderRulesExpand: "Mostrar reglas",
     recorderRules: [
       "Registra solo sueños que observaste personalmente o que tienes permiso para archivar.",
       "La primera persona como yo, me y mi está permitida y no cuenta como exponer un nombre real privado.",
@@ -445,6 +451,7 @@ export default function DreamRecordPage({
   const [collecting, setCollecting] = useState(false);
   const [sharingSaving, setSharingSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [rulesExpanded, setRulesExpanded] = useState(true);
   const title = getDisplayRecordTitle(normalizedRecord, language);
   const body = getDisplayRecordText(normalizedRecord, language);
   const originalLanguage = normalizeLanguage(normalizedRecord.originalLanguage);
@@ -864,17 +871,31 @@ export default function DreamRecordPage({
               </div>
 
               <div className="mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
-                <p className="mb-3 font-mono text-xs uppercase tracking-[0.24em] text-fuchsia-200/70">
-                  {copy.recorderRulesTitle}
-                </p>
-                <ul className="space-y-3 text-sm leading-relaxed text-slate-300">
-                  {copy.recorderRules.map((rule) => (
-                    <li key={rule} className="flex gap-2">
-                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
-                      <span>{rule}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-fuchsia-200/70">
+                    {copy.recorderRulesTitle}
+                  </p>
+                  <button
+                    type="button"
+                    aria-expanded={rulesExpanded}
+                    onClick={() => setRulesExpanded((current) => !current)}
+                    className="shrink-0 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15"
+                  >
+                    {rulesExpanded
+                      ? copy.recorderRulesCollapse
+                      : copy.recorderRulesExpand}
+                  </button>
+                </div>
+                {rulesExpanded && (
+                  <ul className="mt-4 space-y-3 text-sm leading-relaxed text-slate-300">
+                    {copy.recorderRules.map((rule) => (
+                      <li key={rule} className="flex gap-2">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+                        <span>{rule}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {isOwner && (

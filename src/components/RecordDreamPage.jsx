@@ -213,6 +213,8 @@ const RECORD_COPY = {
     emailPasswordUnavailable:
       "Email and password login is not available yet. Use Google or guest mode for now.",
     rulesTitle: "Recording standards",
+    rulesCollapse: "Collapse",
+    rulesExpand: "Show standards",
     rules: [
       "Dream records need written words; images are optional.",
       "First-person wording such as I, me, and my is welcome; dreamers do not need to rewrite their own voice.",
@@ -315,6 +317,8 @@ const RECORD_COPY = {
     authError: "無法確認帳戶狀態；草稿仍然保留在這裡。",
     emailPasswordUnavailable: "電子郵件與密碼登入目前尚未開放。請先使用 Google 或訪客模式。",
     rulesTitle: "記錄標準",
+    rulesCollapse: "收合",
+    rulesExpand: "展開標準",
     rules: [
       "夢境記錄必須有文字；圖片可以有，但不是必要。",
       "可以自然使用「我」、「我的」等第一人稱，不需要改寫掉自己的語氣。",
@@ -426,6 +430,8 @@ const RECORD_COPY = {
     emailPasswordUnavailable:
       "El inicio con correo y contraseña aún no está disponible. Usa Google o modo invitado por ahora.",
     rulesTitle: "Reglas de registro",
+    rulesCollapse: "Contraer",
+    rulesExpand: "Mostrar reglas",
     rules: [
       "Los registros necesitan texto escrito; las imágenes son opcionales.",
       "Puedes usar primera persona como yo, me y mi; no hace falta quitar tu propia voz.",
@@ -481,6 +487,7 @@ export default function RecordDreamPage({
   const [authLoading, setAuthLoading] = useState("");
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
+  const [rulesExpanded, setRulesExpanded] = useState(true);
   const accountBacked = Boolean(currentUser?.uid && !currentUser.isAnonymous);
   const timeCopy = RECORDER_TIME_COPY[normalizeLanguage(language)] || RECORDER_TIME_COPY.zh;
   const imagePreviews = useMemo(
@@ -1350,17 +1357,29 @@ export default function RecordDreamPage({
             </section>
 
             <section className="rounded-3xl border border-white/10 bg-black/45 p-5 backdrop-blur">
-              <p className="font-mono text-xs uppercase tracking-[0.26em] text-fuchsia-200/70">
-                {copy.rulesTitle}
-              </p>
-              <ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-300">
-                {copy.rules.map((rule) => (
-                  <li key={rule} className="flex gap-2">
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
-                    <span>{rule}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-mono text-xs uppercase tracking-[0.26em] text-fuchsia-200/70">
+                  {copy.rulesTitle}
+                </p>
+                <button
+                  type="button"
+                  aria-expanded={rulesExpanded}
+                  onClick={() => setRulesExpanded((current) => !current)}
+                  className="shrink-0 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15"
+                >
+                  {rulesExpanded ? copy.rulesCollapse : copy.rulesExpand}
+                </button>
+              </div>
+              {rulesExpanded && (
+                <ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-300">
+                  {copy.rules.map((rule) => (
+                    <li key={rule} className="flex gap-2">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+                      <span>{rule}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
           </aside>
         </section>
