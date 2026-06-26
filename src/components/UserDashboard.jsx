@@ -6,6 +6,7 @@ import {
   fetchSavedRecords,
   removeCollectedRecord,
   removeSavedRecord,
+  updateOwnedRecordSharing,
 } from "../lib/recordsService.js";
 import {
   createDefaultProfile,
@@ -49,6 +50,15 @@ const DASHBOARD_COPY = {
     exportScopeDreams: "Dream diary only",
     exportScopeCoded: "Dreams + tags",
     exportScopeAnalysis: "Full private fields",
+    bulkShareTitle: "Share private observations",
+    bulkShareText:
+      "Apply one public sharing mode to every dream in My Observations. You can still edit individual dreams later.",
+    shareAllAnonymous: "Share all anonymously",
+    shareAllAccount: "Share all with account",
+    bulkSharing: "Updating sharing...",
+    bulkShareAnonymousDone: ({ count }) => `${count} dreams are now public as anonymous records.`,
+    bulkShareAccountDone: ({ count }) => `${count} dreams are now public with account attribution.`,
+    bulkShareFailed: "Some dreams could not be updated. Please try again.",
     consoleLabel: "Account Console",
     memberSince: "Member since",
     signOut: "Sign Out",
@@ -133,6 +143,14 @@ const DASHBOARD_COPY = {
     exportScopeDreams: "只匯出夢境日記",
     exportScopeCoded: "夢境與標籤",
     exportScopeAnalysis: "完整私人欄位",
+    bulkShareTitle: "批次公開私人觀測",
+    bulkShareText: "把「我的觀測」中的所有夢境套用同一種公開方式。之後仍可逐則修改。",
+    shareAllAnonymous: "全部匿名公開",
+    shareAllAccount: "全部以帳戶公開",
+    bulkSharing: "正在更新公開狀態...",
+    bulkShareAnonymousDone: ({ count }) => `已將 ${count} 則夢境設為匿名公開。`,
+    bulkShareAccountDone: ({ count }) => `已將 ${count} 則夢境設為帳戶署名公開。`,
+    bulkShareFailed: "部分夢境無法更新，請再試一次。",
     consoleLabel: "帳戶終端",
     memberSince: "會員起始日",
     signOut: "登出",
@@ -216,6 +234,15 @@ const DASHBOARD_COPY = {
     exportScopeDreams: "Solo diario",
     exportScopeCoded: "Sueños + etiquetas",
     exportScopeAnalysis: "Campos privados completos",
+    bulkShareTitle: "Compartir observaciones privadas",
+    bulkShareText:
+      "Aplica un modo público a todos los sueños de Mis observaciones. Luego puedes editar cada sueño por separado.",
+    shareAllAnonymous: "Compartir todo anónimo",
+    shareAllAccount: "Compartir todo con cuenta",
+    bulkSharing: "Actualizando...",
+    bulkShareAnonymousDone: ({ count }) => `${count} sueños ahora son públicos como registros anónimos.`,
+    bulkShareAccountDone: ({ count }) => `${count} sueños ahora son públicos con atribución de cuenta.`,
+    bulkShareFailed: "Algunos sueños no se pudieron actualizar. Inténtalo de nuevo.",
     consoleLabel: "Consola de cuenta",
     memberSince: "Miembro desde",
     signOut: "Cerrar sesión",
@@ -390,6 +417,8 @@ export default function UserDashboard({
   const [collectionRecords, setCollectionRecords] = useState([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [recordsError, setRecordsError] = useState("");
+  const [bulkSharingMode, setBulkSharingMode] = useState("");
+  const [bulkShareNotice, setBulkShareNotice] = useState("");
   const [exportDetail, setExportDetail] = useState(EXPORT_DETAIL_LEVELS.ANALYSIS);
   const exportDetailOptions = [
     { value: EXPORT_DETAIL_LEVELS.DREAMS, label: copy.exportScopeDreams },
@@ -500,6 +529,49 @@ export default function UserDashboard({
       setProfileNotice(error.message);
     } finally {
       setProfileSaving(false);
+    }
+  }
+
+  async function handleShareAll(sharingMode) {
+    if (!user?.uid || observations.length === 0 || bulkSharingMode) return;
+
+    setBulkSharingMode(sharingMode);
+    setBulkShareNotice(copy.bulkSharing);
+
+    try {
+      const results = await Promise.allSettled(
+        observations.map((record) =>
+          updateOwnedRecordSharing(user, record.id, { sharingMode }, profile).then(
+            () => record.id
+          )
+        )
+      );
+      const successfulIds = new Set(
+        results
+          .filter((result) => result.status === "fulfilled")
+          .map((result) => result.value)
+      );
+      const sharingPatch = buildDashboardSharingPatch(sharingMode, user, profile);
+
+      if (successfulIds.size > 0) {
+        setObservations((current) =>
+          current.map((item) =>
+            successfulIds.has(item.id) ? { ...item, ...sharingPatch } : item
+          )
+        );
+      }
+
+      setBulkShareNotice(
+        successfulIds.size === observations.length
+          ? sharingMode === "public_pseudonym"
+            ? copy.bulkShareAccountDone({ count: successfulIds.size })
+            : copy.bulkShareAnonymousDone({ count: successfulIds.size })
+          : copy.bulkShareFailed
+      );
+    } catch {
+      setBulkShareNotice(copy.bulkShareFailed);
+    } finally {
+      setBulkSharingMode("");
     }
   }
 
@@ -627,6 +699,46 @@ export default function UserDashboard({
                   label={copy.identityStatus}
                   value={getLanguageName(displayUser.preferredLanguage || language, language)}
                 />
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-3">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-100">
+                  {copy.bulkShareTitle}
+                </p>
+                <p className="mt-2 text-xs leading-5 text-zinc-400">
+                  {copy.bulkShareText}
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => handleShareAll("public_anonymous")}
+                    disabled={observations.length === 0 || Boolean(bulkSharingMode)}
+                    className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {bulkSharingMode === "public_anonymous"
+                      ? copy.bulkSharing
+                      : copy.shareAllAnonymous}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleShareAll("public_pseudonym")}
+                    disabled={
+                      observations.length === 0 ||
+                      Boolean(bulkSharingMode) ||
+                      Boolean(user?.isAnonymous)
+                    }
+                    className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-fuchsia-300/45 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {bulkSharingMode === "public_pseudonym"
+                      ? copy.bulkSharing
+                      : copy.shareAllAccount}
+                  </button>
+                </div>
+                {bulkShareNotice && (
+                  <p className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300">
+                    {bulkShareNotice}
+                  </p>
+                )}
               </div>
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-3">
@@ -976,6 +1088,26 @@ function normalizeDashboardUser(user, profile) {
 
 function getBiologicalSexLabel(value, copy) {
   return copy.biologicalSexOptions?.[value] || copy.biologicalSexPlaceholder || "--";
+}
+
+function buildDashboardSharingPatch(sharingMode, user, profile) {
+  const isPublic = sharingMode === "public_anonymous" || sharingMode === "public_pseudonym";
+  const recordIdentityMode = sharingMode === "public_pseudonym" ? "account" : "anonymous";
+
+  return {
+    visibility: isPublic ? "public" : "private",
+    isPublic,
+    sharingMode,
+    includedInResearchStats: isPublic || sharingMode === "stats_only",
+    researchConsent: isPublic || sharingMode === "stats_only",
+    publicConsent: isPublic,
+    recordIdentityMode,
+    attributionMode: recordIdentityMode,
+    creatorDisplayName:
+      recordIdentityMode === "account" ? profile?.displayName || user?.displayName || "" : "",
+    creatorEmail:
+      recordIdentityMode === "account" && profile?.showEmail ? user?.email || "" : "",
+  };
 }
 
 function normalizeRecordItem(item, index) {

@@ -10,8 +10,6 @@ import {
   refreshDraftSuggestions,
   validateDiaryFile,
 } from "../lib/dreamDiaryImportService.js";
-import { auth } from "../lib/firebaseClient.js";
-import { loginAnonymously } from "../lib/authService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import { getLanguageName, LANGUAGE_OPTIONS, normalizeLanguage } from "../lib/language.js";
 import { getTagLabel, RECORD_TAGS } from "../lib/tagTaxonomy.js";
@@ -30,7 +28,7 @@ const IMPORT_COPY = {
     kicker: "Bulk private import",
     title: "Import your dream diary",
     subtitle:
-      "Upload an existing dream diary and turn it into private dream records. Review every split, title, and tag before anything becomes public or contributes to statistics.",
+      "Upload an existing dream diary and attach it to your account. Review every split, title, tag, and sharing mode before saving.",
     uploadTitle: "1. Upload or paste diary text",
     uploadText:
       "Accepted formats: TXT, Markdown (.md), CSV, and JSON. For DOCX, Notion, Google Docs, Apple Notes, or phone notes, export or copy as plain text/Markdown first.",
@@ -49,10 +47,19 @@ const IMPORT_COPY = {
     parseButton: "Preview dreams",
     refreshButton: "Suggest titles & tags again",
     importButton: "Import selected as private dreams",
+    importButtonGeneric: "Import selected dreams",
     importingButton: "Importing...",
+    sharingTitle: "Sharing after import",
+    sharingText:
+      "Diary imports require an account so the records can appear in My Dream Map and be edited later.",
+    sharingPrivate: "Keep private",
+    sharingAnonymous: "Share publicly as anonymous",
+    sharingAccount: "Share publicly with account",
+    accountRequired: "Sign in with an account before importing a diary. Guest sessions can record one dream, but bulk diary import is account-only.",
+    signInToImport: "Sign in to import",
     reviewTitle: "2. Review drafts before import",
     reviewText:
-      "Imported dreams are private by default. Titles and tags are suggestions only; weak or far-fetched tags should be removed before research use.",
+      "Choose whether this batch stays private, publishes anonymously, or publishes with account attribution. Titles and tags are suggestions only; weak or far-fetched tags should be removed before research use.",
     selectedCount: ({ selected, total }) => `${selected}/${total} selected`,
     noDrafts: "No draft dreams yet. Upload or paste text, then preview.",
     titleLabel: "Title",
@@ -79,7 +86,7 @@ const IMPORT_COPY = {
     noTags: "No strong evidence-based tags found.",
     privacyTitle: "Privacy first",
     privacyText:
-      "Bulk imports save as private records first. After import, you can open each dream and choose whether to keep private, share anonymously, share with a pseudonym, or contribute only to aggregated statistics.",
+      "Bulk imports are tied to your account so you can edit or delete them later. If you choose public sharing, the selected identity mode is applied to every imported dream.",
     disclaimerTitle: "Not a diagnosis",
     disclaimerText:
       "Automatic titles and tags describe visible dream content. They are not medical, psychological, or psychiatric diagnosis.",
@@ -88,8 +95,8 @@ const IMPORT_COPY = {
     readFailed: "The file could not be read.",
     parseFailed: "The diary could not be parsed. Check the format or use blank-line mode.",
     importNeedsDrafts: "Select at least one dream to import.",
-    importStarted: "Importing private dream records...",
-    importComplete: ({ count }) => `${count} private dreams imported.` ,
+    importStarted: "Importing dream records...",
+    importComplete: ({ count }) => `${count} dreams imported.`,
     translationComplete: ({ count }) => `${count} diary versions attached as recorder translations.`,
     skippedComplete: ({ count }) => `${count} duplicate dreams skipped.`,
     importErrors: ({ count }) => `${count} drafts could not be imported. Review the messages and try again.`,
@@ -133,7 +140,7 @@ const IMPORT_COPY = {
     kicker: "批次私人匯入",
     title: "匯入你的夢境日記",
     subtitle:
-      "上傳既有夢境日記，轉成私人夢境紀錄。每一則夢的切分、標題與標籤都能先檢查，任何內容都不會自動公開或加入統計。",
+      "上傳既有夢境日記並連到你的帳戶。儲存前可以檢查每一則夢的切分、標題、標籤與公開方式。",
     uploadTitle: "1. 上傳或貼上日記文字",
     uploadText:
       "支援格式：TXT、Markdown（.md）、CSV、JSON。DOCX、Notion、Google Docs、Apple Notes 或手機備忘錄，請先匯出或複製成純文字／Markdown。",
@@ -152,10 +159,18 @@ const IMPORT_COPY = {
     parseButton: "預覽夢境",
     refreshButton: "重新建議標題與標籤",
     importButton: "匯入選取項為私人夢境",
+    importButtonGeneric: "匯入選取夢境",
     importingButton: "正在匯入...",
+    sharingTitle: "匯入後的公開方式",
+    sharingText: "日記匯入需要登入帳戶，這樣紀錄才會出現在「我的夢境地圖」並可在之後修改。",
+    sharingPrivate: "保持私人",
+    sharingAnonymous: "匿名公開",
+    sharingAccount: "以帳戶公開",
+    accountRequired: "請先登入帳戶再匯入日記。訪客可以記錄單則夢境，但批次日記匯入只限帳戶使用。",
+    signInToImport: "登入後匯入",
     reviewTitle: "2. 匯入前檢查草稿",
     reviewText:
-      "匯入的夢境預設為私人。標題與標籤只是建議；過度詮釋或牽強的標籤應先移除，再用於研究。",
+      "選擇這批夢境要保持私人、匿名公開，或以帳戶署名公開。標題與標籤只是建議；過度詮釋或牽強的標籤應先移除，再用於研究。",
     selectedCount: ({ selected, total }) => `已選 ${selected}/${total}`,
     noDrafts: "尚無夢境草稿。請上傳或貼上文字後預覽。",
     titleLabel: "標題",
@@ -173,7 +188,7 @@ const IMPORT_COPY = {
     noTags: "沒有找到足夠明確的證據標籤。",
     privacyTitle: "隱私優先",
     privacyText:
-      "批次匯入會先儲存為私人紀錄。匯入後，你可以逐則打開夢境，選擇保持私人、匿名分享、以暱稱分享，或只加入整體統計。",
+      "批次匯入會連到你的帳戶，之後可以修改或刪除。若選擇公開，所選身份模式會套用到每一則匯入夢境。",
     disclaimerTitle: "這不是診斷",
     disclaimerText:
       "自動標題與標籤只描述夢中可見內容，不是醫療、心理或精神科診斷。",
@@ -182,8 +197,8 @@ const IMPORT_COPY = {
     readFailed: "無法讀取檔案。",
     parseFailed: "無法解析日記。請檢查格式，或改用空白段落模式。",
     importNeedsDrafts: "請至少選取一則夢境匯入。",
-    importStarted: "正在匯入私人夢境紀錄...",
-    importComplete: ({ count }) => `已匯入 ${count} 則私人夢境。`,
+    importStarted: "正在匯入夢境紀錄...",
+    importComplete: ({ count }) => `已匯入 ${count} 則夢境。`,
     skippedComplete: ({ count }) => `已略過 ${count} 則重複夢境。`,
     importErrors: ({ count }) => `${count} 則草稿無法匯入。請檢查訊息後再試。`,
     storageWarning: "原始檔案儲存尚不可用，但解析後的私人紀錄仍可儲存。",
@@ -225,7 +240,7 @@ const IMPORT_COPY = {
     kicker: "Importación privada por lotes",
     title: "Importa tu diario de sueños",
     subtitle:
-      "Sube un diario existente y conviértelo en registros privados. Revisa cada división, título y etiqueta antes de publicar o contribuir a estadísticas.",
+      "Sube un diario existente y vincúlalo a tu cuenta. Revisa cada división, título, etiqueta y modo de compartir antes de guardar.",
     uploadTitle: "1. Sube o pega el texto del diario",
     uploadText:
       "Formatos aceptados: TXT, Markdown (.md), CSV y JSON. Para DOCX, Notion, Google Docs, Apple Notes o notas del teléfono, exporta o copia primero como texto plano/Markdown.",
@@ -244,10 +259,19 @@ const IMPORT_COPY = {
     parseButton: "Previsualizar sueños",
     refreshButton: "Sugerir títulos y etiquetas otra vez",
     importButton: "Importar seleccionados como privados",
+    importButtonGeneric: "Importar sueños seleccionados",
     importingButton: "Importando...",
+    sharingTitle: "Modo de compartir",
+    sharingText:
+      "La importación de diario requiere una cuenta para que los registros aparezcan en Mi mapa de sueños y puedan editarse después.",
+    sharingPrivate: "Mantener privado",
+    sharingAnonymous: "Compartir público anónimo",
+    sharingAccount: "Compartir público con cuenta",
+    accountRequired: "Inicia sesión con una cuenta antes de importar un diario. Las sesiones invitadas pueden registrar un sueño, pero la importación por lotes requiere cuenta.",
+    signInToImport: "Iniciar sesión para importar",
     reviewTitle: "2. Revisa borradores antes de importar",
     reviewText:
-      "Los sueños importados son privados por defecto. Los títulos y etiquetas son solo sugerencias; elimina etiquetas débiles o forzadas antes de usarlas en investigación.",
+      "Elige si este lote queda privado, se publica de forma anónima o se publica con atribución de cuenta. Los títulos y etiquetas son sugerencias; elimina etiquetas débiles o forzadas antes de usarlas en investigación.",
     selectedCount: ({ selected, total }) => `${selected}/${total} seleccionados`,
     noDrafts: "Aún no hay borradores. Sube o pega texto y previsualiza.",
     titleLabel: "Título",
@@ -265,7 +289,7 @@ const IMPORT_COPY = {
     noTags: "No se encontraron etiquetas fuertes basadas en evidencia.",
     privacyTitle: "Privacidad primero",
     privacyText:
-      "Las importaciones por lotes se guardan primero como registros privados. Después puedes abrir cada sueño y elegir mantenerlo privado, compartirlo anónimamente, usar seudónimo o contribuir solo a estadísticas agregadas.",
+      "Las importaciones por lotes quedan vinculadas a tu cuenta para que puedas editarlas o eliminarlas después. Si eliges compartir públicamente, el modo de identidad seleccionado se aplica a cada sueño importado.",
     disclaimerTitle: "No es un diagnóstico",
     disclaimerText:
       "Los títulos y etiquetas automáticos describen contenido visible del sueño. No son diagnósticos médicos, psicológicos ni psiquiátricos.",
@@ -274,8 +298,8 @@ const IMPORT_COPY = {
     readFailed: "No se pudo leer el archivo.",
     parseFailed: "No se pudo analizar el diario. Revisa el formato o usa el modo de bloques vacíos.",
     importNeedsDrafts: "Selecciona al menos un sueño para importar.",
-    importStarted: "Importando registros privados...",
-    importComplete: ({ count }) => `${count} sueños privados importados.`,
+    importStarted: "Importando registros de sueños...",
+    importComplete: ({ count }) => `${count} sueños importados.`,
     skippedComplete: ({ count }) => `${count} sueños duplicados omitidos.`,
     importErrors: ({ count }) => `${count} borradores no se pudieron importar. Revisa los mensajes e inténtalo de nuevo.`,
     storageWarning: "El almacenamiento del archivo original no está disponible, pero los registros privados procesados se pueden guardar.",
@@ -422,6 +446,7 @@ export default function ImportDreamDiaryPage({
   currentUser,
   onOpenDatabase,
   onOpenDashboard,
+  onOpenAuth,
   onOpenRecorder,
 }) {
   const copy = IMPORT_COPY[language] || IMPORT_COPY.zh;
@@ -435,7 +460,14 @@ export default function ImportDreamDiaryPage({
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
   const [promptCopied, setPromptCopied] = useState(false);
+  const [sharingMode, setSharingMode] = useState("private");
   const timeCopy = getImportTimeCopy(language);
+  const hasImportAccount = Boolean(currentUser?.uid && !currentUser.isAnonymous);
+  const sharingOptions = [
+    { value: "private", label: copy.sharingPrivate },
+    { value: "public_anonymous", label: copy.sharingAnonymous },
+    { value: "public_pseudonym", label: copy.sharingAccount },
+  ];
 
   const selectedCount = useMemo(
     () => drafts.filter((draft) => draft.selected !== false).length,
@@ -460,6 +492,10 @@ export default function ImportDreamDiaryPage({
     setFile(nextFile);
 
     if (!nextFile) return;
+    if (!hasImportAccount) {
+      setError(copy.accountRequired);
+      return;
+    }
 
     const validationCode = validateDiaryFile(nextFile);
     if (validationCode) {
@@ -480,6 +516,11 @@ export default function ImportDreamDiaryPage({
     setError("");
     setNotice("");
     setResult(null);
+
+    if (!hasImportAccount) {
+      setError(copy.accountRequired);
+      return;
+    }
 
     try {
       const parsedDrafts = parseDiaryFileText(text, {
@@ -594,7 +635,7 @@ export default function ImportDreamDiaryPage({
 
   async function handleImportSelected() {
     setError("");
-    setNotice(copy.importStarted);
+    setNotice("");
     setResult(null);
 
     const selectedDrafts = drafts.filter((draft) => draft.selected !== false);
@@ -604,19 +645,17 @@ export default function ImportDreamDiaryPage({
       return;
     }
 
+    if (!hasImportAccount) {
+      setError(copy.accountRequired);
+      return;
+    }
+
+    setNotice(copy.importStarted);
     setImporting(true);
 
     try {
-      let submissionUser = auth?.currentUser || currentUser;
-      if (!submissionUser?.uid) {
-        const credential = await loginAnonymously();
-        submissionUser = credential.user;
-      }
-
-      let profile = null;
-      if (!submissionUser.isAnonymous) {
-        profile = await getOrCreateUserProfile(submissionUser).catch(() => null);
-      }
+      const submissionUser = currentUser;
+      const profile = await getOrCreateUserProfile(submissionUser).catch(() => null);
 
       const importResult = await createDreamDiaryImport({
         currentUser: submissionUser,
@@ -627,6 +666,7 @@ export default function ImportDreamDiaryPage({
         parserMode,
         sourceFormat: parserMode,
         fileName: file?.name || "pasted-diary.txt",
+        sharingMode,
       });
 
       setResult(importResult);
@@ -721,6 +761,7 @@ export default function ImportDreamDiaryPage({
                 type="file"
                 accept={DIARY_FILE_ACCEPT}
                 onChange={handleFileChange}
+                disabled={!hasImportAccount}
                 className="block w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-xs text-cyan-50 file:mr-4 file:rounded-xl file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:font-mono file:text-xs file:font-bold file:uppercase file:tracking-[0.14em] file:text-zinc-950"
               />
               <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">≤ {Math.round(MAX_DIARY_FILE_BYTES / 1024 / 1024)} MB</p>
@@ -732,6 +773,7 @@ export default function ImportDreamDiaryPage({
                 <select
                   value={parserMode}
                   onChange={(event) => setParserMode(event.target.value)}
+                  disabled={!hasImportAccount}
                   className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                 >
                   {MODE_OPTIONS.map((mode) => (
@@ -745,6 +787,7 @@ export default function ImportDreamDiaryPage({
                 <select
                   value={defaultLanguage}
                   onChange={(event) => setDefaultLanguage(event.target.value)}
+                  disabled={!hasImportAccount}
                   className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                 >
                   {LANGUAGE_OPTIONS.map((option) => (
@@ -760,6 +803,7 @@ export default function ImportDreamDiaryPage({
                 value={rawText}
                 onChange={(event) => setRawText(event.target.value)}
                 placeholder={copy.pastePlaceholder}
+                disabled={!hasImportAccount}
                 className="min-h-44 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-6 text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
               />
             </label>
@@ -767,7 +811,8 @@ export default function ImportDreamDiaryPage({
             <button
               type="button"
               onClick={() => parseDrafts()}
-              className="mt-4 w-full rounded-2xl border border-cyan-300/35 bg-cyan-300 px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-950 transition hover:bg-cyan-200"
+              disabled={!hasImportAccount}
+              className="mt-4 w-full rounded-2xl border border-cyan-300/35 bg-cyan-300 px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {copy.parseButton}
             </button>
@@ -811,6 +856,47 @@ export default function ImportDreamDiaryPage({
               </span>
             </div>
 
+            <section className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
+              <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan-100">
+                {copy.sharingTitle}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                {copy.sharingText}
+              </p>
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
+                {sharingOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSharingMode(option.value)}
+                    disabled={option.value === "public_pseudonym" && !hasImportAccount}
+                    className={[
+                      "min-w-0 rounded-xl border px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed disabled:opacity-45",
+                      sharingMode === option.value
+                        ? "border-cyan-300/35 bg-cyan-300/10 text-cyan-100"
+                        : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-fuchsia-300/30 hover:text-fuchsia-100",
+                    ].join(" ")}
+                  >
+                    <span className="block truncate">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+              {!hasImportAccount && (
+                <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3">
+                  <p className="text-xs leading-5 text-amber-100/90">
+                    {copy.accountRequired}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onOpenAuth || onOpenDashboard}
+                    className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-300/50"
+                  >
+                    {copy.signInToImport}
+                  </button>
+                </div>
+              )}
+            </section>
+
             <div className="cdo-mobile-stack-actions mt-4 grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
@@ -823,10 +909,10 @@ export default function ImportDreamDiaryPage({
               <button
                 type="button"
                 onClick={handleImportSelected}
-                disabled={importing || selectedCount === 0}
+                disabled={importing || selectedCount === 0 || !hasImportAccount}
                 className="rounded-2xl border border-cyan-300/35 bg-cyan-300 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {importing ? copy.importingLabel : copy.importButton}
+                {importing ? copy.importingLabel : copy.importButtonGeneric || copy.importButton}
               </button>
             </div>
 

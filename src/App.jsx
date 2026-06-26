@@ -77,7 +77,7 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (currentUser && activeView === "auth") {
+    if (currentUser && !currentUser.isAnonymous && activeView === "auth") {
       setActiveView("dashboard");
     }
 
@@ -183,6 +183,7 @@ export default function App() {
           currentUser={currentUser}
           onOpenDatabase={() => setActiveView("database")}
           onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
+          onOpenAuth={() => setActiveView("auth")}
           onOpenRecorder={() => setActiveView("record")}
           onImported={(record) => openDreamRecord(record, "import")}
         />

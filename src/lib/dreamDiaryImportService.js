@@ -12,6 +12,7 @@ import {
   createDreamRecord,
   DREAM_PERIODS,
   fetchOwnedRecords,
+  updateOwnedRecordSharing,
 } from "./recordsService.js";
 import {
   getTagLabel,
@@ -255,9 +256,14 @@ export async function createDreamDiaryImport({
   parserMode = DIARY_IMPORT_MODES.AUTO,
   sourceFormat = DIARY_IMPORT_MODES.AUTO,
   fileName = "dream-diary.txt",
+  sharingMode = "private",
 }) {
   if (!currentUser?.uid) {
-    throw new Error("A signed-in or guest session is required to import dreams.");
+    throw new Error("A signed-in account is required to import dreams.");
+  }
+
+  if (currentUser.isAnonymous) {
+    throw new Error("Diary import requires an account login.");
   }
 
   if (!isFirebaseConfigured || !db) {
@@ -438,21 +444,27 @@ export async function createDreamDiaryImport({
             dreamText: String(draft.rawText || "").trim(),
           }
         );
+        const sharedRecord = await applyImportSharingMode({
+          currentUser,
+          record,
+          sharingMode,
+          profile,
+        });
 
-        linkedTranslationRecords.push(record);
+        linkedTranslationRecords.push(sharedRecord);
         const recordIndex = matchableRecords.findIndex(
-          (item) => getRecordId(item) === getRecordId(record)
+          (item) => getRecordId(item) === getRecordId(sharedRecord)
         );
         if (recordIndex >= 0) {
-          matchableRecords.splice(recordIndex, 1, record);
+          matchableRecords.splice(recordIndex, 1, sharedRecord);
         } else {
-          matchableRecords.push(record);
+          matchableRecords.push(sharedRecord);
         }
         await setDoc(
           draftRef,
           {
             status: "imported",
-            importedRecordId: record.id || record.dream_id,
+            importedRecordId: sharedRecord.id || sharedRecord.dream_id,
             importedAsTranslation: true,
             updatedAt: serverTimestamp(),
           },
@@ -461,7 +473,7 @@ export async function createDreamDiaryImport({
         continue;
       }
 
-      const record = await createDreamRecord(
+      const createdRecord = await createDreamRecord(
         currentUser,
         {
           dreamText: String(draft.rawText || "").trim(),
@@ -498,6 +510,12 @@ export async function createDreamDiaryImport({
         },
         profile
       );
+      const record = await applyImportSharingMode({
+        currentUser,
+        record: createdRecord,
+        sharingMode,
+        profile,
+      });
 
       importedRecords.push(record);
       matchableRecords.push(record);
@@ -580,6 +598,52 @@ function findDuplicateRecord(records, draft) {
 
     return true;
   }) || null;
+}
+
+async function applyImportSharingMode({
+  currentUser,
+  record,
+  sharingMode = "private",
+  profile = null,
+}) {
+  if (!record || sharingMode === "private") return record;
+
+  const recordId = getRecordId(record);
+  if (!recordId) return record;
+
+  await updateOwnedRecordSharing(currentUser, recordId, { sharingMode }, profile);
+
+  return {
+    ...record,
+    ...buildImportSharingPatch(sharingMode, currentUser, profile),
+  };
+}
+
+function buildImportSharingPatch(sharingMode, currentUser, profile) {
+  const publicMode =
+    sharingMode === "public_anonymous" || sharingMode === "public_pseudonym";
+  const statsOnly = sharingMode === "stats_only";
+  const recordIdentityMode =
+    sharingMode === "public_pseudonym" ? "account" : "anonymous";
+
+  return {
+    visibility: statsOnly ? "stats_only" : publicMode ? "public" : "private",
+    isPublic: publicMode,
+    sharingMode,
+    includedInResearchStats: publicMode || statsOnly,
+    researchConsent: publicMode || statsOnly,
+    publicConsent: publicMode,
+    recordIdentityMode,
+    attributionMode: recordIdentityMode,
+    creatorDisplayName:
+      recordIdentityMode === "account"
+        ? profile?.displayName || currentUser?.displayName || ""
+        : "",
+    creatorEmail:
+      recordIdentityMode === "account" && profile?.showEmail
+        ? currentUser?.email || ""
+        : "",
+  };
 }
 
 function findTranslationTarget(records, draft) {
