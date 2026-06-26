@@ -38,6 +38,7 @@ service cloud.firestore {
 
     function optionalString(data, field, maxSize) {
       return !data.keys().hasAny([field])
+        || data[field] == null
         || (data[field] is string && data[field].size() <= maxSize);
     }
 
@@ -49,11 +50,12 @@ service cloud.firestore {
     }
 
     function optionalBool(data, field) {
-      return !data.keys().hasAny([field]) || data[field] is bool;
+      return !data.keys().hasAny([field]) || data[field] == null || data[field] is bool;
     }
 
     function optionalNumber(data, field, minValue, maxValue) {
       return !data.keys().hasAny([field])
+        || data[field] == null
         || (data[field] is number
           && data[field] >= minValue
           && data[field] <= maxValue);
@@ -69,6 +71,7 @@ service cloud.firestore {
 
     function optionalList(data, field, maxSize) {
       return !data.keys().hasAny([field])
+        || data[field] == null
         || (data[field] is list && data[field].size() <= maxSize);
     }
 
@@ -80,16 +83,19 @@ service cloud.firestore {
 
     function validOptionalAge(data, field) {
       return !data.keys().hasAny([field])
+        || data[field] == null
         || data[field] == ""
         || (data[field] is number && data[field] >= 0 && data[field] <= 120);
     }
 
     function validOptionalLanguageField(data, field) {
-      return !data.keys().hasAny([field]) || validLanguage(data[field]);
+      return !data.keys().hasAny([field]) || data[field] == null || validLanguage(data[field]);
     }
 
     function validOptionalDreamDateStatusField(data, field) {
-      return !data.keys().hasAny([field]) || validDreamDateStatus(data[field]);
+      return !data.keys().hasAny([field])
+        || data[field] == null
+        || validDreamDateStatus(data[field]);
     }
 
     function isPublicRecord(data) {

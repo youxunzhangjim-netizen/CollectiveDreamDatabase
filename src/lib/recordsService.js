@@ -124,7 +124,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     throw new Error("A signed-in or guest session is required to save a record.");
   }
 
-  const dreamText = String(draft?.dreamText || draft?.originalText || "").trim();
+  const dreamText = limitString(draft?.dreamText || draft?.originalText || "", 120000);
 
   if (!dreamText) {
     throw new Error("Dream text is required.");
@@ -694,10 +694,16 @@ function buildOriginalLanguageFields(language, title, text, excerpt) {
   };
 }
 
-function buildRecorderTranslationFields(translations, originalLanguage) {
+function buildRecorderTranslationFields(
+  translations,
+  originalLanguage,
+  existingTranslationLanguages = []
+) {
   const normalizedOriginalLanguage = normalizeLanguage(originalLanguage);
   const fields = {};
-  const translationLanguages = [];
+  const translationLanguages = normalizeTranslationLanguages(existingTranslationLanguages).filter(
+    (language) => language !== normalizedOriginalLanguage
+  );
   const translationMap =
     translations && typeof translations === "object" && !Array.isArray(translations)
       ? translations
@@ -707,8 +713,11 @@ function buildRecorderTranslationFields(translations, originalLanguage) {
     const normalizedLanguage = normalizeLanguage(language);
     if (normalizedLanguage === normalizedOriginalLanguage) continue;
 
-    const text = String(value?.dreamText || value?.text || value?.originalText || "").trim();
-    const title = String(value?.title || "").trim();
+    const text = limitString(
+      value?.dreamText || value?.text || value?.originalText || "",
+      120000
+    );
+    const title = limitString(value?.title || "", 220);
     if (!text && !title) continue;
 
     const excerpt = createExcerpt(text || title);
@@ -716,8 +725,10 @@ function buildRecorderTranslationFields(translations, originalLanguage) {
     translationLanguages.push(normalizedLanguage);
   }
 
-  if (translationLanguages.length > 0) {
-    fields.translationLanguages = [...new Set(translationLanguages)];
+  const uniqueTranslationLanguages = [...new Set(translationLanguages)];
+
+  if (uniqueTranslationLanguages.length > 0) {
+    fields.translationLanguages = uniqueTranslationLanguages;
     fields.translationSource = "recorder_provided";
   }
 
@@ -765,7 +776,11 @@ function normalizeOptionalTitle(title, dreamText) {
 
   if (firstSentence && trimmedTitle === firstSentence) return "";
 
-  return trimmedTitle;
+  return limitString(trimmedTitle, 220);
+}
+
+function limitString(value, maxLength) {
+  return String(value || "").trim().slice(0, maxLength);
 }
 
 
@@ -961,7 +976,7 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
 
   if ("title" in updates || "dreamText" in updates) {
     const originalLanguage = normalizeLanguage(updates.originalLanguage || "zh");
-    const dreamText = String(updates.dreamText || "").trim();
+    const dreamText = limitString(updates.dreamText || "", 120000);
     const title = normalizeOptionalTitle(updates.title, dreamText);
 
     if (!dreamText) {
@@ -1030,7 +1045,8 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     const originalLanguage = normalizeLanguage(updates.originalLanguage || "zh");
     const translationFields = buildRecorderTranslationFields(
       updates.translations || updates.translationVersions,
-      originalLanguage
+      originalLanguage,
+      updates.existingTranslationLanguages
     );
 
     metadata.translationLanguages = translationFields.translationLanguages || [];
@@ -1129,10 +1145,11 @@ export async function addRecorderTranslationToRecord(currentUser, recordId, tran
     throw new Error("This language is already the original dream language.");
   }
 
-  const dreamText = String(
-    translation?.dreamText || translation?.originalText || translation?.text || ""
-  ).trim();
-  const title = String(translation?.title || "").trim();
+  const dreamText = limitString(
+    translation?.dreamText || translation?.originalText || translation?.text || "",
+    120000
+  );
+  const title = limitString(translation?.title || "", 220);
 
   if (!dreamText && !title) {
     throw new Error("A translation version needs title or dream words.");

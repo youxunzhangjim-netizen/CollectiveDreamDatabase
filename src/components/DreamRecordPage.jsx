@@ -629,6 +629,7 @@ export default function DreamRecordPage({
         dreamPeriod,
         dreamSequence,
         translations: translationDrafts,
+        existingTranslationLanguages: normalizedRecord.translationLanguages,
         ageAtDream,
         adultContent,
         minimumViewerAge: adultContent ? 18 : 0,
@@ -651,6 +652,7 @@ export default function DreamRecordPage({
           dreamPeriod,
           dreamSequence,
           translations: translationDrafts,
+          existingTranslationLanguages: normalizedRecord.translationLanguages,
           ageAtDream,
           adultContent,
           minimumViewerAge: adultContent ? 18 : 0,
@@ -732,8 +734,8 @@ export default function DreamRecordPage({
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.025)_1px,transparent_1px)] bg-[size:44px_44px]" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-        <header className="mb-5 grid gap-2 sm:mb-6 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="relative mx-auto max-w-6xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
+        <header className="mb-6 grid gap-3 sm:mb-8 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={onBack}
@@ -742,7 +744,7 @@ export default function DreamRecordPage({
             {copy.back}
           </button>
 
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-4">
             <LanguageToggle language={language} setLanguage={setLanguage} copy={copy} />
             <button
               type="button"
@@ -764,7 +766,7 @@ export default function DreamRecordPage({
 
         <section className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/75 shadow-terminal backdrop-blur">
           <div className="grid gap-0 lg:grid-cols-[1.2fr_.8fr]">
-            <article className="p-6 sm:p-8">
+            <article className="p-7 sm:p-9 lg:p-10">
               <p className="mb-4 font-mono text-xs uppercase tracking-[0.38em] text-cyan-200/70">
                 {copy.recordText}
               </p>
@@ -774,11 +776,11 @@ export default function DreamRecordPage({
                 </h1>
               )}
               {adultAllowed && (
-                <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
+                <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
                   {copy.recordedBy} @{getRecordAuthorName(normalizedRecord, copy)}
                 </p>
               )}
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-5 flex flex-wrap gap-3">
                 <span className="rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
                   {copy.originalLanguage}: {getLanguageName(originalLanguage, language)}
                 </span>
@@ -797,12 +799,12 @@ export default function DreamRecordPage({
               ) : (
                 <>
                   {dreamImages.length > 0 && (
-                    <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <section className="mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
                       <p className="mb-4 font-mono text-xs uppercase tracking-[0.24em] text-cyan-200/70">
                         {copy.pictureGallery}
                       </p>
                       {canSeeImages ? (
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-4 sm:grid-cols-2">
                           {dreamImages.map((image, index) => (
                             <img
                               key={image.path || image.url || index}
@@ -823,21 +825,21 @@ export default function DreamRecordPage({
                     </section>
                   )}
 
-                  <p className="mt-5 max-w-3xl text-sm leading-7 text-zinc-300 sm:text-base">
+                  <p className="mt-7 max-w-3xl text-sm leading-relaxed text-slate-300 sm:text-base sm:leading-8">
                     {body || copy.emptyRecordBody}
                   </p>
                 </>
               )}
 
               {status && (
-                <p className="mt-6 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4 font-mono text-xs uppercase tracking-[0.16em] text-cyan-100">
+                <p className="mt-7 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-5 font-mono text-xs uppercase tracking-[0.16em] text-cyan-100">
                   {status}
                 </p>
               )}
             </article>
 
-            <aside className="border-t border-white/10 bg-black/30 p-6 sm:p-8 lg:border-l lg:border-t-0">
-              <div className="space-y-3">
+            <aside className="border-t border-white/10 bg-black/30 p-7 sm:p-9 lg:border-l lg:border-t-0 lg:p-10">
+              <div className="space-y-4">
                 <CreatorIdentity copy={copy} record={normalizedRecord} />
                 <InfoRow
                   label={copy.recordDate}
@@ -861,11 +863,11 @@ export default function DreamRecordPage({
                 />
               </div>
 
-              <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
                 <p className="mb-3 font-mono text-xs uppercase tracking-[0.24em] text-fuchsia-200/70">
                   {copy.recorderRulesTitle}
                 </p>
-                <ul className="space-y-2 text-sm leading-6 text-zinc-300">
+                <ul className="space-y-3 text-sm leading-relaxed text-slate-300">
                   {copy.recorderRules.map((rule) => (
                     <li key={rule} className="flex gap-2">
                       <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
@@ -876,7 +878,7 @@ export default function DreamRecordPage({
               </div>
 
               {isOwner && (
-                <div className="mt-6 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
+                <div className="mt-7 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-5 sm:p-6">
                   <SharingControlPanel
                     copy={copy}
                     sharingMode={sharingMode}
@@ -889,7 +891,7 @@ export default function DreamRecordPage({
                   <p className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-cyan-200/70">
                     {copy.creatorPanel}
                   </p>
-                  <label className="mb-3 block">
+                  <label className="mb-4 block">
                     <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                       {copy.topicLabel}
                     </span>
@@ -900,7 +902,7 @@ export default function DreamRecordPage({
                       className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                     />
                   </label>
-                  <label className="mb-3 block">
+                  <label className="mb-4 block">
                     <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                       {copy.dreamTextLabel}
                     </span>
@@ -908,23 +910,23 @@ export default function DreamRecordPage({
                       value={dreamTextDraft}
                       onChange={(event) => setDreamTextDraft(event.target.value)}
                       placeholder={copy.dreamTextPlaceholder}
-                      className="min-h-48 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-7 text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                      className="min-h-48 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-relaxed text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                     />
                   </label>
-                  <section className="mb-3 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
+                  <section className="mb-4 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-5">
                     <p className="font-mono text-xs uppercase tracking-[0.22em] text-fuchsia-100">
                       {timeCopy.translationsTitle}
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    <p className="mt-3 text-sm leading-relaxed text-slate-300">
                       {timeCopy.translationsHelp}
                     </p>
-                    <div className="mt-4 space-y-4">
+                    <div className="mt-5 space-y-5">
                       {LANGUAGE_OPTIONS.filter(
                         (option) => option.value !== originalLanguage
                       ).map((option) => (
                         <div
                           key={option.value}
-                          className="rounded-2xl border border-white/10 bg-black/25 p-4"
+                          className="rounded-2xl border border-white/10 bg-black/25 p-5"
                         >
                           <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                             {getLanguageName(option.value, language)}
@@ -950,14 +952,14 @@ export default function DreamRecordPage({
                               onChange={(event) =>
                                 updateTranslationDraft(option.value, "dreamText", event.target.value)
                               }
-                              className="min-h-32 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-7 text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                              className="min-h-32 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-relaxed text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                             />
                           </label>
                         </div>
                       ))}
                     </div>
                   </section>
-                  <label className="mb-3 block">
+                  <label className="mb-4 block">
                     <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                       {copy.dreamDate}
                     </span>
@@ -970,7 +972,7 @@ export default function DreamRecordPage({
                       }}
                       className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                     />
-                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
                       <button
                         type="button"
                         onClick={() => {
@@ -1018,7 +1020,7 @@ export default function DreamRecordPage({
                       </button>
                     </div>
                   </label>
-                  <div className="mb-3 grid gap-3 md:grid-cols-3">
+                  <div className="mb-4 grid gap-4 md:grid-cols-3">
                     <label className="block">
                       <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                         {timeCopy.dreamTime}
@@ -1079,7 +1081,7 @@ export default function DreamRecordPage({
                       className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                     />
                   </label>
-                  <label className="mt-4 flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                  <label className="mt-5 flex min-h-12 items-center gap-4 rounded-2xl border border-white/10 bg-black/30 px-5 py-4">
                     <input
                       type="checkbox"
                       checked={adultContent}
@@ -1090,7 +1092,7 @@ export default function DreamRecordPage({
                       {copy.markAdultContent}
                     </span>
                   </label>
-                  <div className="mt-4">
+                  <div className="mt-5">
                     <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                       {copy.recordIdentity}
                     </p>
@@ -1109,11 +1111,11 @@ export default function DreamRecordPage({
                       </IdentityModeButton>
                     </div>
                   </div>
-                  <div className="mt-4">
+                  <div className="mt-5">
                     <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                       {copy.recordTags}
                     </p>
-                    <div className="max-h-[24rem] space-y-3 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-3 pr-2 [scrollbar-color:rgba(34,211,238,.45)_rgba(255,255,255,.08)] [scrollbar-width:thin]">
+                    <div className="max-h-[24rem] space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-4 pr-3 [scrollbar-color:rgba(34,211,238,.45)_rgba(255,255,255,.08)] [scrollbar-width:thin]">
                       {tagGroups.map((group) => (
                         <EditableTagGroup
                           key={group.category}
@@ -1142,7 +1144,7 @@ export default function DreamRecordPage({
                   <button
                     type="button"
                     onClick={handleSaveMetadata}
-                    className="mt-4 w-full rounded-2xl border border-fuchsia-300/35 bg-fuchsia-300 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-950 transition hover:bg-fuchsia-200"
+                    className="mt-5 w-full rounded-2xl border border-fuchsia-300/35 bg-fuchsia-300 px-5 py-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-950 transition hover:bg-fuchsia-200"
                   >
                     {copy.saveMetadata}
                   </button>
@@ -1172,13 +1174,13 @@ function SharingControlPanel({
   ];
 
   return (
-    <section className="mb-6 rounded-2xl border border-white/10 bg-black/30 p-4">
+    <section className="mb-7 rounded-2xl border border-white/10 bg-black/30 p-5 sm:p-6">
       <p className="font-mono text-xs uppercase tracking-[0.26em] text-cyan-200/70">
         {copy.sharingPanel}
       </p>
-      <p className="mt-2 text-sm leading-6 text-zinc-300">{copy.sharingHelp}</p>
+      <p className="mt-3 text-sm leading-relaxed text-slate-300">{copy.sharingHelp}</p>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {modes.map((mode) => (
           <button
             key={mode.value}
@@ -1198,7 +1200,7 @@ function SharingControlPanel({
         ))}
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <button
           type="button"
           disabled={saving || deleting || sharingMode === "private"}
@@ -1217,11 +1219,11 @@ function SharingControlPanel({
         </button>
       </div>
 
-      <div className="mt-4 rounded-xl border border-fuchsia-300/20 bg-fuchsia-300/5 p-3">
+      <div className="mt-5 rounded-xl border border-fuchsia-300/20 bg-fuchsia-300/5 p-4">
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-100">
           {copy.notDiagnosisTitle}
         </p>
-        <p className="mt-2 text-xs leading-5 text-zinc-300">
+        <p className="mt-3 text-xs leading-relaxed text-slate-300">
           {copy.notDiagnosisText}
         </p>
       </div>
@@ -1546,7 +1548,8 @@ function mergeRecordEdits(record, updates) {
   );
   const translationFields = buildLocalTranslationFields(
     updates.translations,
-    updates.originalLanguage
+    updates.originalLanguage,
+    updates.existingTranslationLanguages
   );
 
   return {
@@ -1647,17 +1650,23 @@ function buildLocalLanguageFields(language, title, text, excerpt) {
   };
 }
 
-function buildLocalTranslationFields(translations, originalLanguage) {
+function buildLocalTranslationFields(
+  translations,
+  originalLanguage,
+  existingTranslationLanguages = []
+) {
   const fields = {};
-  const translationLanguages = [];
   const normalizedOriginalLanguage = normalizeLanguage(originalLanguage);
+  const translationLanguages = normalizeTranslationLanguages(existingTranslationLanguages).filter(
+    (language) => language !== normalizedOriginalLanguage
+  );
 
   Object.entries(translations || {}).forEach(([language, value]) => {
     const normalizedLanguage = normalizeLanguage(language);
     if (normalizedLanguage === normalizedOriginalLanguage) return;
 
-    const title = String(value?.title || "").trim();
-    const text = String(value?.dreamText || value?.text || "").trim();
+    const title = limitLocalString(value?.title || "", 220);
+    const text = limitLocalString(value?.dreamText || value?.text || "", 120000);
     if (!title && !text) return;
 
     Object.assign(
@@ -1672,6 +1681,10 @@ function buildLocalTranslationFields(translations, originalLanguage) {
     translationLanguages: [...new Set(translationLanguages)],
     translationSource: translationLanguages.length > 0 ? "recorder_provided" : "",
   };
+}
+
+function limitLocalString(value, maxLength) {
+  return String(value || "").trim().slice(0, maxLength);
 }
 
 function normalizeDreamTime(value) {
@@ -1797,7 +1810,7 @@ function CreatorIdentity({ copy, record }) {
     : record.pseudoId || copy.anonymousCreator;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
         {copy.creator}
       </p>
@@ -1826,7 +1839,7 @@ function AdultGatePanel({ copy, currentUser, onConfirm }) {
       <p className="font-mono text-xs uppercase tracking-[0.24em] text-amber-100">
         {copy.adultRestrictedTitle}
       </p>
-      <p className="mt-3 text-sm leading-6 text-zinc-300">
+      <p className="mt-4 text-sm leading-relaxed text-slate-300">
         {accountNeedsSavedAge ? copy.adultAccountPrompt : copy.adultGuestPrompt}
       </p>
       {!accountNeedsSavedAge && (
@@ -1870,7 +1883,7 @@ function IdentityModeButton({ active, children, onClick }) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
         {label}
       </p>

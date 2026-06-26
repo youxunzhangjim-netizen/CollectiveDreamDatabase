@@ -1571,19 +1571,19 @@ function LanguageToggle({ language, setLanguage, copy }) {
 
 function PersonalAnalysisPanel({ stats, copy }) {
   return (
-    <section className="mb-6 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-4 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-5">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <section className="mb-8 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-7">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
             {copy.analysisTitle}
           </p>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
             {copy.analysisText}
           </p>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatusBlock label={copy.analysisTotal} value={String(stats.total)} />
         <StatusBlock label={copy.analysisAdult} value={String(stats.adultCount)} />
         <StatusBlock label={copy.analysisLanguageLead} value={stats.leadingLanguage} />
@@ -1594,7 +1594,7 @@ function PersonalAnalysisPanel({ stats, copy }) {
         <StatusBlock label={copy.analysisAverageAge} value={String(stats.averageAge)} />
       </div>
 
-      <div className="mt-5 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <MiniList title={copy.analysisFrequency} items={stats.dreamFrequency} empty={copy.analysisNoData} />
         <MiniList title={copy.analysisRecurringPlaces} items={stats.recurringPlaces} empty={copy.analysisNoData} />
         <MiniList title={copy.analysisRecurringEntities} items={stats.recurringEntities} empty={copy.analysisNoData} />
@@ -1621,12 +1621,12 @@ function PersonalAnalysisPanel({ stats, copy }) {
 
 function MiniList({ title, items = [], empty }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+    <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
         {title}
       </p>
       {items.length > 0 ? (
-        <div className="mt-3 space-y-2">
+        <div className="mt-4 space-y-3">
           {items.map((item) => (
             <div key={item.label} className="flex items-center justify-between gap-3">
               <span className="truncate text-sm text-zinc-300">{item.label}</span>
@@ -1637,7 +1637,7 @@ function MiniList({ title, items = [], empty }) {
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-zinc-500">{empty}</p>
+        <p className="mt-4 text-sm leading-relaxed text-slate-400">{empty}</p>
       )}
     </div>
   );
@@ -1645,15 +1645,15 @@ function MiniList({ title, items = [], empty }) {
 
 function SimilarDreamList({ title, items = [], empty }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+    <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
         {title}
       </p>
       {items.length > 0 ? (
-        <div className="mt-3 space-y-3">
+        <div className="mt-4 space-y-4">
           {items.map((item) => (
-            <div key={`${item.leftTitle}-${item.rightTitle}`} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <p className="text-sm leading-5 text-zinc-300">
+            <div key={`${item.leftTitle}-${item.rightTitle}`} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-sm leading-relaxed text-slate-300">
                 {item.leftTitle} ↔ {item.rightTitle}
               </p>
               <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100">
@@ -1663,7 +1663,7 @@ function SimilarDreamList({ title, items = [], empty }) {
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-zinc-500">{empty}</p>
+        <p className="mt-4 text-sm leading-relaxed text-slate-400">{empty}</p>
       )}
     </div>
   );
@@ -1671,20 +1671,20 @@ function SimilarDreamList({ title, items = [], empty }) {
 
 function ReflectionList({ title, questions = [], empty }) {
   return (
-    <div className="mt-5 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
+    <div className="mt-6 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-5">
       <p className="font-mono text-xs uppercase tracking-[0.26em] text-fuchsia-200/70">
         {title}
       </p>
       {questions.length > 0 ? (
-        <ul className="mt-3 grid gap-3 md:grid-cols-2">
+        <ul className="mt-4 grid gap-4 md:grid-cols-2">
           {questions.map((question) => (
-            <li key={question} className="rounded-xl border border-white/10 bg-black/25 p-3 text-sm leading-6 text-zinc-300">
+            <li key={question} className="rounded-xl border border-white/10 bg-black/25 p-4 text-sm leading-relaxed text-slate-300">
               {question}
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-zinc-500">{empty}</p>
+        <p className="mt-4 text-sm leading-relaxed text-slate-400">{empty}</p>
       )}
     </div>
   );
@@ -1701,7 +1701,7 @@ function ProfilePill({ label, value }) {
 
 function StatusBlock({ label, value }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
         {label}
       </p>
@@ -1763,8 +1763,8 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
         </div>
       )}
 
-      <div className="p-5">
-        <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="p-6">
+        <div className="mb-4 flex items-center justify-between gap-4">
           <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-zinc-500">
             {getRecordDateDisplay(item, copy)}
           </span>
@@ -1774,11 +1774,11 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
           {copy.recordedBy} @{getItemAuthorName(item, copy)}
         </p>
         {body && (
-          <p className="mt-3 line-clamp-3 text-sm leading-6 text-zinc-400">
+          <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-slate-300">
             {body}
           </p>
         )}
-        <p className="mt-3 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
+        <p className="mt-4 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
           {copy.originalLanguageLabel}: {getLanguageName(item.originalLanguage, language)}
         </p>
 
@@ -1791,7 +1791,7 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
             onRemove();
           }}
           className={[
-            "mt-5 w-full rounded-xl border px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.2em] transition",
+            "mt-6 w-full rounded-xl border px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] transition",
             locked
               ? "cursor-not-allowed border-white/10 bg-white/[0.03] text-zinc-500"
               : "border-red-300/20 bg-red-400/5 text-red-100 hover:border-red-300/45 hover:bg-red-400/10",

@@ -1007,7 +1007,7 @@ export default function CollectiveDreamDashboard({
           onOpenImporter={onOpenImporter}
         />
 
-      <section className="relative mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <section className="relative mx-auto max-w-7xl px-4 pb-20 pt-9 sm:px-6 sm:pt-10 lg:px-8">
         <HeroPanel
           total={dreams.length}
           visible={filteredDreams.length}
@@ -1810,9 +1810,9 @@ function HeroPanel({
   const loadCopy = copy.loadStates[loadState];
 
   return (
-    <header className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/70 shadow-terminal backdrop-blur">
+    <header className="mb-8 overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/70 shadow-terminal backdrop-blur">
       <div className="grid gap-0 lg:grid-cols-[1.45fr_.55fr]">
-        <div className="relative p-6 sm:p-8 lg:p-10">
+        <div className="relative p-7 sm:p-9 lg:p-12">
           <div className="absolute right-8 top-8 hidden h-28 w-28 rounded-full border border-cyan-300/20 bg-cyan-300/5 blur-sm lg:block" />
 
           <p className="mb-4 font-mono text-xs uppercase tracking-[0.42em] text-cyan-200/70">
@@ -1823,16 +1823,16 @@ function HeroPanel({
             {copy.heroTitle}
           </h1>
 
-          <p className="mt-5 max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">
+          <p className="mt-6 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base sm:leading-8">
             {copy.heroText}
           </p>
           {copy.heroSubtext && (
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-400">
+            <p className="mt-5 max-w-3xl text-sm leading-relaxed text-slate-300">
               {copy.heroSubtext}
             </p>
           )}
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-9 flex flex-wrap gap-4">
             <StatusPill label={copy.accessLabel} value={copy.accessValue} />
             <StatusPill label={copy.datasetLabel} value={loadCopy} pulse={loadState === "live" || loadState === "loading"} />
             <StatusPill label={copy.visibleLabel} value={`${visible}/${total}`} />
@@ -1846,8 +1846,8 @@ function HeroPanel({
           )}
         </div>
 
-        <aside className="border-t border-white/10 bg-black/30 p-6 sm:p-8 lg:border-l lg:border-t-0">
-          <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-5">
+        <aside className="border-t border-white/10 bg-black/30 p-7 sm:p-9 lg:border-l lg:border-t-0">
+          <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-6">
             <p className="font-mono text-xs uppercase tracking-[0.28em] text-cyan-200/70">
               {copy.schemaFocus}
             </p>
@@ -1865,11 +1865,11 @@ function HeroPanel({
               />
             </div>
 
-            <div className="mt-6 rounded-xl border border-white/10 bg-black/30 p-4">
+            <div className="mt-7 rounded-xl border border-white/10 bg-black/30 p-5">
               <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
                 {copy.databaseNote}
               </p>
-              <p className="mt-2 text-sm leading-6 text-zinc-300">
+              <p className="mt-3 text-sm leading-relaxed text-slate-300">
                 {copy.schemaNote?.(schemaStats) || copy.databaseNoteText}
               </p>
             </div>
@@ -1885,8 +1885,8 @@ function HomePathways({ copy, activeSection, onSelectSection }) {
   const sectionModes = ["record", "explore", "patterns", "dream-map", "research"];
 
   return (
-    <section className="mb-6 rounded-3xl border border-cyan-300/15 bg-zinc-950/65 p-4 shadow-[0_12px_50px_rgba(0,0,0,.28)] backdrop-blur sm:p-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <section className="mb-8 rounded-3xl border border-cyan-300/15 bg-zinc-950/65 p-5 shadow-[0_12px_50px_rgba(0,0,0,.28)] backdrop-blur sm:p-7">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
             {copy.audienceKicker}
@@ -1894,13 +1894,13 @@ function HomePathways({ copy, activeSection, onSelectSection }) {
           <h2 className="mt-3 max-w-3xl text-2xl font-semibold text-zinc-50 sm:text-3xl">
             {copy.audienceTitle}
           </h2>
-          <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-zinc-400">
+          <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-relaxed text-slate-300">
             {copy.audienceText}
           </p>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+      <div className="mt-7 grid gap-6 lg:grid-cols-2">
         <AudienceCard
           title={copy.dreamerAudienceTitle}
           text={copy.dreamerAudienceText}
@@ -1913,7 +1913,7 @@ function HomePathways({ copy, activeSection, onSelectSection }) {
         />
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {sections.map((section, index) => {
           const mode = sectionModes[index];
           const active = activeSection === mode;
@@ -1925,7 +1925,7 @@ function HomePathways({ copy, activeSection, onSelectSection }) {
               aria-pressed={active}
               onClick={() => onSelectSection?.(section, index)}
               className={[
-                "min-w-0 rounded-2xl border p-4 text-left transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]",
+                "min-w-0 rounded-2xl border p-5 text-left transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]",
                 active
                   ? "border-cyan-300/35 bg-cyan-300/10 shadow-[0_0_28px_rgba(34,211,238,.08)]"
                   : "border-white/10 bg-black/30",
@@ -1934,7 +1934,7 @@ function HomePathways({ copy, activeSection, onSelectSection }) {
               <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-200/70 sm:tracking-[0.2em]">
                 {section.title}
               </p>
-              <p className="cdo-mobile-readable-text mt-3 text-sm leading-6 text-zinc-400">
+              <p className="cdo-mobile-readable-text mt-4 text-sm leading-relaxed text-slate-300">
                 {section.text}
               </p>
             </button>
@@ -1952,9 +1952,9 @@ function AudienceCard({ title, text, accent }) {
       : "border-cyan-300/20 bg-cyan-300/5";
 
   return (
-    <article className={`rounded-2xl border p-5 ${accentClass}`}>
+    <article className={`rounded-2xl border p-6 ${accentClass}`}>
       <h3 className="text-lg font-semibold text-zinc-50">{title}</h3>
-      <p className="mt-3 text-sm leading-7 text-zinc-300">{text}</p>
+      <p className="mt-4 text-sm leading-relaxed text-slate-300">{text}</p>
     </article>
   );
 }
@@ -1978,16 +1978,16 @@ function ResearchPanel({
   ];
 
   return (
-    <section id="research-archive" className="mb-6 scroll-mt-28 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <section id="research-archive" className="mb-8 scroll-mt-28 rounded-3xl border border-white/10 bg-zinc-950/60 p-5 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-7">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
             {copy.researchTitle}
           </p>
-          <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-zinc-400">
+          <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-relaxed text-slate-300">
             {copy.researchText}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-3">
             <CompactSummaryPill label={copy.researchTotal} value={String(stats.total)} />
             <CompactSummaryPill label={copy.researchVisible} value={String(stats.visible)} />
             <CompactSummaryPill label={copy.exportTitle} value={`N=${records.length}`} />
@@ -1998,7 +1998,7 @@ function ResearchPanel({
 
       {expanded && (
         <>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <ResearchMetric label={copy.researchTotal} value={String(stats.total)} />
         <ResearchMetric label={copy.researchVisible} value={String(stats.visible)} />
         <ResearchMetric
@@ -2103,7 +2103,7 @@ function CompactSummaryPill({ label, value }) {
 
 function ResearchMetric({ label, value }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+    <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
         {label}
       </p>
@@ -2118,16 +2118,16 @@ function CollectivePatternsPanel({ stats, copy, expanded, onToggle }) {
   const sampleTooSmall = stats.sampleSize > 0 && stats.sampleSize < 10;
 
   return (
-    <section id="collective-patterns" className="mb-6 scroll-mt-28 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <section id="collective-patterns" className="mb-8 scroll-mt-28 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-7">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
             {copy.patternDashboardTitle}
           </p>
-          <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-zinc-400">
+          <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-relaxed text-slate-300">
             {copy.patternDashboardText}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-3">
             <CompactSummaryPill label={copy.patternSampleSize} value={`N=${stats.sampleSize}`} />
             <CompactSummaryPill label={copy.patternDateRange} value={stats.dateRange || copy.patternNoData} />
             <CompactSummaryPill
@@ -2141,7 +2141,7 @@ function CollectivePatternsPanel({ stats, copy, expanded, onToggle }) {
 
       {expanded && (
         <>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <ResearchMetric label={copy.patternSampleSize} value={`N=${stats.sampleSize}`} />
         <ResearchMetric label={copy.patternDateRange} value={stats.dateRange || copy.patternNoData} />
         <ResearchMetric label={copy.patternFilters} value={stats.filtersActive ? copy.patternFiltered : copy.patternAllLoaded} />
@@ -2149,13 +2149,13 @@ function CollectivePatternsPanel({ stats, copy, expanded, onToggle }) {
       </div>
 
       {(sampleTooSmall || stats.suppressedCount > 0) && (
-        <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-6 text-amber-100">
+        <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-5 text-sm leading-relaxed text-amber-100">
           {sampleTooSmall && <p>{copy.patternSmallSampleWarning({ count: stats.sampleSize })}</p>}
           {stats.suppressedCount > 0 && <p>{copy.patternSuppressed}</p>}
         </div>
       )}
 
-      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+      <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <PatternBarList
           title={copy.patternEmotions}
           items={stats.emotions}
@@ -2218,7 +2218,7 @@ function PatternBarList({ title, items = [], total, empty }) {
   const maxCount = Math.max(1, ...items.map((item) => item.count || 0));
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-black/30 p-4">
+    <section className="rounded-2xl border border-white/10 bg-black/30 p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <p className="font-mono text-xs uppercase tracking-[0.24em] text-zinc-300">
           {title}
@@ -2229,7 +2229,7 @@ function PatternBarList({ title, items = [], total, empty }) {
       </div>
 
       {items.length > 0 ? (
-        <div className="mt-4 space-y-3">
+        <div className="mt-5 space-y-4">
           {items.map((item) => (
             <div key={item.label}>
               <div className="mb-1 flex items-center justify-between gap-3 text-sm">
@@ -2246,7 +2246,7 @@ function PatternBarList({ title, items = [], total, empty }) {
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-sm text-zinc-500">{empty}</p>
+        <p className="mt-5 text-sm leading-relaxed text-slate-400">{empty}</p>
       )}
     </section>
   );
@@ -2293,16 +2293,16 @@ function FilterPanel({
         : copy.sortNewest;
 
   return (
-    <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <section className="mb-8 rounded-3xl border border-white/10 bg-zinc-950/60 p-5 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-7">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-xs uppercase tracking-[0.32em] text-fuchsia-200/70">
             {copy.filterTitle}
           </p>
-          <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-6 text-zinc-400">
+          <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-relaxed text-slate-300">
             {copy.filterText}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-3">
             <CompactSummaryPill
               label={copy.selectedLabel}
               value={String(activeTagCount)}
@@ -2331,7 +2331,7 @@ function FilterPanel({
 
       {expanded && (
         <>
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
           <SegmentButton active={matchMode === "all"} onClick={() => setMatchMode("all")}>
             {copy.matchAll}
           </SegmentButton>
@@ -2351,7 +2351,7 @@ function FilterPanel({
           </select>
         </div>
 
-      <div className="mt-5 grid gap-3 lg:grid-cols-2">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {tagGroups.map(({ category, tags: categoryTags }) => {
           const expanded = Boolean(expandedCategories[category]);
           const activeCount = categoryTags.filter((tag) =>
@@ -2391,8 +2391,8 @@ function FilterPanel({
               </button>
 
               {expanded && (
-                <div className="overflow-x-auto border-t border-white/10 p-3">
-                  <div className="flex flex-nowrap gap-2 pb-1">
+                <div className="overflow-x-auto border-t border-white/10 p-4">
+                  <div className="flex flex-nowrap gap-3 pb-1">
                     {categoryTags.map((tag) => {
                       const active = selectedTagSlugs.includes(tag.slug);
                       const tagName = getTagName(tag, language);
@@ -2431,7 +2431,7 @@ function FilterPanel({
         <button
           type="button"
           onClick={clearTags}
-          className="mt-4 rounded-full border border-red-300/20 bg-red-400/5 px-3 py-2 font-mono text-xs uppercase tracking-[0.18em] text-red-200/80 transition hover:border-red-300/40 hover:bg-red-400/10"
+          className="mt-5 rounded-full border border-red-300/20 bg-red-400/5 px-4 py-2.5 font-mono text-xs uppercase tracking-[0.18em] text-red-200/80 transition hover:border-red-300/40 hover:bg-red-400/10"
         >
           {copy.clearFilters}
         </button>
@@ -2460,11 +2460,11 @@ function ObservationGrid({
     const emptyDatabase = totalDreamCount === 0;
 
     return (
-      <section id="dream-explore" className="scroll-mt-28 rounded-3xl border border-dashed border-cyan-300/20 bg-cyan-300/5 p-10 text-center">
+      <section id="dream-explore" className="scroll-mt-28 rounded-3xl border border-dashed border-cyan-300/20 bg-cyan-300/5 p-10 text-center sm:p-12">
         <p className="font-mono text-sm uppercase tracking-[0.25em] text-cyan-100">
           {emptyDatabase ? copy.noRecordsTitle : copy.noMatchesTitle}
         </p>
-        <p className="mt-3 text-sm text-zinc-400">
+        <p className="mt-4 text-sm leading-relaxed text-slate-300">
           {emptyDatabase ? copy.noRecordsText : copy.noMatchesText}
         </p>
       </section>
@@ -2472,7 +2472,7 @@ function ObservationGrid({
   }
 
   return (
-    <section id="dream-explore" className="scroll-mt-28 columns-1 gap-5 sm:columns-2 xl:columns-3 2xl:columns-4">
+    <section id="dream-explore" className="scroll-mt-28 columns-1 gap-6 sm:columns-2 xl:columns-3 2xl:columns-4">
       {dreams.map((dream) => (
         <ObservationCard
           key={dream.dream_id}
@@ -2507,7 +2507,7 @@ function PaginationControls({
   const lastVisible = Math.min(currentPage * pageSize, totalItems);
 
   return (
-    <nav className="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-950/70 p-4 font-mono text-xs uppercase tracking-[0.16em] text-zinc-300 sm:flex-row sm:items-center sm:justify-between">
+    <nav className="mt-8 flex flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-950/70 p-5 font-mono text-xs uppercase tracking-[0.16em] text-zinc-300 sm:flex-row sm:items-center sm:justify-between">
       <p>
         {copy.showingLabel} {firstVisible}-{lastVisible} / {totalItems}
       </p>
@@ -2654,7 +2654,7 @@ function ObservationCard({
           pseudoId: dream.pseudo_id,
         });
       }}
-      className="group mb-5 inline-block w-full cursor-pointer break-inside-avoid overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(34,211,238,.04),0_18px_60px_rgba(0,0,0,.35)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_0_46px_rgba(34,211,238,.12)]"
+      className="group mb-6 inline-block w-full cursor-pointer break-inside-avoid overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 shadow-[0_0_0_1px_rgba(34,211,238,.04),0_18px_60px_rgba(0,0,0,.35)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_0_46px_rgba(34,211,238,.12)]"
     >
       {guestAdultGate ? (
         <AdultGatePanel
@@ -2673,8 +2673,8 @@ function ObservationCard({
         null
       )}
 
-      <div className="p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="p-6">
+        <div className="mb-5 flex items-center justify-between gap-4">
           <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">
             {dream.pseudo_id}
           </span>
@@ -2695,21 +2695,21 @@ function ObservationCard({
             {copy.recordedBy} @{getDreamAuthorName(dream, copy)}
           </p>
         )}
-        <p className="mt-2 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
+        <p className="mt-3 inline-flex rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
           {copy.originalLanguageLabel}: {getLanguageName(dream.originalLanguage, language)}
         </p>
         {adultDream && (
-          <p className="ml-0 mt-2 inline-flex rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100 sm:ml-2">
+          <p className="ml-0 mt-3 inline-flex rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100 sm:ml-2">
             {copy.adultContentLabel} 18+
           </p>
         )}
 
-        <p className="mt-3 text-sm leading-7 text-zinc-300">
+        <p className="mt-4 text-sm leading-relaxed text-slate-300">
           {guestAdultGate ? copy.adultGuestPrompt : getDreamExcerpt(dream, language)}
         </p>
 
         {!guestAdultGate && dream.recordIdentityMode === "account" && (
-          <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3">
+          <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
             <p className="break-words font-mono text-xs uppercase tracking-[0.16em] text-cyan-100">
               {dream.creatorDisplayName || dream.pseudo_id}
             </p>
@@ -2736,7 +2736,7 @@ function ObservationCard({
         )}
 
         {dream.tags.length > 0 && (
-          <div className="mt-5">
+          <div className="mt-6">
             <div
               className={[
                 "flex gap-2 overflow-hidden transition-[max-height] duration-300",
@@ -2765,7 +2765,7 @@ function ObservationCard({
           </div>
         )}
 
-        <div className="mt-5 border-t border-white/10 pt-4">
+        <div className="mt-6 border-t border-white/10 pt-5">
           <div className="mb-2 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.18em]">
             <span className="text-zinc-500">{copy.signalCoherence}</span>
             <span className="text-cyan-100">{dream.signal_coherence}%</span>
