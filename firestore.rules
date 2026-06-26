@@ -308,6 +308,14 @@ service cloud.firestore {
           || data.recordIdentityMode == "anonymous");
     }
 
+    function validRecordWriteMinimum(data) {
+      return requiredString(data, "ownerId", 1, 128)
+        && requiredString(data, "dream_text", 1, 120000)
+        && (!isAnonymousAuth()
+          || !data.keys().hasAny(["recordIdentityMode"])
+          || data.recordIdentityMode == "anonymous");
+    }
+
     function anonymousLockUnchanged() {
       return (!resource.data.keys().hasAny(["anonymousLocked"])
           && !request.resource.data.keys().hasAny(["anonymousLocked"]))
@@ -490,12 +498,12 @@ service cloud.firestore {
         || isOwner(resource.data.ownerId);
 
       allow create: if isOwner(request.resource.data.ownerId)
-        && validRecordCreateMetadata(request.resource.data);
+        && validRecordWriteMinimum(request.resource.data);
 
       allow update: if isOwner(resource.data.ownerId)
         && request.resource.data.ownerId == resource.data.ownerId
         && anonymousLockUnchanged()
-        && validRecordMetadata(request.resource.data);
+        && validRecordWriteMinimum(request.resource.data);
 
       allow delete: if isOwner(resource.data.ownerId);
     }

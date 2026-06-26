@@ -1298,6 +1298,8 @@ function getDreamText(dream, language = "") {
 }
 
 function hasRecorderTranslation(record, language) {
+  if (record.translationSource !== "recorder_provided") return false;
+
   return normalizeTranslationLanguages(record.translationLanguages).includes(
     normalizeLanguage(language)
   );

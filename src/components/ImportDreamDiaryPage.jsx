@@ -33,6 +33,9 @@ const IMPORT_COPY = {
     uploadText:
       "Accepted formats: TXT, Markdown (.md), CSV, and JSON. For DOCX, Notion, Google Docs, Apple Notes, or phone notes, export or copy as plain text/Markdown first.",
     fileLabel: "Diary file",
+    fileButton: "Choose diary file",
+    fileEmpty: "No file selected",
+    fileSelected: ({ name }) => `Selected: ${name}`,
     pasteLabel: "Or paste diary text",
     pastePlaceholder: "Paste many dreams here if you do not have a text file...",
     parserMode: "Parsing mode",
@@ -106,6 +109,8 @@ const IMPORT_COPY = {
     storageWarning:
       "Original file storage was not available, but parsed private records can still be saved.",
     importFailed: "Import could not be completed. Review the drafts and try again.",
+    permissionDenied:
+      "The archive could not save these dreams yet. Refresh after the newest deployment and try again.",
     titleSourceLabels: {
       user: "user edited",
       imported_heading: "imported heading",
@@ -148,6 +153,9 @@ const IMPORT_COPY = {
     uploadText:
       "支援格式：TXT、Markdown（.md）、CSV、JSON。DOCX、Notion、Google Docs、Apple Notes 或手機備忘錄，請先匯出或複製成純文字／Markdown。",
     fileLabel: "日記檔案",
+    fileButton: "選擇日記檔案",
+    fileEmpty: "尚未選擇檔案",
+    fileSelected: ({ name }) => `已選擇：${name}`,
     pasteLabel: "或貼上日記文字",
     pastePlaceholder: "如果沒有文字檔，也可以把多則夢境貼在這裡...",
     parserMode: "解析模式",
@@ -208,6 +216,7 @@ const IMPORT_COPY = {
     sharingWarning: "部分夢境已匯入，但公開狀態無法更新，因此保留為私人。",
     storageWarning: "原始檔案儲存尚不可用，但解析後的私人紀錄仍可儲存。",
     importFailed: "匯入無法完成。請檢查草稿後再試一次。",
+    permissionDenied: "目前尚無法儲存這批夢境。請在最新版本部署完成後重新整理，再試一次。",
     titleSourceLabels: {
       user: "使用者編輯",
       imported_heading: "原始標題",
@@ -250,6 +259,9 @@ const IMPORT_COPY = {
     uploadText:
       "Formatos aceptados: TXT, Markdown (.md), CSV y JSON. Para DOCX, Notion, Google Docs, Apple Notes o notas del teléfono, exporta o copia primero como texto plano/Markdown.",
     fileLabel: "Archivo del diario",
+    fileButton: "Seleccionar archivo",
+    fileEmpty: "Ningún archivo seleccionado",
+    fileSelected: ({ name }) => `Seleccionado: ${name}`,
     pasteLabel: "O pega texto del diario",
     pastePlaceholder: "Pega varios sueños aquí si no tienes un archivo de texto...",
     parserMode: "Modo de análisis",
@@ -312,6 +324,8 @@ const IMPORT_COPY = {
       "Algunos sueños se importaron pero quedaron privados porque no se pudo actualizar el modo público.",
     storageWarning: "El almacenamiento del archivo original no está disponible, pero los registros privados procesados se pueden guardar.",
     importFailed: "La importación no se pudo completar. Revisa los borradores e inténtalo de nuevo.",
+    permissionDenied:
+      "El archivo todavía no pudo guardar estos sueños. Actualiza después del despliegue más reciente e inténtalo de nuevo.",
     titleSourceLabels: {
       user: "editado por usuario",
       imported_heading: "título importado",
@@ -701,7 +715,11 @@ export default function ImportDreamDiaryPage({
         setError(
           [
             copy.importErrors({ count: importResult.failedDrafts.length }),
-            firstError ? copy.firstImportError({ message: firstError }) : "",
+            firstError
+              ? copy.firstImportError({
+                  message: getImportDisplayError(firstError, copy),
+                })
+              : "",
           ]
             .filter(Boolean)
             .join(" ")
@@ -711,7 +729,7 @@ export default function ImportDreamDiaryPage({
         setNotice(`${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice}${skippedNotice}${sharingWarning} ${copy.storageWarning}`);
       }
     } catch (importError) {
-      setError(importError?.message || copy.importFailed);
+      setError(getImportDisplayError(importError, copy));
       setNotice("");
     } finally {
       setImporting(false);
@@ -778,17 +796,32 @@ export default function ImportDreamDiaryPage({
             <p className="font-mono text-xs uppercase tracking-[0.28em] text-cyan-200/70">{copy.uploadTitle}</p>
             <p className="mt-3 text-sm leading-6 text-zinc-400">{copy.uploadText}</p>
 
-            <label className="mt-5 block">
+            <div className="mt-5">
               <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">{copy.fileLabel}</span>
-              <input
-                type="file"
-                accept={DIARY_FILE_ACCEPT}
-                onChange={handleFileChange}
-                disabled={!hasImportAccount}
-                className="block w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-xs text-cyan-50 file:mr-4 file:rounded-xl file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:font-mono file:text-xs file:font-bold file:uppercase file:tracking-[0.14em] file:text-zinc-950"
-              />
+              <label
+                htmlFor="dream-diary-file"
+                className={[
+                  "flex cursor-pointer flex-col gap-3 rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-4 font-mono text-xs text-cyan-50 transition hover:border-cyan-300/40 sm:flex-row sm:items-center sm:justify-between",
+                  !hasImportAccount ? "cursor-not-allowed opacity-50" : "",
+                ].join(" ")}
+              >
+                <span className="inline-flex shrink-0 items-center justify-center rounded-xl bg-cyan-300 px-3 py-2 font-bold uppercase tracking-[0.14em] text-zinc-950">
+                  {copy.fileButton}
+                </span>
+                <span className="min-w-0 truncate text-zinc-400">
+                  {file ? copy.fileSelected({ name: file.name }) : copy.fileEmpty}
+                </span>
+                <input
+                  id="dream-diary-file"
+                  type="file"
+                  accept={DIARY_FILE_ACCEPT}
+                  onChange={handleFileChange}
+                  disabled={!hasImportAccount}
+                  className="sr-only"
+                />
+              </label>
               <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">≤ {Math.round(MAX_DIARY_FILE_BYTES / 1024 / 1024)} MB</p>
-            </label>
+            </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="block">
@@ -1145,6 +1178,19 @@ function getTitleSourceLabel(copy, source) {
 
 function getImportTimeCopy(language) {
   return IMPORT_TIME_COPY[normalizeLanguage(language)] || IMPORT_TIME_COPY.zh;
+}
+
+function getImportDisplayError(error, copy) {
+  const message =
+    typeof error === "string"
+      ? error
+      : error?.message || error?.code || "";
+
+  if (/permission|insufficient|missing/i.test(message)) {
+    return copy.permissionDenied || copy.importFailed;
+  }
+
+  return message || copy.importFailed;
 }
 
 function InfoNotice({ title, text, tone = "cyan" }) {

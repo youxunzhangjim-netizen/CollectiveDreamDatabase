@@ -286,6 +286,21 @@ export async function createDreamDiaryImport({
   const nowIso = new Date().toISOString();
   let storagePath = "";
   let storageUploadError = null;
+  let importAuditError = null;
+  let importAuditWritesAvailable = true;
+
+  async function writeImportAudit(ref, data, options) {
+    if (!importAuditWritesAvailable) return false;
+
+    try {
+      await setDoc(ref, data, options);
+      return true;
+    } catch (error) {
+      importAuditWritesAvailable = false;
+      importAuditError = importAuditError || formatImportError(error);
+      return false;
+    }
+  }
 
   if (file && isFirebaseStorageConfigured && storage) {
     storagePath = [
@@ -319,7 +334,7 @@ export async function createDreamDiaryImport({
     };
   }
 
-  await setDoc(batchRef, {
+  await writeImportAudit(batchRef, {
     id: batchRef.id,
     ownerId: currentUser.uid,
     status: "importing",
@@ -360,7 +375,7 @@ export async function createDreamDiaryImport({
     const dreamSequence = normalizeDreamSequence(draft.dreamSequence || draft.dream_sequence);
     const selectedCustomTags = getSelectedCustomTags(draft);
 
-    await setDoc(draftRef, {
+    await writeImportAudit(draftRef, {
       id: draftRef.id,
       ownerId: currentUser.uid,
       importBatchId: batchRef.id,
@@ -412,7 +427,7 @@ export async function createDreamDiaryImport({
           record: duplicateRecord,
           reason: "duplicate_record",
         });
-        await setDoc(
+        await writeImportAudit(
           draftRef,
           {
             status: "skipped",
@@ -460,7 +475,7 @@ export async function createDreamDiaryImport({
         } else {
           matchableRecords.push(sharedRecord);
         }
-        await setDoc(
+        await writeImportAudit(
           draftRef,
           {
             status: "imported",
@@ -519,7 +534,7 @@ export async function createDreamDiaryImport({
 
       importedRecords.push(record);
       matchableRecords.push(record);
-      await setDoc(
+      await writeImportAudit(
         draftRef,
         {
           status: "imported",
@@ -530,7 +545,7 @@ export async function createDreamDiaryImport({
       );
     } catch (error) {
       failedDrafts.push({ draft, error: formatImportError(error) });
-      await setDoc(
+      await writeImportAudit(
         draftRef,
         {
           status: "failed",
@@ -542,7 +557,7 @@ export async function createDreamDiaryImport({
     }
   }
 
-  await setDoc(
+  await writeImportAudit(
     batchRef,
     {
       status: failedDrafts.length > 0 ? "completed_with_errors" : "imported",
@@ -563,6 +578,7 @@ export async function createDreamDiaryImport({
     skippedDrafts,
     failedDrafts,
     storageUploadError,
+    importAuditError,
   };
 }
 
