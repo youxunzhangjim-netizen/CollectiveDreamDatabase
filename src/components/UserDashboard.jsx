@@ -32,6 +32,7 @@ import {
   exportPersonalDreamsJson,
   EXPORT_DETAIL_LEVELS,
 } from "../lib/researchExportService.js";
+import { suggestTagsForDream } from "../lib/dreamDiaryImportService.js";
 import LanguageMenu from "./LanguageMenu.jsx";
 
 const DASHBOARD_COPY = {
@@ -78,6 +79,9 @@ const DASHBOARD_COPY = {
     accountEmailHidden: "Account email hidden",
     privateAccountLabel: "Private account",
     lastSync: "Last Sync",
+    timeOrderLabel: "Time order",
+    timeNewest: "Newest first",
+    timeOldest: "Oldest first",
     recordsLoading: "Loading personal records",
     accountDetails: "Account Details",
     displayNameLabel: "Public Name",
@@ -108,6 +112,7 @@ const DASHBOARD_COPY = {
     anonymousObserver: "Anonymous Observer",
     unknownDate: "Date unknown",
     hiddenDate: "Date hidden",
+    tagSuggestionHint: "New tag suggestions available",
     analysisTitle: "My Dream Map",
     analysisText:
       "A private pattern dashboard for self-reflection. It highlights recurring places, entities, symbols, emotions, lucid/nightmare frequency, similar dreams, and gentle questions generated locally from your tags and counts, not AI diagnosis.",
@@ -170,6 +175,9 @@ const DASHBOARD_COPY = {
     accountEmailHidden: "帳戶電子郵件已隱藏",
     privateAccountLabel: "私人帳戶",
     lastSync: "最後同步",
+    timeOrderLabel: "時間順序",
+    timeNewest: "最新在前",
+    timeOldest: "最舊在前",
     recordsLoading: "正在載入個人紀錄",
     accountDetails: "帳戶資料",
     displayNameLabel: "公開名稱",
@@ -200,6 +208,7 @@ const DASHBOARD_COPY = {
     anonymousObserver: "匿名觀察者",
     unknownDate: "日期不確定",
     hiddenDate: "日期已隱藏",
+    tagSuggestionHint: "可加入新的標籤建議",
     analysisTitle: "我的夢境地圖",
     analysisText: "只根據此帳戶夢境建立的私人模式儀表板，用於自我反思。它會整理重複場景、人物／實體、符號、情緒、清醒夢／惡夢、相似夢境與反思問題；這些問題由標籤與次數在本機規則生成，不是 AI 診斷。",
     analysisTotal: "已上傳",
@@ -262,6 +271,9 @@ const DASHBOARD_COPY = {
     accountEmailHidden: "Correo de cuenta oculto",
     privateAccountLabel: "Cuenta privada",
     lastSync: "Última sincronización",
+    timeOrderLabel: "Orden temporal",
+    timeNewest: "Más reciente primero",
+    timeOldest: "Más antiguo primero",
     recordsLoading: "Cargando registros personales",
     accountDetails: "Datos de la cuenta",
     displayNameLabel: "Nombre público",
@@ -292,6 +304,7 @@ const DASHBOARD_COPY = {
     anonymousObserver: "Observador anónimo",
     unknownDate: "Fecha desconocida",
     hiddenDate: "Fecha oculta",
+    tagSuggestionHint: "Hay nuevas etiquetas sugeridas",
     analysisTitle: "Mi mapa de sueños",
     analysisText:
       "Panel privado de patrones para autorreflexión. Destaca lugares, entidades, símbolos, emociones, sueños lúcidos/pesadillas, sueños similares y preguntas generadas localmente desde etiquetas y conteos, no como diagnóstico de IA.",
@@ -420,6 +433,7 @@ export default function UserDashboard({
   const [bulkSharingMode, setBulkSharingMode] = useState("");
   const [bulkShareNotice, setBulkShareNotice] = useState("");
   const [exportDetail, setExportDetail] = useState(EXPORT_DETAIL_LEVELS.ANALYSIS);
+  const [timeOrder, setTimeOrder] = useState("desc");
   const exportDetailOptions = [
     { value: EXPORT_DETAIL_LEVELS.DREAMS, label: copy.exportScopeDreams },
     { value: EXPORT_DETAIL_LEVELS.CODED, label: copy.exportScopeCoded },
@@ -431,6 +445,20 @@ export default function UserDashboard({
       : activeTab === "saved"
         ? savedRecords
         : collectionRecords;
+  const orderedActiveItems = useMemo(
+    () =>
+      [...activeItems].sort((a, b) => {
+        const first = getRecordSortMillis(a);
+        const second = getRecordSortMillis(b);
+
+        if (first == null && second == null) return 0;
+        if (first == null) return 1;
+        if (second == null) return -1;
+
+        return timeOrder === "asc" ? first - second : second - first;
+      }),
+    [activeItems, timeOrder]
+  );
   const emptyMessage =
     activeTab === "observations"
       ? copy.observationsEmpty
@@ -989,9 +1017,24 @@ export default function UserDashboard({
             </TabButton>
           </div>
 
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-zinc-500">
-            {copy.lastSync}: {lastSyncLabel}
-          </p>
+          <div className="flex flex-col gap-3 sm:items-end">
+            <label className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-3 py-2">
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                {copy.timeOrderLabel}
+              </span>
+              <select
+                value={timeOrder}
+                onChange={(event) => setTimeOrder(event.target.value)}
+                className="rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+              >
+                <option value="desc">{copy.timeNewest}</option>
+                <option value="asc">{copy.timeOldest}</option>
+              </select>
+            </label>
+            <p className="font-mono text-xs uppercase tracking-[0.22em] text-zinc-500">
+              {copy.lastSync}: {lastSyncLabel}
+            </p>
+          </div>
         </section>
 
         {recordsError && (
@@ -1007,9 +1050,9 @@ export default function UserDashboard({
               (language === "zh" ? "正在載入個人紀錄" : "Loading personal records")
             }
           />
-        ) : activeItems.length > 0 ? (
+        ) : orderedActiveItems.length > 0 ? (
           <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {activeItems.map((item) => (
+            {orderedActiveItems.map((item) => (
               <RecordCard
                 key={item.id}
                 item={item}
@@ -1279,6 +1322,36 @@ function normalizeDreamSequence(value) {
 function getRecordDateDisplay(item, copy) {
   if (item.dreamDateStatus === "hidden") return copy.hiddenDate;
   return item.date || copy.unknownDate;
+}
+
+function getMissingSuggestedTags(item, language) {
+  const text = getOriginalItemText(item);
+  if (!text) return [];
+
+  const existingSlugs = new Set((item.tags || []).map((tag) => tag.slug).filter(Boolean));
+
+  return suggestTagsForDream(text, item.originalLanguage || language)
+    .filter(
+      (tag) =>
+        tag.confidence >= 0.85 &&
+        tag.tagType !== "interpretive_suggestion" &&
+        !existingSlugs.has(tag.slug)
+    )
+    .map((tag) => ({
+      ...tag,
+      label: getTagLabel(RECORD_TAGS[tag.slug] || tag, language),
+    }))
+    .slice(0, 6);
+}
+
+function getRecordSortMillis(item) {
+  const date = formatRecordDate(item.dreamDate || item.date);
+  if (!date) return null;
+
+  const time = normalizeDreamTime(item.dreamTime || item.dream_time);
+  const parsed = new Date(time ? `${date}T${time}:00` : `${date}T00:00:00`).getTime();
+
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function buildPersonalDreamAnalysis(items, language, copy) {
@@ -1736,6 +1809,11 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
   const title = getDisplayItemTitle(item, language);
   const body = getDisplayItemText(item, language);
   const showThumbnail = Boolean(item.thumbnailUrl && !thumbnailFailed);
+  const missingSuggestedTags = getMissingSuggestedTags(item, language).slice(0, 3);
+  const suggestionTitle =
+    missingSuggestedTags.length > 0
+      ? `${copy.tagSuggestionHint}: ${missingSuggestedTags.map((tag) => tag.label).join(", ")}`
+      : "";
 
   return (
     <article
@@ -1768,6 +1846,20 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
           <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-zinc-500">
             {getRecordDateDisplay(item, copy)}
           </span>
+          {missingSuggestedTags.length > 0 && (
+            <span
+              className="inline-flex shrink-0 items-center gap-1"
+              title={suggestionTitle}
+              aria-label={suggestionTitle}
+            >
+              {missingSuggestedTags.map((tag) => (
+                <span
+                  key={tag.slug}
+                  className="h-2 w-2 rounded-full bg-cyan-200 shadow-[0_0_12px_rgba(103,232,249,.85)]"
+                />
+              ))}
+            </span>
+          )}
         </div>
         {title && <h2 className="text-xl font-semibold text-zinc-50">{title}</h2>}
         <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">

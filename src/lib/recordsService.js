@@ -249,6 +249,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     sourceType: draft?.sourceType || (draft?.importBatchId ? "diary_import" : "single_record"),
     importBatchId: draft?.importBatchId || "",
     importDraftId: draft?.importDraftId || "",
+    importMatchKey: draft?.importMatchKey || "",
     sourceFileName: draft?.sourceFileName || "",
     sourceFormat: draft?.sourceFormat || "",
     sourceOrderIndex:
@@ -741,6 +742,20 @@ function normalizeTranslationLanguages(value) {
   return [...new Set(value.map(normalizeLanguage))];
 }
 
+function mergeRecordTagSets(existingTags = [], additionalTags = []) {
+  const merged = new Map();
+
+  [...existingTags, ...additionalTags].forEach((tag) => {
+    if (!tag?.slug) return;
+    merged.set(tag.slug, {
+      ...merged.get(tag.slug),
+      ...tag,
+    });
+  });
+
+  return [...merged.values()];
+}
+
 function normalizeDreamTime(value) {
   const rawValue = String(value || "").trim();
   const match = rawValue.match(/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/);
@@ -1168,7 +1183,44 @@ export async function addRecorderTranslationToRecord(currentUser, recordId, tran
     updatedAt: serverTimestamp(),
   };
 
+  const hasAdditionalTags =
+    Array.isArray(translation?.selectedTagSlugs) && translation.selectedTagSlugs.length > 0 ||
+    Array.isArray(translation?.customTagLabels) && translation.customTagLabels.length > 0 ||
+    Array.isArray(translation?.sharedTags) && translation.sharedTags.length > 0;
+
+  if (hasAdditionalTags) {
+    const additionalTags = buildRecordTags(
+      translation.selectedTagSlugs || [],
+      translation.customTagLabels || [],
+      Boolean(existingRecord.adultContent),
+      translation.sharedTags || []
+    );
+    const tags = mergeRecordTagSets(existingRecord.tags || [], additionalTags);
+
+    metadata.tags = tags;
+    metadata.environmentTags = getTagSlugsByCategory(tags, "Environment");
+    metadata.entityTags = getTagSlugsByCategory(tags, "Entities");
+    metadata.anomalyTags = getTagSlugsByCategory(tags, "Anomalies");
+    metadata.emotionTags = getTagSlugsByCategory(tags, "Emotions");
+    metadata.styleTags = getTagSlugsByCategory(tags, "Styles");
+    metadata.eraTags = getTagSlugsByCategory(tags, "Eras");
+    metadata.weatherTags = getTagSlugsByCategory(tags, "Weather");
+    metadata.dreamTypeTags = getTagSlugsByCategory(tags, "Dream Types");
+    metadata.perspectiveTags = getTagSlugsByCategory(tags, "Perspective");
+    metadata.psychologicalObservableTags = getTagSlugsByCategory(
+      tags,
+      "Psychological Observables"
+    );
+    metadata.dreamAnalysisTags = getTagSlugsByCategory(tags, "Dream Analysis");
+    metadata.customTags = tags.filter((tag) => tag.custom).map((tag) => tag.slug);
+    metadata.anomaly_tag_slugs = metadata.anomalyTags;
+  }
+
   await setDoc(recordRef, metadata, { merge: true });
+
+  if (Array.isArray(translation?.customTagLabels) && translation.customTagLabels.length > 0) {
+    await upsertSharedCustomTags(currentUser, translation.customTagLabels).catch(() => {});
+  }
 
   return {
     ...existingRecord,

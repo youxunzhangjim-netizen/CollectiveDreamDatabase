@@ -179,6 +179,7 @@ const UI_COPY = {
     sortSelectLabel: "Sort dreams",
     sortCoherence: "Sort: Coherence",
     sortNewest: "Sort: Newest",
+    sortOldest: "Sort: Oldest",
     sortTitle: "Sort: Title",
     selectedLabel: "selected",
     clearFilters: "Clear filters",
@@ -358,6 +359,7 @@ const UI_COPY = {
     sortSelectLabel: "排序夢境",
     sortCoherence: "排序：一致性",
     sortNewest: "排序：最新",
+    sortOldest: "排序：最舊",
     sortTitle: "排序：標題",
     selectedLabel: "已選",
     clearFilters: "清除篩選",
@@ -534,6 +536,7 @@ const UI_COPY = {
     sortSelectLabel: "Ordenar sueños",
     sortCoherence: "Orden: Coherencia",
     sortNewest: "Orden: Más reciente",
+    sortOldest: "Orden: Más antiguo",
     sortTitle: "Orden: Título",
     selectedLabel: "seleccionadas",
     clearFilters: "Limpiar filtros",
@@ -833,7 +836,11 @@ export default function CollectiveDreamDashboard({
       })
       .sort((a, b) => {
         if (sortMode === "newest") {
-          return getDreamDateMillis(b) - getDreamDateMillis(a);
+          return compareDreamDateOrder(a, b, "desc");
+        }
+
+        if (sortMode === "oldest") {
+          return compareDreamDateOrder(a, b, "asc");
         }
 
         if (sortMode === "title") {
@@ -1374,7 +1381,18 @@ function createExcerpt(value) {
 function getDreamDateMillis(dream) {
   const parsed = new Date(getVisibleDreamDate(dream)).getTime();
 
-  return Number.isFinite(parsed) ? parsed : 0;
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function compareDreamDateOrder(a, b, direction = "desc") {
+  const first = getDreamDateMillis(a);
+  const second = getDreamDateMillis(b);
+
+  if (first == null && second == null) return 0;
+  if (first == null) return 1;
+  if (second == null) return -1;
+
+  return direction === "asc" ? first - second : second - first;
 }
 
 function getTagName(tag, language) {
@@ -2292,7 +2310,9 @@ function FilterPanel({
       ? copy.sortTitle
       : sortMode === "coherence"
         ? copy.sortCoherence
-        : copy.sortNewest;
+        : sortMode === "oldest"
+          ? copy.sortOldest
+          : copy.sortNewest;
 
   return (
     <section className="mb-8 rounded-3xl border border-white/10 bg-zinc-950/60 p-5 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-7">
@@ -2349,6 +2369,7 @@ function FilterPanel({
           >
             <option value="coherence">{copy.sortCoherence}</option>
             <option value="newest">{copy.sortNewest}</option>
+            <option value="oldest">{copy.sortOldest}</option>
             <option value="title">{copy.sortTitle}</option>
           </select>
         </div>

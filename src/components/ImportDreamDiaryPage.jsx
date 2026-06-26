@@ -374,12 +374,12 @@ const IMPORT_TIME_COPY = {
       `${count} diary versions attached as recorder translations.`,
     formatTitle: "Diary upload format",
     formatText:
-      "Best for translation linking: include dreamDate plus either dreamTime or dreamPeriod, and keep dreamSequence as 1 unless it is the second or later dream in that same period.",
+      "Best for translation linking: include dreamKey for the same dream across language files. If dreamKey is absent, include dreamDate plus either dreamTime or dreamPeriod, and keep dreamSequence as 1 unless it is the second or later dream in that same period.",
     formatColumns:
-      "CSV columns: date,time,period,sequence,language,title,text,tags,adultContent",
+      "CSV columns: dreamKey,date,time,period,sequence,language,title,text,tags,adultContent",
     promptTitle: "Copyable AI formatting prompt",
     promptText:
-      "Convert my dream diary into CSV for import. Do not invent, beautify, summarize, moralize, censor, or rewrite dream content. Preserve first-person wording and original details. Only structure the diary into columns: date,time,period,sequence,language,title,text,tags,adultContent. Use date as YYYY-MM-DD when known, time as HH:mm when known, period as morning/afternoon/evening/night when stated, sequence as 1 by default unless the diary clearly says second/third dream in the same period, language as en/zh/es. If the diary has no title, you may add a short factual neutral title based only on the dream content; leave title blank if still unclear. Put tags in the tags column separated by semicolons, using concrete content, emotion, weather, style, era, perspective, dream-type, and psychological-observable labels already present in the diary. adultContent is true only when explicit adult content appears. Keep the text column as close to the original diary words as possible.",
+      "Convert my dream diary into CSV for import. Do not invent, beautify, summarize, moralize, censor, or rewrite dream content. Preserve first-person wording and original details. Only structure the diary into columns: dreamKey,date,time,period,sequence,language,title,text,tags,adultContent. Use dreamKey as a stable ID for the same dream across different language versions, such as dream-001. Use date as YYYY-MM-DD when known, time as HH:mm when known, period as morning/afternoon/evening/night when stated, sequence as 1 by default unless the diary clearly says second/third dream in the same period, language as en/zh/es. If the diary has no title, you may add a short factual neutral title based only on the dream content; leave title blank if still unclear. Put tags in the tags column separated by semicolons, using concrete content, emotion, weather, style, era, perspective, dream-type, and psychological-observable labels present in the diary. If no existing tag fits a clearly present detail, add a short new tag label in the same tags column. adultContent is true only when explicit adult content appears. Keep the text column as close to the original diary words as possible.",
     copyPrompt: "Copy prompt",
     copiedPrompt: "Copied",
     periods: {
@@ -405,12 +405,12 @@ const IMPORT_TIME_COPY = {
     translationComplete: ({ count }) => `已連結 ${count} 份不同語言日記版本。`,
     formatTitle: "日記上傳格式",
     formatText:
-      "若要連結不同語言版本，最好提供夢境日期，並填入精確時間或時段；同一時段若沒有特別說明，夢序預設為第一個夢。",
+      "若要連結不同語言版本，最好為同一個夢填入相同 dreamKey。若沒有 dreamKey，請提供夢境日期，並填入精確時間或時段；同一時段若沒有特別說明，夢序預設為第一個夢。",
     formatColumns:
-      "CSV 欄位：date,time,period,sequence,language,title,text,tags,adultContent",
+      "CSV 欄位：dreamKey,date,time,period,sequence,language,title,text,tags,adultContent",
     promptTitle: "可複製的 AI 格式整理提示詞",
     promptText:
-      "請把我的夢境日記整理成可匯入的 CSV。不要創造、修飾、摘要、美化、道德化、審查或改寫夢境內容。保留第一人稱與原始細節。只整理成欄位：date,time,period,sequence,language,title,text,tags,adultContent。date 用 YYYY-MM-DD；time 若知道用 HH:mm；period 只用 morning/afternoon/evening/night；若同一時段沒有明確說第幾個夢，sequence 預設為 1；language 用 en/zh/es。若原日記沒有標題，可以只根據夢境內容加一個短而中性的事實標題；仍不清楚就留空。tags 欄位用分號分隔，盡量使用日記中可見的具體內容、情緒、天氣、風格、時代、視角、夢境類型與心理觀察標籤。adultContent 只有明確成人內容才填 true。text 欄位要盡量保留原本日記文字。",
+      "請把我的夢境日記整理成可匯入的 CSV。不要創造、修飾、摘要、美化、道德化、審查或改寫夢境內容。保留第一人稱與原始細節。只整理成欄位：dreamKey,date,time,period,sequence,language,title,text,tags,adultContent。dreamKey 是同一個夢在不同語言版本中的穩定 ID，例如 dream-001。date 用 YYYY-MM-DD；time 若知道用 HH:mm；period 只用 morning/afternoon/evening/night；若同一時段沒有明確說第幾個夢，sequence 預設為 1；language 用 en/zh/es。若原日記沒有標題，可以只根據夢境內容加一個短而中性的事實標題；仍不清楚就留空。tags 欄位用分號分隔，盡量使用日記中可見的具體內容、情緒、天氣、風格、時代、視角、夢境類型與心理觀察標籤。若現有標籤沒有符合某個清楚出現的細節，可以在同一欄新增短的新標籤。adultContent 只有明確成人內容才填 true。text 欄位要盡量保留原本日記文字。",
     copyPrompt: "複製提示詞",
     copiedPrompt: "已複製",
     periods: {
@@ -437,12 +437,12 @@ const IMPORT_TIME_COPY = {
       `${count} versiones del diario vinculadas como traducciones del autor.`,
     formatTitle: "Formato de subida del diario",
     formatText:
-      "Para vincular versiones traducidas: incluye dreamDate y dreamTime o dreamPeriod; deja dreamSequence en 1 salvo que sea el segundo o tercer sueno del mismo momento.",
+      "Para vincular versiones traducidas: usa el mismo dreamKey para el mismo sueño. Si no hay dreamKey, incluye dreamDate y dreamTime o dreamPeriod; deja dreamSequence en 1 salvo que sea el segundo o tercer sueno del mismo momento.",
     formatColumns:
-      "Columnas CSV: date,time,period,sequence,language,title,text,tags,adultContent",
+      "Columnas CSV: dreamKey,date,time,period,sequence,language,title,text,tags,adultContent",
     promptTitle: "Prompt copiable para IA",
     promptText:
-      "Convierte mi diario de sueños en CSV para importar. No inventes, embellezcas, resumas, moralices, censures ni reescribas el contenido del sueño. Conserva la primera persona y los detalles originales. Solo organiza el diario en columnas: date,time,period,sequence,language,title,text,tags,adultContent. Usa date como YYYY-MM-DD cuando se conozca, time como HH:mm cuando se conozca, period como morning/afternoon/evening/night cuando aparezca, sequence como 1 por defecto salvo que el diario diga claramente segundo/tercer sueño en el mismo periodo, language como en/zh/es. Si no hay título, puedes añadir un título breve, factual y neutral basado solo en el contenido del sueño; deja title vacío si no está claro. En tags, separa etiquetas con punto y coma y usa contenido concreto, emociones, clima, estilo, época, perspectiva, tipo de sueño y observables psicológicos presentes en el diario. adultContent true solo si hay contenido adulto explícito. Mantén la columna text lo más cercana posible a las palabras originales.",
+      "Convierte mi diario de sueños en CSV para importar. No inventes, embellezcas, resumas, moralices, censures ni reescribas el contenido del sueño. Conserva la primera persona y los detalles originales. Solo organiza el diario en columnas: dreamKey,date,time,period,sequence,language,title,text,tags,adultContent. Usa dreamKey como ID estable para el mismo sueño en distintas versiones de idioma, por ejemplo dream-001. Usa date como YYYY-MM-DD cuando se conozca, time como HH:mm cuando se conozca, period como morning/afternoon/evening/night cuando aparezca, sequence como 1 por defecto salvo que el diario diga claramente segundo/tercer sueño en el mismo periodo, language como en/zh/es. Si no hay título, puedes añadir un título breve, factual y neutral basado solo en el contenido del sueño; deja title vacío si no está claro. En tags, separa etiquetas con punto y coma y usa contenido concreto, emociones, clima, estilo, época, perspectiva, tipo de sueño y observables psicológicos presentes en el diario. Si ninguna etiqueta existente encaja con un detalle claro, añade una etiqueta nueva y breve en la misma columna tags. adultContent true solo si hay contenido adulto explícito. Mantén la columna text lo más cercana posible a las palabras originales.",
     copyPrompt: "Copiar prompt",
     copiedPrompt: "Copiado",
     periods: {
