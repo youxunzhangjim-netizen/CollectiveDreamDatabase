@@ -328,6 +328,72 @@ html[data-appearance="morning"] *::-webkit-scrollbar-thumb {
   background: linear-gradient(90deg, #67e8f9, #c084fc, #e879f9);
 }
 
+.cdo-kicker {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: rgba(165, 243, 252, 0.82);
+}
+
+.cdo-section-heading {
+  font-size: clamp(1.5rem, 1.1rem + 1.2vw, 2.25rem);
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1.12;
+  color: #f8fafc;
+}
+
+.cdo-panel-heading {
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: #f8fafc;
+}
+
+.cdo-card-heading {
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: #f8fafc;
+}
+
+.cdo-body-copy {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.75;
+  color: #cbd5e1;
+}
+
+.cdo-muted-copy {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.65;
+  color: #94a3b8;
+}
+
+.cdo-metric-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  color: #cbd5e1;
+}
+
+.cdo-metric-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: #a5f3fc;
+}
+
 .cdo-action-grid {
   display: grid;
   gap: 0.5rem;
@@ -372,6 +438,32 @@ html[data-appearance="morning"] *::-webkit-scrollbar-thumb {
 
 html[data-appearance="morning"] .cdo-gradient-bar {
   background: linear-gradient(90deg, #0ea5e9, #7c3aed, #c026d3) !important;
+}
+
+html[data-appearance="morning"] .cdo-kicker {
+  color: #0369a1;
+}
+
+html[data-appearance="morning"] .cdo-section-heading,
+html[data-appearance="morning"] .cdo-panel-heading,
+html[data-appearance="morning"] .cdo-card-heading {
+  color: #0f172a;
+}
+
+html[data-appearance="morning"] .cdo-body-copy {
+  color: #1e293b;
+}
+
+html[data-appearance="morning"] .cdo-muted-copy {
+  color: #475569;
+}
+
+html[data-appearance="morning"] .cdo-metric-label {
+  color: #334155;
+}
+
+html[data-appearance="morning"] .cdo-metric-value {
+  color: #075985;
 }
 
 html[data-appearance="morning"] .cdo-record-card {

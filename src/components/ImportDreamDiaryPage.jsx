@@ -779,9 +779,9 @@ export default function ImportDreamDiaryPage({
         <section className="mb-6 overflow-hidden rounded-3xl border border-cyan-300/15 bg-zinc-950/70 shadow-terminal backdrop-blur">
           <div className="grid gap-0 lg:grid-cols-[1.25fr_.75fr]">
             <div className="p-6 sm:p-8 lg:p-10">
-              <p className="font-mono text-xs uppercase tracking-[0.38em] text-cyan-200/70">{copy.kicker}</p>
+              <p className="cdo-kicker">{copy.kicker}</p>
               <h1 className="mt-3 max-w-4xl break-words text-3xl font-semibold text-zinc-50 sm:text-5xl">{copy.title}</h1>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-400">{copy.subtitle}</p>
+              <p className="cdo-body-copy mt-4 max-w-3xl">{copy.subtitle}</p>
             </div>
             <aside className="border-t border-white/10 bg-black/30 p-6 sm:p-8 lg:border-l lg:border-t-0">
               <InfoNotice title={copy.privacyTitle} text={copy.privacyText} />
@@ -793,8 +793,8 @@ export default function ImportDreamDiaryPage({
 
         <section className="mb-6 grid gap-5 lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)]">
           <div className="rounded-3xl border border-white/10 bg-zinc-950/65 p-5 backdrop-blur">
-            <p className="font-mono text-xs uppercase tracking-[0.28em] text-cyan-200/70">{copy.uploadTitle}</p>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">{copy.uploadText}</p>
+            <h2 className="cdo-panel-heading">{copy.uploadTitle}</h2>
+            <p className="cdo-body-copy mt-3">{copy.uploadText}</p>
 
             <div className="mt-5">
               <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">{copy.fileLabel}</span>
@@ -874,17 +874,17 @@ export default function ImportDreamDiaryPage({
             </button>
 
             <section className="mt-4 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
-              <p className="font-mono text-xs uppercase tracking-[0.22em] text-fuchsia-100">
+              <h3 className="cdo-card-heading">
                 {timeCopy.formatTitle}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
+              </h3>
+              <p className="cdo-body-copy mt-2">
                 {timeCopy.formatText}
               </p>
               <code className="mt-3 block overflow-x-auto rounded-xl border border-white/10 bg-black/45 p-3 font-mono text-[11px] leading-5 text-cyan-100">
                 {timeCopy.formatColumns}
               </code>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                <p className="cdo-metric-label">
                   {timeCopy.promptTitle}
                 </p>
                 <button
@@ -904,8 +904,8 @@ export default function ImportDreamDiaryPage({
           <div className="rounded-3xl border border-white/10 bg-zinc-950/65 p-5 backdrop-blur">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="font-mono text-xs uppercase tracking-[0.28em] text-fuchsia-200/70">{copy.reviewTitle}</p>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">{copy.reviewText}</p>
+                <h2 className="cdo-panel-heading">{copy.reviewTitle}</h2>
+                <p className="cdo-body-copy mt-3 max-w-3xl">{copy.reviewText}</p>
               </div>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100">
                 {copy.selectedCount({ selected: selectedCount, total: drafts.length })}
@@ -913,10 +913,10 @@ export default function ImportDreamDiaryPage({
             </div>
 
             <section className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
-              <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan-100">
+              <h3 className="cdo-card-heading">
                 {copy.sharingTitle}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
+              </h3>
+              <p className="cdo-body-copy mt-2">
                 {copy.sharingText}
               </p>
               <div className="mt-3 grid gap-2 md:grid-cols-3">
@@ -1201,8 +1201,8 @@ function InfoNotice({ title, text, tone = "cyan" }) {
 
   return (
     <section className={`rounded-2xl border p-4 ${toneClass}`}>
-      <p className="font-mono text-[10px] uppercase tracking-[0.22em]">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-zinc-300">{text}</p>
+      <h3 className="cdo-card-heading">{title}</h3>
+      <p className="cdo-body-copy mt-2">{text}</p>
     </section>
   );
 }

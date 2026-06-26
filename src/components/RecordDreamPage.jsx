@@ -829,13 +829,13 @@ export default function RecordDreamPage({
             <div className="border-b border-white/10 bg-black/30 p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="font-mono text-xs uppercase tracking-[0.34em] text-cyan-200/70">
+                  <p className="cdo-kicker">
                     {copy.kicker}
                   </p>
                   <h1 className="mt-3 text-3xl font-semibold text-zinc-50 sm:text-4xl">
                     {copy.title}
                   </h1>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
+                  <p className="cdo-body-copy mt-3 max-w-2xl">
                     {copy.subtitle}
                   </p>
                 </div>
@@ -845,7 +845,7 @@ export default function RecordDreamPage({
 
             <div className="flex-1 space-y-5 p-5 sm:p-6">
               <label className="block">
-                <span className="mb-2 block font-mono text-xs uppercase tracking-[0.22em] text-cyan-100">
+                <span className="cdo-metric-label mb-2 block text-cyan-100">
                   {copy.dreamTextLabel}
                 </span>
                 <textarea
@@ -1015,10 +1015,10 @@ export default function RecordDreamPage({
               </div>
 
               <section className="rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
-                <p className="font-mono text-xs uppercase tracking-[0.22em] text-fuchsia-100">
+                <h2 className="cdo-panel-heading">
                   {timeCopy.translationsTitle}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                </h2>
+                <p className="cdo-body-copy mt-2">
                   {timeCopy.translationsHelp}
                 </p>
                 <div className="mt-4 space-y-4">
@@ -1064,10 +1064,10 @@ export default function RecordDreamPage({
               <section className="rounded-2xl border border-cyan-300/15 bg-black/25 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    <h2 className="cdo-card-heading">
                       {copy.picturesLabel}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    </h2>
+                    <p className="cdo-body-copy mt-2">
                       {copy.picturesHelp}
                     </p>
                   </div>
@@ -1409,10 +1409,10 @@ function InfoNotice({ title, text, tone = "cyan" }) {
 
   return (
     <section className={`rounded-2xl border p-4 ${toneClass}`}>
-      <p className="font-mono text-[10px] uppercase tracking-[0.22em]">
+      <h3 className="cdo-card-heading">
         {title}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-zinc-300">{text}</p>
+      </h3>
+      <p className="cdo-body-copy mt-2">{text}</p>
     </section>
   );
 }

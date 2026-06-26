@@ -774,7 +774,7 @@ export default function DreamRecordPage({
         <section className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/75 shadow-terminal backdrop-blur">
           <div className="grid gap-0 lg:grid-cols-[1.2fr_.8fr]">
             <article className="p-7 sm:p-9 lg:p-10">
-              <p className="mb-4 font-mono text-xs uppercase tracking-[0.38em] text-cyan-200/70">
+              <p className="cdo-kicker mb-4">
                 {copy.recordText}
               </p>
               {pageTitle && (
@@ -807,9 +807,9 @@ export default function DreamRecordPage({
                 <>
                   {dreamImages.length > 0 && (
                     <section className="mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
-                      <p className="mb-4 font-mono text-xs uppercase tracking-[0.24em] text-cyan-200/70">
+                      <h2 className="cdo-panel-heading mb-4">
                         {copy.pictureGallery}
-                      </p>
+                      </h2>
                       {canSeeImages ? (
                         <div className="grid gap-4 sm:grid-cols-2">
                           {dreamImages.map((image, index) => (
@@ -832,7 +832,7 @@ export default function DreamRecordPage({
                     </section>
                   )}
 
-                  <p className="mt-7 max-w-3xl text-sm leading-relaxed text-slate-300 sm:text-base sm:leading-8">
+                  <p className="cdo-body-copy mt-7 max-w-3xl sm:text-base sm:leading-8">
                     {body || copy.emptyRecordBody}
                   </p>
                 </>
@@ -1196,10 +1196,10 @@ function SharingControlPanel({
 
   return (
     <section className="mb-7 rounded-2xl border border-white/10 bg-black/30 p-5 sm:p-6">
-      <p className="font-mono text-xs uppercase tracking-[0.26em] text-cyan-200/70">
+      <h2 className="cdo-panel-heading">
         {copy.sharingPanel}
-      </p>
-      <p className="mt-3 text-sm leading-relaxed text-slate-300">{copy.sharingHelp}</p>
+      </h2>
+      <p className="cdo-body-copy mt-3">{copy.sharingHelp}</p>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {modes.map((mode) => (
@@ -1241,10 +1241,10 @@ function SharingControlPanel({
       </div>
 
       <div className="mt-5 rounded-xl border border-fuchsia-300/20 bg-fuchsia-300/5 p-4">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-100">
+        <h3 className="cdo-card-heading">
           {copy.notDiagnosisTitle}
-        </p>
-        <p className="mt-3 text-xs leading-relaxed text-slate-300">
+        </h3>
+        <p className="cdo-muted-copy mt-3">
           {copy.notDiagnosisText}
         </p>
       </div>
@@ -1834,7 +1834,7 @@ function CreatorIdentity({ copy, record }) {
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+      <p className="cdo-metric-label">
         {copy.creator}
       </p>
       <div className="mt-3 flex items-center gap-3">
@@ -1859,10 +1859,10 @@ function AdultGatePanel({ copy, currentUser, onConfirm }) {
 
   return (
     <section className="mt-7 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-5">
-      <p className="font-mono text-xs uppercase tracking-[0.24em] text-amber-100">
+      <h2 className="cdo-panel-heading text-amber-100">
         {copy.adultRestrictedTitle}
-      </p>
-      <p className="mt-4 text-sm leading-relaxed text-slate-300">
+      </h2>
+      <p className="cdo-body-copy mt-4">
         {accountNeedsSavedAge ? copy.adultAccountPrompt : copy.adultGuestPrompt}
       </p>
       {!accountNeedsSavedAge && (
@@ -1907,10 +1907,10 @@ function IdentityModeButton({ active, children, onClick }) {
 function InfoRow({ label, value }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+      <p className="cdo-metric-label">
         {label}
       </p>
-      <p className="mt-2 break-words font-mono text-sm text-cyan-100">{value}</p>
+      <p className="cdo-metric-value mt-2 break-words text-sm">{value}</p>
     </div>
   );
 }

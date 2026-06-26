@@ -324,13 +324,13 @@ export default function AuthPanel({
 
         <section className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[1.05fr_.95fr]">
           <div className="max-w-2xl">
-            <p className="font-mono text-xs uppercase tracking-[0.42em] text-cyan-200/70">
+            <p className="cdo-kicker">
               {copy.eyebrow}
             </p>
             <h1 className="mt-5 text-4xl font-semibold text-zinc-50 sm:text-5xl lg:text-6xl">
               {copy.title}
             </h1>
-            <p className="mt-5 max-w-xl text-sm leading-7 text-zinc-300 sm:text-base">
+            <p className="cdo-body-copy mt-5 max-w-xl sm:text-base">
               {copy.subtitle}
             </p>
 
@@ -358,7 +358,7 @@ export default function AuthPanel({
 
             <div className="space-y-5 p-5 sm:p-7">
               <label className="block">
-                <span className="mb-2 block font-mono text-xs uppercase tracking-[0.22em] text-zinc-400">
+                <span className="cdo-metric-label mb-2 block">
                   {copy.emailLabel}
                 </span>
                 <input
@@ -372,7 +372,7 @@ export default function AuthPanel({
               </label>
 
               <label className="block">
-                <span className="mb-2 block font-mono text-xs uppercase tracking-[0.22em] text-zinc-400">
+                <span className="cdo-metric-label mb-2 block">
                   {copy.passwordLabel}
                 </span>
                 <span className="relative block">
@@ -500,10 +500,10 @@ function ModeButton({ active, children, onClick }) {
 function SignalTile({ label, value }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+      <p className="cdo-metric-label">
         {label}
       </p>
-      <p className="mt-2 font-mono text-sm font-semibold text-cyan-100">{value}</p>
+      <p className="cdo-metric-value mt-2">{value}</p>
     </div>
   );
 }

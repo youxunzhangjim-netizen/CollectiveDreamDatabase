@@ -739,7 +739,7 @@ export default function UserDashboard({
               </div>
 
               <div className="min-w-0">
-                <p className="font-mono text-xs uppercase tracking-[0.34em] text-cyan-200/70">
+                <p className="cdo-kicker">
                   {copy.consoleLabel}
                 </p>
                 <h1 className="mt-2 truncate text-2xl font-semibold text-zinc-50 sm:text-3xl">
@@ -787,10 +787,10 @@ export default function UserDashboard({
               </div>
 
               <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-3">
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-100">
+                <h2 className="cdo-card-heading">
                   {copy.bulkShareTitle}
-                </p>
-                <p className="mt-2 text-xs leading-5 text-zinc-400">
+                </h2>
+                <p className="cdo-muted-copy mt-2 text-xs">
                   {copy.bulkShareText}
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -827,9 +827,9 @@ export default function UserDashboard({
               </div>
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-3">
-                <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                <h2 className="cdo-card-heading mb-2">
                   {copy.exportScopeLabel}
-                </p>
+                </h2>
                 <div className="grid gap-2 min-[520px]:grid-cols-3">
                   {exportDetailOptions.map((option) => (
                     <button
@@ -874,9 +874,9 @@ export default function UserDashboard({
         {profileDraft && (
           <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/60 p-4 backdrop-blur sm:p-5">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
+              <h2 className="cdo-panel-heading">
                 {copy.accountDetails}
-              </p>
+              </h2>
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
                 {copy.joinedDate}: {displayUser.memberSince}
               </p>
@@ -1776,10 +1776,10 @@ function PersonalAnalysisPanel({ stats, copy }) {
     <section className="mb-8 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-7">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
+          <p className="cdo-kicker">
             {copy.analysisTitle}
           </p>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+          <p className="cdo-body-copy mt-3 max-w-3xl">
             {copy.analysisText}
           </p>
         </div>
@@ -1863,10 +1863,10 @@ function PersonalVisualModal({ stats, copy, onClose }) {
       <section className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-6xl rounded-3xl border border-cyan-300/20 bg-zinc-950/95 p-5 shadow-[0_0_80px_rgba(34,211,238,.16)] sm:min-h-0 sm:p-7">
         <div className="flex flex-col gap-4 border-b border-white/10 pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-cyan-200/70">
+            <p className="cdo-kicker">
               {copy.analysisVisualsTitle}
             </p>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+            <p className="cdo-body-copy mt-3 max-w-3xl">
               {copy.analysisVisualsText}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -1938,9 +1938,9 @@ function PersonalVisualBarCard({ title, items = [], total, empty }) {
   return (
     <section className="rounded-2xl border border-white/10 bg-black/30 p-5">
       <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-300">
+        <h3 className="cdo-card-heading">
           {title}
-        </p>
+        </h3>
         <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100">
           N={total}
         </span>
@@ -1951,7 +1951,7 @@ function PersonalVisualBarCard({ title, items = [], total, empty }) {
           {items.slice(0, 6).map((item) => (
             <div key={item.label}>
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                <span className="truncate text-slate-300">{item.label}</span>
+                <span className="truncate text-sm font-medium text-slate-300">{item.label}</span>
                 <span className="font-mono text-cyan-100">{item.count}</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white/10">
@@ -1964,7 +1964,7 @@ function PersonalVisualBarCard({ title, items = [], total, empty }) {
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-sm leading-relaxed text-slate-400">{empty}</p>
+        <p className="cdo-muted-copy mt-4">{empty}</p>
       )}
     </section>
   );
@@ -1973,14 +1973,14 @@ function PersonalVisualBarCard({ title, items = [], total, empty }) {
 function MiniList({ title, items = [], empty }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+      <h3 className="cdo-card-heading">
         {title}
-      </p>
+      </h3>
       {items.length > 0 ? (
         <div className="mt-4 space-y-3">
           {items.map((item) => (
             <div key={item.label} className="flex items-center justify-between gap-3">
-              <span className="truncate text-sm text-zinc-300">{item.label}</span>
+              <span className="truncate text-sm font-medium text-zinc-300">{item.label}</span>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2 py-1 font-mono text-[10px] text-cyan-100">
                 {item.count}
               </span>
@@ -1988,7 +1988,7 @@ function MiniList({ title, items = [], empty }) {
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-sm leading-relaxed text-slate-400">{empty}</p>
+        <p className="cdo-muted-copy mt-4">{empty}</p>
       )}
     </div>
   );
@@ -1997,14 +1997,14 @@ function MiniList({ title, items = [], empty }) {
 function SimilarDreamList({ title, items = [], empty }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+      <h3 className="cdo-card-heading">
         {title}
-      </p>
+      </h3>
       {items.length > 0 ? (
         <div className="mt-4 space-y-4">
           {items.map((item) => (
             <div key={`${item.leftTitle}-${item.rightTitle}`} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-sm leading-relaxed text-slate-300">
+              <p className="cdo-body-copy">
                 {item.leftTitle} ↔ {item.rightTitle}
               </p>
               <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100">
@@ -2014,7 +2014,7 @@ function SimilarDreamList({ title, items = [], empty }) {
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-sm leading-relaxed text-slate-400">{empty}</p>
+        <p className="cdo-muted-copy mt-4">{empty}</p>
       )}
     </div>
   );
@@ -2023,19 +2023,19 @@ function SimilarDreamList({ title, items = [], empty }) {
 function ReflectionList({ title, questions = [], empty }) {
   return (
     <div className="mt-6 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-5">
-      <p className="font-mono text-xs uppercase tracking-[0.26em] text-fuchsia-200/70">
+      <h3 className="cdo-panel-heading">
         {title}
-      </p>
+      </h3>
       {questions.length > 0 ? (
         <ul className="mt-4 grid gap-4 md:grid-cols-2">
           {questions.map((question) => (
-            <li key={question} className="rounded-xl border border-white/10 bg-black/25 p-4 text-sm leading-relaxed text-slate-300">
+            <li key={question} className="cdo-body-copy rounded-xl border border-white/10 bg-black/25 p-4">
               {question}
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-4 text-sm leading-relaxed text-slate-400">{empty}</p>
+        <p className="cdo-muted-copy mt-4">{empty}</p>
       )}
     </div>
   );
@@ -2053,10 +2053,10 @@ function ProfilePill({ label, value }) {
 function StatusBlock({ label, value }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+      <p className="cdo-metric-label">
         {label}
       </p>
-      <p className="mt-2 truncate font-mono text-sm font-semibold text-cyan-100">
+      <p className="cdo-metric-value mt-2 truncate">
         {value}
       </p>
     </div>

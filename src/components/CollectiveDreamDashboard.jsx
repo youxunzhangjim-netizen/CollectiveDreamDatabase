@@ -1944,7 +1944,7 @@ function HeroPanel({
         <div className="relative p-7 sm:p-9 lg:p-12">
           <div className="absolute right-8 top-8 hidden h-28 w-28 rounded-full border border-cyan-300/20 bg-cyan-300/5 blur-sm lg:block" />
 
-          <p className="mb-4 font-mono text-xs uppercase tracking-[0.42em] text-cyan-200/70">
+          <p className="cdo-kicker mb-4">
             {copy.heroKicker}
           </p>
 
@@ -1952,11 +1952,11 @@ function HeroPanel({
             {copy.heroTitle}
           </h1>
 
-          <p className="mt-6 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base sm:leading-8">
+          <p className="cdo-body-copy mt-6 max-w-2xl sm:text-base sm:leading-8">
             {copy.heroText}
           </p>
           {copy.heroSubtext && (
-            <p className="mt-5 max-w-3xl text-sm leading-relaxed text-slate-300">
+            <p className="cdo-muted-copy mt-5 max-w-3xl">
               {copy.heroSubtext}
             </p>
           )}
@@ -1977,9 +1977,9 @@ function HeroPanel({
 
         <aside className="border-t border-white/10 bg-black/30 p-7 sm:p-9 lg:border-l lg:border-t-0">
           <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-6">
-            <p className="font-mono text-xs uppercase tracking-[0.28em] text-cyan-200/70">
+            <h2 className="cdo-panel-heading">
               {copy.schemaFocus}
-            </p>
+            </h2>
 
             <div className="mt-5 space-y-5">
               <SignalRow label={copy.anomalySearch} value={schemaStats.anomalySearch} />
@@ -1995,10 +1995,10 @@ function HeroPanel({
             </div>
 
             <div className="mt-7 rounded-xl border border-white/10 bg-black/30 p-5">
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+              <h3 className="cdo-card-heading">
                 {copy.databaseNote}
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-slate-300">
+              </h3>
+              <p className="cdo-body-copy mt-3">
                 {copy.schemaNote?.(schemaStats) || copy.databaseNoteText}
               </p>
             </div>
@@ -2017,13 +2017,13 @@ function HomePathways({ copy, activeSection, onSelectSection }) {
     <section className="mb-8 rounded-3xl border border-cyan-300/15 bg-zinc-950/65 p-5 shadow-[0_12px_50px_rgba(0,0,0,.28)] backdrop-blur sm:p-7">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
+          <p className="cdo-kicker">
             {copy.audienceKicker}
           </p>
-          <h2 className="mt-3 max-w-3xl text-2xl font-semibold text-zinc-50 sm:text-3xl">
+          <h2 className="cdo-section-heading mt-3 max-w-3xl">
             {copy.audienceTitle}
           </h2>
-          <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-relaxed text-slate-300">
+          <p className="cdo-body-copy mt-3 line-clamp-2 max-w-3xl">
             {copy.audienceText}
           </p>
         </div>
@@ -2060,10 +2060,10 @@ function HomePathways({ copy, activeSection, onSelectSection }) {
                   : "border-white/10 bg-black/30",
               ].join(" ")}
             >
-              <h3 className="text-base font-semibold leading-snug text-zinc-50 sm:text-lg">
+              <h3 className="cdo-card-heading sm:text-lg">
                 {section.title}
               </h3>
-              <p className="cdo-mobile-readable-text mt-3 text-sm leading-relaxed text-slate-300">
+              <p className="cdo-body-copy cdo-mobile-readable-text mt-3">
                 {section.text}
               </p>
             </button>
@@ -2082,8 +2082,8 @@ function AudienceCard({ title, text, accent }) {
 
   return (
     <article className={`rounded-2xl border p-6 ${accentClass}`}>
-      <h3 className="text-xl font-semibold leading-tight text-zinc-50">{title}</h3>
-      <p className="mt-3 text-[15px] font-medium leading-relaxed text-slate-300">{text}</p>
+      <h3 className="cdo-panel-heading text-xl">{title}</h3>
+      <p className="cdo-body-copy mt-3">{text}</p>
     </article>
   );
 }
@@ -2110,10 +2110,10 @@ function ResearchPanel({
     <section id="research-archive" className="mb-8 scroll-mt-28 rounded-3xl border border-white/10 bg-zinc-950/60 p-5 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-7">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
+          <p className="cdo-kicker">
             {copy.researchTitle}
           </p>
-          <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-relaxed text-slate-300">
+          <p className="cdo-body-copy mt-3 line-clamp-2 max-w-3xl">
             {copy.researchText}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -2151,9 +2151,9 @@ function ResearchPanel({
       <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-cyan-100">{copy.exportTitle}</p>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">{copy.exportText}</p>
-            <p className="mt-2 text-xs leading-5 text-zinc-500">{copy.exportPrivacyNote}</p>
+            <h3 className="cdo-card-heading">{copy.exportTitle}</h3>
+            <p className="cdo-body-copy mt-2 max-w-3xl">{copy.exportText}</p>
+            <p className="cdo-muted-copy mt-2">{copy.exportPrivacyNote}</p>
           </div>
           <span className="rounded-full border border-cyan-300/20 bg-black/30 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">N={records.length}</span>
         </div>
@@ -2233,10 +2233,10 @@ function CompactSummaryPill({ label, value }) {
 function ResearchMetric({ label, value }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+      <p className="cdo-metric-label">
         {label}
       </p>
-      <p className="mt-2 truncate font-mono text-sm font-semibold text-cyan-100">
+      <p className="cdo-metric-value mt-2 truncate">
         {value}
       </p>
     </div>
@@ -2251,10 +2251,10 @@ function CollectivePatternsPanel({ stats, copy, expanded, onToggle }) {
     <section id="collective-patterns" className="mb-8 scroll-mt-28 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-7">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="font-mono text-xs uppercase tracking-[0.32em] text-cyan-200/70">
+          <p className="cdo-kicker">
             {copy.patternDashboardTitle}
           </p>
-          <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-relaxed text-slate-300">
+          <p className="cdo-body-copy mt-3 line-clamp-2 max-w-3xl">
             {copy.patternDashboardText}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -2404,10 +2404,10 @@ function CollectiveVisualModal({ stats, copy, onClose }) {
       <section className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-6xl rounded-3xl border border-cyan-300/20 bg-zinc-950/95 p-5 shadow-[0_0_80px_rgba(34,211,238,.16)] sm:min-h-0 sm:p-7">
         <div className="flex flex-col gap-4 border-b border-white/10 pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-cyan-200/70">
+            <p className="cdo-kicker">
               {copy.patternVisualsTitle}
             </p>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+            <p className="cdo-body-copy mt-3 max-w-3xl">
               {copy.patternVisualsText}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -2450,9 +2450,9 @@ function PatternBarList({ title, items = [], total, empty }) {
   return (
     <section className="rounded-2xl border border-white/10 bg-black/30 p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-xs uppercase tracking-[0.24em] text-zinc-300">
+        <h3 className="cdo-card-heading">
           {title}
-        </p>
+        </h3>
         <span className="rounded-full border border-cyan-300/20 bg-cyan-300/5 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100">
           N={total}
         </span>
@@ -2476,7 +2476,7 @@ function PatternBarList({ title, items = [], total, empty }) {
           ))}
         </div>
       ) : (
-        <p className="mt-5 text-sm leading-relaxed text-slate-400">{empty}</p>
+        <p className="cdo-muted-copy mt-5">{empty}</p>
       )}
     </section>
   );
@@ -2517,9 +2517,9 @@ function VisualBarCard({ title, items = [], total, empty }) {
   return (
     <section className="rounded-2xl border border-white/10 bg-black/30 p-5">
       <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-300">
+        <h3 className="cdo-card-heading">
           {title}
-        </p>
+        </h3>
         <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100">
           N={total}
         </span>
@@ -2530,7 +2530,7 @@ function VisualBarCard({ title, items = [], total, empty }) {
           {items.slice(0, 6).map((item) => (
             <div key={item.label}>
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                <span className="truncate text-slate-300">{item.label}</span>
+                <span className="truncate text-sm font-medium text-slate-300">{item.label}</span>
                 <span className="font-mono text-cyan-100">{item.count}</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white/10">
@@ -2543,7 +2543,7 @@ function VisualBarCard({ title, items = [], total, empty }) {
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-sm leading-relaxed text-slate-400">{empty}</p>
+        <p className="cdo-muted-copy mt-4">{empty}</p>
       )}
     </section>
   );
@@ -2585,10 +2585,10 @@ function FilterPanel({
     <section className="mb-8 rounded-3xl border border-white/10 bg-zinc-950/60 p-5 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-7">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="font-mono text-xs uppercase tracking-[0.32em] text-fuchsia-200/70">
+          <p className="cdo-kicker">
             {copy.filterTitle}
           </p>
-          <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-relaxed text-slate-300">
+          <p className="cdo-body-copy mt-3 line-clamp-2 max-w-2xl">
             {copy.filterText}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -2723,10 +2723,10 @@ function ObservationSortBar({ sortMode, setSortMode, totalItems, copy }) {
   return (
     <section className="mb-5 rounded-2xl border border-white/10 bg-zinc-950/65 p-4 backdrop-blur sm:p-5">
       <div className="mb-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
-        <h3 className="text-base font-semibold leading-snug text-zinc-50">
+        <h3 className="cdo-panel-heading">
           {copy.signalCoherence}
         </h3>
-        <p className="mt-2 max-w-4xl text-sm font-medium leading-relaxed text-slate-300">
+        <p className="cdo-body-copy mt-2 max-w-4xl">
           {copy.signalCoherenceInfo}
         </p>
       </div>
@@ -3230,10 +3230,10 @@ function StatusPill({ label, value, pulse = false }) {
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-cyan-200" />
         </span>
       )}
-      <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+      <span className="cdo-metric-label text-[10px]">
         {label}
       </span>
-      <span className="font-mono text-xs uppercase tracking-[0.16em] text-cyan-100">
+      <span className="cdo-metric-value text-xs">
         {value}
       </span>
     </div>
@@ -3244,10 +3244,10 @@ function SignalRow({ label, value, inverse = false }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-4">
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+        <span className="cdo-metric-label">
           {label}
         </span>
-        <span className="font-mono text-xs text-cyan-100">{value}%</span>
+        <span className="cdo-metric-value text-sm">{value}%</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
         <div
