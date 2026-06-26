@@ -133,12 +133,35 @@ html[data-appearance="morning"] [class*="text-zinc-200"] {
 
 html[data-appearance="morning"] [class*="text-zinc-300"],
 html[data-appearance="morning"] [class*="text-zinc-400"] {
-  color: #334155 !important;
+  color: #1e293b !important;
 }
 
 html[data-appearance="morning"] [class*="text-zinc-500"],
 html[data-appearance="morning"] [class*="text-zinc-600"] {
-  color: #64748b !important;
+  color: #475569 !important;
+}
+
+html[data-appearance="morning"] [class*="text-slate-50"],
+html[data-appearance="morning"] [class*="text-slate-100"],
+html[data-appearance="morning"] [class*="text-slate-200"],
+html[data-appearance="morning"] [class*="text-gray-50"],
+html[data-appearance="morning"] [class*="text-gray-100"],
+html[data-appearance="morning"] [class*="text-gray-200"] {
+  color: #0f172a !important;
+}
+
+html[data-appearance="morning"] [class*="text-slate-300"],
+html[data-appearance="morning"] [class*="text-slate-400"],
+html[data-appearance="morning"] [class*="text-gray-300"],
+html[data-appearance="morning"] [class*="text-gray-400"] {
+  color: #1e293b !important;
+}
+
+html[data-appearance="morning"] [class*="text-slate-500"],
+html[data-appearance="morning"] [class*="text-slate-600"],
+html[data-appearance="morning"] [class*="text-gray-500"],
+html[data-appearance="morning"] [class*="text-gray-600"] {
+  color: #475569 !important;
 }
 
 html[data-appearance="morning"] [class*="text-cyan-50"],
@@ -230,6 +253,12 @@ html[data-appearance="morning"] label[class*="cursor-pointer"] {
   text-shadow: none !important;
 }
 
+html[data-appearance="morning"] button [class*="text-"],
+html[data-appearance="morning"] a[role="button"] [class*="text-"],
+html[data-appearance="morning"] label[class*="cursor-pointer"] [class*="text-"] {
+  color: inherit !important;
+}
+
 html[data-appearance="morning"] button[class*="bg-cyan-300"],
 html[data-appearance="morning"] button[class*="bg-fuchsia-300"],
 html[data-appearance="morning"] button[class*="bg-amber-300"] {
@@ -255,7 +284,7 @@ html[data-appearance="morning"] select {
 
 html[data-appearance="morning"] input::placeholder,
 html[data-appearance="morning"] textarea::placeholder {
-  color: #94a3b8 !important;
+  color: #64748b !important;
 }
 
 html[data-appearance="morning"] option {
@@ -368,5 +397,5 @@ html[data-appearance="morning"] [class*="border-red-300/"] {
 
 html[data-appearance="morning"] [class*="text-zinc-500"],
 html[data-appearance="morning"] [class*="text-zinc-600"] {
-  color: #64748b !important;
+  color: #475569 !important;
 }
