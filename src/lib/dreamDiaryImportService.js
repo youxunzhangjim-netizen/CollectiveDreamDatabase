@@ -529,12 +529,12 @@ export async function createDreamDiaryImport({
         { merge: true }
       );
     } catch (error) {
-      failedDrafts.push({ draft, error: error?.message || "Import failed." });
+      failedDrafts.push({ draft, error: formatImportError(error) });
       await setDoc(
         draftRef,
         {
           status: "failed",
-          importError: error?.message || "Import failed.",
+          importError: formatImportError(error),
           updatedAt: serverTimestamp(),
         },
         { merge: true }
@@ -611,12 +611,20 @@ async function applyImportSharingMode({
   const recordId = getRecordId(record);
   if (!recordId) return record;
 
-  await updateOwnedRecordSharing(currentUser, recordId, { sharingMode }, profile);
+  try {
+    await updateOwnedRecordSharing(currentUser, recordId, { sharingMode }, profile);
 
-  return {
-    ...record,
-    ...buildImportSharingPatch(sharingMode, currentUser, profile),
-  };
+    return {
+      ...record,
+      ...buildImportSharingPatch(sharingMode, currentUser, profile),
+    };
+  } catch (error) {
+    return {
+      ...record,
+      sharingUpdateError:
+        error?.message || "The record imported, but sharing could not be updated.",
+    };
+  }
 }
 
 function buildImportSharingPatch(sharingMode, currentUser, profile) {
@@ -675,6 +683,12 @@ function findTranslationTarget(records, draft) {
 
 function getRecordId(record) {
   return record?.id || record?.dream_id || record?.recordId || "";
+}
+
+function formatImportError(error) {
+  const code = error?.code ? `${error.code}: ` : "";
+  const message = error?.message || "Import failed.";
+  return `${code}${message}`.slice(0, 1000);
 }
 
 function normalizeRecordDate(value) {

@@ -100,6 +100,9 @@ const IMPORT_COPY = {
     translationComplete: ({ count }) => `${count} diary versions attached as recorder translations.`,
     skippedComplete: ({ count }) => `${count} duplicate dreams skipped.`,
     importErrors: ({ count }) => `${count} drafts could not be imported. Review the messages and try again.`,
+    firstImportError: ({ message }) => `First error: ${message}`,
+    sharingWarning:
+      "Some dreams were imported but stayed private because sharing could not be updated.",
     storageWarning:
       "Original file storage was not available, but parsed private records can still be saved.",
     importFailed: "Import could not be completed. Review the drafts and try again.",
@@ -201,6 +204,8 @@ const IMPORT_COPY = {
     importComplete: ({ count }) => `已匯入 ${count} 則夢境。`,
     skippedComplete: ({ count }) => `已略過 ${count} 則重複夢境。`,
     importErrors: ({ count }) => `${count} 則草稿無法匯入。請檢查訊息後再試。`,
+    firstImportError: ({ message }) => `第一個錯誤：${message}`,
+    sharingWarning: "部分夢境已匯入，但公開狀態無法更新，因此保留為私人。",
     storageWarning: "原始檔案儲存尚不可用，但解析後的私人紀錄仍可儲存。",
     importFailed: "匯入無法完成。請檢查草稿後再試一次。",
     titleSourceLabels: {
@@ -302,6 +307,9 @@ const IMPORT_COPY = {
     importComplete: ({ count }) => `${count} sueños importados.`,
     skippedComplete: ({ count }) => `${count} sueños duplicados omitidos.`,
     importErrors: ({ count }) => `${count} borradores no se pudieron importar. Revisa los mensajes e inténtalo de nuevo.`,
+    firstImportError: ({ message }) => `Primer error: ${message}`,
+    sharingWarning:
+      "Algunos sueños se importaron pero quedaron privados porque no se pudo actualizar el modo público.",
     storageWarning: "El almacenamiento del archivo original no está disponible, pero los registros privados procesados se pueden guardar.",
     importFailed: "La importación no se pudo completar. Revisa los borradores e inténtalo de nuevo.",
     titleSourceLabels: {
@@ -678,14 +686,29 @@ export default function ImportDreamDiaryPage({
           : "";
       const skippedNotice =
         skippedCount > 0 ? ` ${copy.skippedComplete({ count: skippedCount })}` : "";
+      const sharingWarningCount = [
+        ...(importResult.importedRecords || []),
+        ...(importResult.linkedTranslationRecords || []),
+      ].filter((record) => record?.sharingUpdateError).length;
+      const sharingWarning = sharingWarningCount > 0 ? ` ${copy.sharingWarning}` : "";
       setNotice(
-        `${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice}${skippedNotice}`
+        `${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice}${skippedNotice}${sharingWarning}`
       );
       if (importResult.failedDrafts.length > 0) {
-        setError(copy.importErrors({ count: importResult.failedDrafts.length }));
+        const firstError = String(
+          importResult.failedDrafts.find((item) => item?.error)?.error || ""
+        ).slice(0, 500);
+        setError(
+          [
+            copy.importErrors({ count: importResult.failedDrafts.length }),
+            firstError ? copy.firstImportError({ message: firstError }) : "",
+          ]
+            .filter(Boolean)
+            .join(" ")
+        );
       }
       if (importResult.storageUploadError) {
-        setNotice(`${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice}${skippedNotice} ${copy.storageWarning}`);
+        setNotice(`${copy.importComplete({ count: importResult.importedRecords.length })}${translationNotice}${skippedNotice}${sharingWarning} ${copy.storageWarning}`);
       }
     } catch (importError) {
       setError(importError?.message || copy.importFailed);
