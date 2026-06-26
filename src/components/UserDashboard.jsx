@@ -6,6 +6,7 @@ import {
   fetchSavedRecords,
   removeCollectedRecord,
   removeSavedRecord,
+  calculateDreamSignalCoherence,
   updateOwnedRecordSharing,
 } from "../lib/recordsService.js";
 import {
@@ -79,9 +80,12 @@ const DASHBOARD_COPY = {
     accountEmailHidden: "Account email hidden",
     privateAccountLabel: "Private account",
     lastSync: "Last Sync",
-    timeOrderLabel: "Time order",
+    timeOrderLabel: "Dream order",
     timeNewest: "Newest first",
     timeOldest: "Oldest first",
+    sortUpdated: "Recently amended",
+    sortName: "Name A-Z",
+    sortAuthor: "Recorder name",
     recordsLoading: "Loading personal records",
     accountDetails: "Account Details",
     displayNameLabel: "Public Name",
@@ -125,6 +129,12 @@ const DASHBOARD_COPY = {
     analysisLucidNightmare: "Lucid / nightmare",
     analysisSimilarDreams: "Similar dreams",
     analysisReflectionQuestions: "Questions for reflection",
+    analysisPsychologyPatterns: "Psychological observables",
+    analysisAnalysisMarkers: "Dream-analysis markers",
+    analysisWeatherPatterns: "Weather / atmosphere",
+    analysisPerspectivePatterns: "Viewpoint patterns",
+    analysisStylePatterns: "Visual style",
+    analysisEraPatterns: "Era / time setting",
     analysisDreamTypeLead: "Leading dream type",
     analysisPsychologyLead: "Leading psyche signal",
     analysisAnalysisLead: "Leading analysis marker",
@@ -132,6 +142,11 @@ const DASHBOARD_COPY = {
     analysisEmotionLead: "Leading emotion",
     analysisAverageAge: "Avg dream age",
     analysisNoData: "No data yet",
+    analysisVisualsButton: "Open visual map",
+    analysisVisualsTitle: "Personal analysis visual map",
+    analysisVisualsText:
+      "A local diagram view generated from your own dream records, tags, dates, language, and descriptive markers. It is for reflection, not diagnosis.",
+    closeVisuals: "Close",
   },
   zh: {
     documentTitle: "個人夢境終端",
@@ -175,9 +190,12 @@ const DASHBOARD_COPY = {
     accountEmailHidden: "帳戶電子郵件已隱藏",
     privateAccountLabel: "私人帳戶",
     lastSync: "最後同步",
-    timeOrderLabel: "時間順序",
+    timeOrderLabel: "夢境排序",
     timeNewest: "最新在前",
     timeOldest: "最舊在前",
+    sortUpdated: "最近修改",
+    sortName: "名稱 A-Z",
+    sortAuthor: "記錄者名稱",
     recordsLoading: "正在載入個人紀錄",
     accountDetails: "帳戶資料",
     displayNameLabel: "公開名稱",
@@ -220,6 +238,12 @@ const DASHBOARD_COPY = {
     analysisLucidNightmare: "清醒夢／惡夢",
     analysisSimilarDreams: "相似夢境",
     analysisReflectionQuestions: "反思問題",
+    analysisPsychologyPatterns: "心理觀察項",
+    analysisAnalysisMarkers: "夢境分析標記",
+    analysisWeatherPatterns: "天氣／氣氛",
+    analysisPerspectivePatterns: "視角模式",
+    analysisStylePatterns: "視覺風格",
+    analysisEraPatterns: "時代／時間背景",
     analysisDreamTypeLead: "主要夢境類型",
     analysisPsychologyLead: "主要心理訊號",
     analysisAnalysisLead: "主要分析標記",
@@ -227,6 +251,11 @@ const DASHBOARD_COPY = {
     analysisEmotionLead: "主要情緒",
     analysisAverageAge: "平均夢中年齡",
     analysisNoData: "尚無資料",
+    analysisVisualsButton: "開啟視覺圖表",
+    analysisVisualsTitle: "個人分析視覺圖",
+    analysisVisualsText:
+      "由你的夢境記錄、標籤、日期、語言與描述性標記在本機產生的圖表視圖，用於自我反思，不是診斷。",
+    closeVisuals: "關閉",
   },
   es: {
     documentTitle: "Consola personal de sueños",
@@ -271,9 +300,12 @@ const DASHBOARD_COPY = {
     accountEmailHidden: "Correo de cuenta oculto",
     privateAccountLabel: "Cuenta privada",
     lastSync: "Última sincronización",
-    timeOrderLabel: "Orden temporal",
+    timeOrderLabel: "Orden de sueños",
     timeNewest: "Más reciente primero",
     timeOldest: "Más antiguo primero",
+    sortUpdated: "Modificado reciente",
+    sortName: "Nombre A-Z",
+    sortAuthor: "Nombre del registrador",
     recordsLoading: "Cargando registros personales",
     accountDetails: "Datos de la cuenta",
     displayNameLabel: "Nombre público",
@@ -317,6 +349,12 @@ const DASHBOARD_COPY = {
     analysisLucidNightmare: "Lúcido / pesadilla",
     analysisSimilarDreams: "Sueños similares",
     analysisReflectionQuestions: "Preguntas de reflexión",
+    analysisPsychologyPatterns: "Observables psicológicos",
+    analysisAnalysisMarkers: "Marcadores de análisis onírico",
+    analysisWeatherPatterns: "Clima / atmósfera",
+    analysisPerspectivePatterns: "Patrones de punto de vista",
+    analysisStylePatterns: "Estilo visual",
+    analysisEraPatterns: "Época / tiempo",
     analysisDreamTypeLead: "Tipo principal",
     analysisPsychologyLead: "Señal psíquica principal",
     analysisAnalysisLead: "Marcador principal",
@@ -324,6 +362,11 @@ const DASHBOARD_COPY = {
     analysisEmotionLead: "Emoción principal",
     analysisAverageAge: "Edad media",
     analysisNoData: "Sin datos",
+    analysisVisualsButton: "Abrir mapa visual",
+    analysisVisualsTitle: "Mapa visual de análisis personal",
+    analysisVisualsText:
+      "Una vista de diagramas local generada desde tus propios registros, etiquetas, fechas, idioma y marcadores descriptivos. Es para reflexión, no diagnóstico.",
+    closeVisuals: "Cerrar",
   },
 };
 
@@ -448,16 +491,30 @@ export default function UserDashboard({
   const orderedActiveItems = useMemo(
     () =>
       [...activeItems].sort((a, b) => {
+        if (timeOrder === "updated") {
+          return compareNullableMillis(getRecordUpdatedMillis(a), getRecordUpdatedMillis(b), "desc");
+        }
+
+        if (timeOrder === "name") {
+          return getDisplayItemTitle(a, language).localeCompare(
+            getDisplayItemTitle(b, language),
+            language === "zh" ? "zh-Hant" : language === "es" ? "es" : "en"
+          );
+        }
+
+        if (timeOrder === "author") {
+          return getItemAuthorName(a, copy).localeCompare(
+            getItemAuthorName(b, copy),
+            language === "zh" ? "zh-Hant" : language === "es" ? "es" : "en"
+          );
+        }
+
         const first = getRecordSortMillis(a);
         const second = getRecordSortMillis(b);
 
-        if (first == null && second == null) return 0;
-        if (first == null) return 1;
-        if (second == null) return -1;
-
-        return timeOrder === "asc" ? first - second : second - first;
+        return compareNullableMillis(first, second, timeOrder === "asc" ? "asc" : "desc");
       }),
-    [activeItems, timeOrder]
+    [activeItems, copy, language, timeOrder]
   );
   const emptyMessage =
     activeTab === "observations"
@@ -1029,6 +1086,9 @@ export default function UserDashboard({
               >
                 <option value="desc">{copy.timeNewest}</option>
                 <option value="asc">{copy.timeOldest}</option>
+                <option value="updated">{copy.sortUpdated}</option>
+                <option value="name">{copy.sortName}</option>
+                <option value="author">{copy.sortAuthor}</option>
               </select>
             </label>
             <p className="font-mono text-xs uppercase tracking-[0.22em] text-zinc-500">
@@ -1172,6 +1232,23 @@ function normalizeRecordItem(item, index) {
   const thumbnailUrl = getPrimaryDreamImageUrl(item);
   const dreamDate = getVisibleDreamDate(item);
   const dreamDateStatus = getDreamDateStatus(item);
+  const tags = Array.isArray(item.tags) ? item.tags : [];
+  const signalCoherence = calculateDreamSignalCoherence({
+    dreamText:
+      item.originalText ||
+      item.original_text ||
+      getLanguageSpecificRecordValue({ text, textEn, textZh, textEs }, "text", originalLanguage),
+    title:
+      item.originalTitle ||
+      item.original_title ||
+      getLanguageSpecificRecordValue({ title, titleEn, titleZh, titleEs }, "title", originalLanguage),
+    dreamDate,
+    dreamTime: item.dreamTime || item.dream_time,
+    dreamPeriod: item.dreamPeriod || item.dream_period,
+    dreamSequence: item.dreamSequence || item.dream_sequence,
+    ageAtDream: item.ageAtDream,
+    tags,
+  });
 
   return {
     id,
@@ -1245,7 +1322,7 @@ function normalizeRecordItem(item, index) {
     includedInResearchStats: Boolean(
       item.includedInResearchStats || item.researchConsent
     ),
-    tags: Array.isArray(item.tags) ? item.tags : [],
+    tags,
     environmentTags: Array.isArray(item.environmentTags) ? item.environmentTags : [],
     entityTags: Array.isArray(item.entityTags) ? item.entityTags : [],
     anomalyTags: Array.isArray(item.anomalyTags)
@@ -1268,6 +1345,9 @@ function normalizeRecordItem(item, index) {
     customTags: Array.isArray(item.customTags) ? item.customTags : [],
     adultContent: Boolean(item.adultContent || item.adult_content || item.isAdult || item.is_adult),
     minimumViewerAge: item.minimumViewerAge || item.minimum_viewer_age || 0,
+    signal_coherence: signalCoherence,
+    createdAt: item.createdAt || item.created_at || "",
+    updatedAt: item.updatedAt || item.updated_at || item.sharingUpdatedAt || "",
     date: formatRecordDate(dreamDate),
     hash: item.hash || `VX-${String(id || "record").slice(0, 8).toUpperCase()}`,
     accent: item.accent || accents[index % accents.length],
@@ -1354,6 +1434,27 @@ function getRecordSortMillis(item) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function getRecordTimestampMillis(value) {
+  if (!value) return null;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (Number.isFinite(value?.seconds)) return value.seconds * 1000;
+
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getRecordUpdatedMillis(item) {
+  return getRecordTimestampMillis(item.updatedAt || item.sharingUpdatedAt || item.createdAt);
+}
+
+function compareNullableMillis(first, second, direction = "desc") {
+  if (first == null && second == null) return 0;
+  if (first == null) return 1;
+  if (second == null) return -1;
+
+  return direction === "asc" ? first - second : second - first;
+}
+
 function buildPersonalDreamAnalysis(items, language, copy) {
   const languageCounts = new Map();
   const emotionCounts = new Map();
@@ -1363,6 +1464,10 @@ function buildPersonalDreamAnalysis(items, language, copy) {
   const placeCounts = new Map();
   const entityCounts = new Map();
   const symbolCounts = new Map();
+  const weatherCounts = new Map();
+  const perspectiveCounts = new Map();
+  const styleCounts = new Map();
+  const eraCounts = new Map();
   const monthCounts = new Map();
   let adultCount = 0;
   let ageTotal = 0;
@@ -1418,6 +1523,22 @@ function buildPersonalDreamAnalysis(items, language, copy) {
       incrementMap(symbolCounts, label);
     });
 
+    getCategoryTagLabels(item, "Weather", language).forEach((label) => {
+      incrementMap(weatherCounts, label);
+    });
+
+    getCategoryTagLabels(item, "Perspective", language).forEach((label) => {
+      incrementMap(perspectiveCounts, label);
+    });
+
+    getCategoryTagLabels(item, "Styles", language).forEach((label) => {
+      incrementMap(styleCounts, label);
+    });
+
+    getCategoryTagLabels(item, "Eras", language).forEach((label) => {
+      incrementMap(eraCounts, label);
+    });
+
     if (hasTagSlug(item, "lucid")) lucidCount += 1;
     if (hasTagSlug(item, "nightmare")) nightmareCount += 1;
   });
@@ -1443,6 +1564,12 @@ function buildPersonalDreamAnalysis(items, language, copy) {
     recurringPlaces: toTopEntries(placeCounts, 5),
     recurringEntities: toTopEntries(entityCounts, 5),
     commonSymbols: toTopEntries(symbolCounts, 5),
+    psychologyPatterns: toTopEntries(psychologyCounts, 6),
+    analysisMarkers: toTopEntries(analysisCounts, 6),
+    weatherPatterns: toTopEntries(weatherCounts, 5),
+    perspectivePatterns: toTopEntries(perspectiveCounts, 5),
+    stylePatterns: toTopEntries(styleCounts, 5),
+    eraPatterns: toTopEntries(eraCounts, 5),
     lucidCount,
     nightmareCount,
     similarDreams: findSimilarDreamPairs(items, language).slice(0, 3),
@@ -1643,6 +1770,8 @@ function LanguageToggle({ language, setLanguage, copy }) {
 }
 
 function PersonalAnalysisPanel({ stats, copy }) {
+  const [visualsOpen, setVisualsOpen] = useState(false);
+
   return (
     <section className="mb-8 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-7">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -1654,6 +1783,13 @@ function PersonalAnalysisPanel({ stats, copy }) {
             {copy.analysisText}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setVisualsOpen(true)}
+          className="self-start rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15 sm:self-end"
+        >
+          {copy.analysisVisualsButton}
+        </button>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1672,6 +1808,10 @@ function PersonalAnalysisPanel({ stats, copy }) {
         <MiniList title={copy.analysisRecurringPlaces} items={stats.recurringPlaces} empty={copy.analysisNoData} />
         <MiniList title={copy.analysisRecurringEntities} items={stats.recurringEntities} empty={copy.analysisNoData} />
         <MiniList title={copy.analysisCommonSymbols} items={stats.commonSymbols} empty={copy.analysisNoData} />
+        <MiniList title={copy.analysisPsychologyPatterns} items={stats.psychologyPatterns} empty={copy.analysisNoData} />
+        <MiniList title={copy.analysisAnalysisMarkers} items={stats.analysisMarkers} empty={copy.analysisNoData} />
+        <MiniList title={copy.analysisWeatherPatterns} items={stats.weatherPatterns} empty={copy.analysisNoData} />
+        <MiniList title={copy.analysisPerspectivePatterns} items={stats.perspectivePatterns} empty={copy.analysisNoData} />
         <StatusBlock
           label={copy.analysisLucidNightmare}
           value={`${stats.lucidCount || 0} / ${stats.nightmareCount || 0}`}
@@ -1688,6 +1828,144 @@ function PersonalAnalysisPanel({ stats, copy }) {
         questions={stats.reflectionQuestions}
         empty={copy.analysisNoData}
       />
+
+      {visualsOpen && (
+        <PersonalVisualModal
+          stats={stats}
+          copy={copy}
+          onClose={() => setVisualsOpen(false)}
+        />
+      )}
+    </section>
+  );
+}
+
+function PersonalVisualModal({ stats, copy, onClose }) {
+  const visualGroups = [
+    { title: copy.analysisFrequency, items: stats.dreamFrequency },
+    { title: copy.analysisPsychologyPatterns, items: stats.psychologyPatterns },
+    { title: copy.analysisAnalysisMarkers, items: stats.analysisMarkers },
+    { title: copy.analysisWeatherPatterns, items: stats.weatherPatterns },
+    { title: copy.analysisPerspectivePatterns, items: stats.perspectivePatterns },
+    { title: copy.analysisStylePatterns, items: stats.stylePatterns },
+    { title: copy.analysisEraPatterns, items: stats.eraPatterns },
+    { title: copy.analysisCommonSymbols, items: stats.commonSymbols },
+  ];
+  const orbitItems = [
+    ...(stats.recurringPlaces || []).slice(0, 2),
+    ...(stats.recurringEntities || []).slice(0, 2),
+    ...(stats.psychologyPatterns || []).slice(0, 3),
+    ...(stats.analysisMarkers || []).slice(0, 3),
+  ].slice(0, 10);
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-3 backdrop-blur-md sm:p-6">
+      <section className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-6xl rounded-3xl border border-cyan-300/20 bg-zinc-950/95 p-5 shadow-[0_0_80px_rgba(34,211,238,.16)] sm:min-h-0 sm:p-7">
+        <div className="flex flex-col gap-4 border-b border-white/10 pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-cyan-200/70">
+              {copy.analysisVisualsTitle}
+            </p>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+              {copy.analysisVisualsText}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ProfilePill label={copy.analysisTotal} value={String(stats.total)} />
+              <ProfilePill label={copy.analysisEmotionLead} value={stats.leadingEmotion} />
+              <ProfilePill label={copy.analysisPsychologyLead} value={stats.leadingPsychology} />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="self-start rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-200 transition hover:border-cyan-300/35 hover:text-cyan-100"
+          >
+            {copy.closeVisuals}
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+          <PersonalVisualOrbit items={orbitItems} empty={copy.analysisNoData} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {visualGroups.map((group) => (
+              <PersonalVisualBarCard
+                key={group.title}
+                title={group.title}
+                items={group.items}
+                total={Math.max(1, stats.total)}
+                empty={copy.analysisNoData}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function PersonalVisualOrbit({ items = [], empty }) {
+  return (
+    <div className="relative min-h-[22rem] overflow-hidden rounded-3xl border border-cyan-300/15 bg-black/35 p-5">
+      <div className="absolute inset-6 rounded-full border border-cyan-300/10" />
+      <div className="absolute inset-16 rounded-full border border-fuchsia-300/10" />
+      <div className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/25 bg-cyan-300/10 shadow-[0_0_38px_rgba(34,211,238,.16)]" />
+      <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-200 shadow-[0_0_20px_rgba(103,232,249,.9)]" />
+
+      {items.length > 0 ? (
+        <div className="relative grid min-h-[19rem] grid-cols-2 content-between gap-3 sm:grid-cols-3">
+          {items.map((item, index) => (
+            <span
+              key={`${item.label}-${index}`}
+              className="rounded-2xl border border-white/10 bg-zinc-950/80 px-3 py-2 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-slate-200 shadow-[0_0_24px_rgba(0,0,0,.25)]"
+            >
+              <span className="block truncate">{item.label}</span>
+              <span className="mt-1 block text-cyan-100">{item.count}</span>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="relative flex min-h-[19rem] items-center justify-center text-sm leading-relaxed text-slate-400">
+          {empty}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PersonalVisualBarCard({ title, items = [], total, empty }) {
+  const maxCount = Math.max(1, ...items.map((item) => item.count || 0));
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-black/30 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-300">
+          {title}
+        </p>
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100">
+          N={total}
+        </span>
+      </div>
+
+      {items.length > 0 ? (
+        <div className="mt-4 space-y-3">
+          {items.slice(0, 6).map((item) => (
+            <div key={item.label}>
+              <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                <span className="truncate text-slate-300">{item.label}</span>
+                <span className="font-mono text-cyan-100">{item.count}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="cdo-gradient-bar h-full rounded-full"
+                  style={{ width: `${Math.max(6, Math.round((item.count / maxCount) * 100))}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 text-sm leading-relaxed text-slate-400">{empty}</p>
+      )}
     </section>
   );
 }

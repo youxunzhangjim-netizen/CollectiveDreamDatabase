@@ -19,6 +19,7 @@ import {
   fetchFollowingRecorders,
   fetchPublicRecords,
   followRecorderForUser,
+  calculateDreamSignalCoherence,
   saveRecordForUser,
   unfollowRecorderForUser,
 } from "../lib/recordsService.js";
@@ -177,10 +178,12 @@ const UI_COPY = {
     matchAny: "Match any",
     categorySelectLabel: "Filter tags by category",
     sortSelectLabel: "Sort dreams",
-    sortCoherence: "Sort: Coherence",
+    sortCoherence: "Sort: Analysis coverage",
     sortNewest: "Sort: Newest",
     sortOldest: "Sort: Oldest",
     sortTitle: "Sort: Title",
+    sortUpdated: "Sort: Recently amended",
+    sortAuthor: "Sort: Recorder name",
     selectedLabel: "selected",
     clearFilters: "Clear filters",
     noMatchesTitle: "No matching dream observations",
@@ -191,7 +194,9 @@ const UI_COPY = {
     generatedImage: "Generated Image",
     generatedImageAlt: "Generated visual for dream titled",
     visualHash: "Visual hash",
-    signalCoherence: "Signal coherence",
+    signalCoherence: "Analysis coverage",
+    signalCoherenceInfo:
+      "Calculated from record detail, tag coverage, emotion markers, psychological observables, analysis markers, and date/time metadata. It is not a truth score or literary quality score.",
     originalLanguageLabel: "Original language",
     unknownDate: "Date unknown",
     adultContentLabel: "Adult content",
@@ -210,7 +215,7 @@ const UI_COPY = {
     researchTotal: "Total records",
     researchVisible: "Visible now",
     researchAdultRestricted: "Mature gated",
-    researchAverageCoherence: "Avg coherence",
+    researchAverageCoherence: "Avg coverage",
     researchEmotionLead: "Leading emotion",
     researchLanguageLead: "Leading original language",
     exportTitle: "Research exports",
@@ -246,6 +251,15 @@ const UI_COPY = {
     patternLucidNightmare: "Nightmare / lucid ratio",
     patternDreamLength: "Dream length",
     patternCooccurrence: "Tag co-occurrence",
+    patternPsychology: "Psychological observables",
+    patternAnalysisMarkers: "Dream-analysis markers",
+    patternPerspectives: "Viewpoint patterns",
+    patternWeather: "Weather / atmosphere",
+    patternVisualsButton: "Open visual map",
+    patternVisualsTitle: "Collective analysis visual map",
+    patternVisualsText:
+      "A browser-generated diagram view of aggregate patterns. It uses only public, readable records in the current filter set.",
+    closeVisuals: "Close",
     patternNightmare: "Nightmare",
     patternLucid: "Lucid",
     patternRecords: "records",
@@ -357,10 +371,12 @@ const UI_COPY = {
     matchAny: "任一符合",
     categorySelectLabel: "依類別篩選標籤",
     sortSelectLabel: "排序夢境",
-    sortCoherence: "排序：一致性",
+    sortCoherence: "排序：分析覆蓋度",
     sortNewest: "排序：最新",
     sortOldest: "排序：最舊",
     sortTitle: "排序：標題",
+    sortUpdated: "排序：最近修改",
+    sortAuthor: "排序：記錄者名稱",
     selectedLabel: "已選",
     clearFilters: "清除篩選",
     noMatchesTitle: "沒有相符的夢境觀測",
@@ -370,7 +386,9 @@ const UI_COPY = {
     generatedImage: "生成影像",
     generatedImageAlt: "夢境生成視覺，標題為",
     visualHash: "視覺雜湊",
-    signalCoherence: "訊號一致性",
+    signalCoherence: "分析覆蓋度",
+    signalCoherenceInfo:
+      "由記錄細節、標籤覆蓋、情緒標記、心理觀察、夢境分析標記與日期／時間資料計算。它不是夢境真實度，也不是文學品質分數。",
     originalLanguageLabel: "原始語言",
     unknownDate: "日期不確定",
     adultContentLabel: "成人內容",
@@ -386,7 +404,7 @@ const UI_COPY = {
     researchTotal: "總紀錄",
     researchVisible: "目前可見",
     researchAdultRestricted: "成人門檻",
-    researchAverageCoherence: "平均一致性",
+    researchAverageCoherence: "平均覆蓋度",
     researchEmotionLead: "主要情緒",
     researchLanguageLead: "主要原始語言",
     exportTitle: "研究匯出",
@@ -422,6 +440,15 @@ const UI_COPY = {
     patternLucidNightmare: "惡夢／清醒夢比例",
     patternDreamLength: "夢境長度",
     patternCooccurrence: "標籤共現",
+    patternPsychology: "心理觀察項",
+    patternAnalysisMarkers: "夢境分析標記",
+    patternPerspectives: "視角模式",
+    patternWeather: "天氣／氣氛",
+    patternVisualsButton: "開啟視覺圖表",
+    patternVisualsTitle: "集體分析視覺圖",
+    patternVisualsText:
+      "由瀏覽器根據目前篩選中的公開可讀夢境產生的圖表視圖。",
+    closeVisuals: "關閉",
     patternNightmare: "惡夢",
     patternLucid: "清醒夢",
     patternRecords: "筆紀錄",
@@ -534,10 +561,12 @@ const UI_COPY = {
     matchAny: "Cualquiera",
     categorySelectLabel: "Filtrar etiquetas por categoría",
     sortSelectLabel: "Ordenar sueños",
-    sortCoherence: "Orden: Coherencia",
+    sortCoherence: "Orden: Cobertura de análisis",
     sortNewest: "Orden: Más reciente",
     sortOldest: "Orden: Más antiguo",
     sortTitle: "Orden: Título",
+    sortUpdated: "Orden: Modificado reciente",
+    sortAuthor: "Orden: Nombre del registrador",
     selectedLabel: "seleccionadas",
     clearFilters: "Limpiar filtros",
     noMatchesTitle: "No hay observaciones coincidentes",
@@ -548,7 +577,9 @@ const UI_COPY = {
     generatedImage: "Imagen generada",
     generatedImageAlt: "Visual generado para el sueño titulado",
     visualHash: "Hash visual",
-    signalCoherence: "Coherencia de señal",
+    signalCoherence: "Cobertura de análisis",
+    signalCoherenceInfo:
+      "Calculada desde el detalle del registro, cobertura de etiquetas, emociones, observables psicológicos, marcadores de análisis y fecha/hora. No es una puntuación de verdad ni de calidad literaria.",
     originalLanguageLabel: "Idioma original",
     unknownDate: "Fecha desconocida",
     adultContentLabel: "Contenido adulto",
@@ -567,7 +598,7 @@ const UI_COPY = {
     researchTotal: "Registros",
     researchVisible: "Visibles ahora",
     researchAdultRestricted: "Madurez filtrada",
-    researchAverageCoherence: "Coherencia media",
+    researchAverageCoherence: "Cobertura media",
     researchEmotionLead: "Emoción principal",
     researchLanguageLead: "Idioma original principal",
     exportTitle: "Exportaciones de investigación",
@@ -603,6 +634,15 @@ const UI_COPY = {
     patternLucidNightmare: "Pesadilla / lúcido",
     patternDreamLength: "Longitud del sueño",
     patternCooccurrence: "Coocurrencia de etiquetas",
+    patternPsychology: "Observables psicológicos",
+    patternAnalysisMarkers: "Marcadores de análisis onírico",
+    patternPerspectives: "Patrones de punto de vista",
+    patternWeather: "Clima / atmósfera",
+    patternVisualsButton: "Abrir mapa visual",
+    patternVisualsTitle: "Mapa visual de análisis colectivo",
+    patternVisualsText:
+      "Una vista de diagramas generada en el navegador con los registros públicos legibles del filtro actual.",
+    closeVisuals: "Cerrar",
     patternNightmare: "Pesadilla",
     patternLucid: "Lúcido",
     patternRecords: "registros",
@@ -850,6 +890,17 @@ export default function CollectiveDreamDashboard({
           );
         }
 
+        if (sortMode === "updated") {
+          return compareNullableMillis(getDreamUpdatedMillis(a), getDreamUpdatedMillis(b), "desc");
+        }
+
+        if (sortMode === "author") {
+          return getDreamAuthorName(a, copy).localeCompare(
+            getDreamAuthorName(b, copy),
+            language === "zh" ? "zh-Hant" : language === "es" ? "es" : "en"
+          );
+        }
+
         return b.signal_coherence - a.signal_coherence;
       });
   }, [
@@ -862,6 +913,7 @@ export default function CollectiveDreamDashboard({
     matchMode,
     sortMode,
     language,
+    copy,
     isAgeVerifiedAdult,
   ]);
 
@@ -1063,12 +1115,17 @@ export default function CollectiveDreamDashboard({
           clearTags={() => setSelectedTagSlugs([])}
           matchMode={matchMode}
           setMatchMode={setMatchMode}
-          sortMode={sortMode}
-          setSortMode={setSortMode}
           language={language}
           copy={copy}
           expanded={expandedPanels.filters}
           onToggle={() => togglePanel("filters")}
+        />
+
+        <ObservationSortBar
+          sortMode={sortMode}
+          setSortMode={setSortMode}
+          totalItems={filteredDreams.length}
+          copy={copy}
         />
 
         <ObservationGrid
@@ -1135,6 +1192,16 @@ function normalizeDreamCard(row) {
     ? row.anomalyTags
     : row.anomaly_tag_slugs ||
       tags.filter((tag) => tag.category === "Anomalies").map((tag) => tag.slug);
+  const signalCoherence = calculateDreamSignalCoherence({
+    dreamText: originalText,
+    title: originalTitle,
+    dreamDate,
+    dreamTime: row.dreamTime || row.dream_time,
+    dreamPeriod: row.dreamPeriod || row.dream_period,
+    dreamSequence: row.dreamSequence || row.dream_sequence,
+    ageAtDream: row.ageAtDream,
+    tags,
+  });
 
   return {
     dream_id: row.dream_id || row.id,
@@ -1221,7 +1288,10 @@ function normalizeDreamCard(row) {
     dreamTypeTags: Array.isArray(row.dreamTypeTags) ? row.dreamTypeTags : [],
     pseudo_id: row.pseudo_id || row.pseudoId || "",
     pseudoId: row.pseudoId || row.pseudo_id || "",
-    signal_coherence: row.signal_coherence || 50,
+    createdAt: row.createdAt || row.created_at || "",
+    updatedAt: row.updatedAt || row.updated_at || "",
+    sharingUpdatedAt: row.sharingUpdatedAt || row.sharing_updated_at || "",
+    signal_coherence: signalCoherence,
     tags,
     anomaly_tag_slugs: anomalyTags,
   };
@@ -1395,6 +1465,29 @@ function compareDreamDateOrder(a, b, direction = "desc") {
   return direction === "asc" ? first - second : second - first;
 }
 
+function getRecordTimestampMillis(value) {
+  if (!value) return null;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (Number.isFinite(value?.seconds)) return value.seconds * 1000;
+
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getDreamUpdatedMillis(dream) {
+  return getRecordTimestampMillis(
+    dream.updatedAt || dream.sharingUpdatedAt || dream.createdAt || dream.created_at
+  );
+}
+
+function compareNullableMillis(first, second, direction = "desc") {
+  if (first == null && second == null) return 0;
+  if (first == null) return 1;
+  if (second == null) return -1;
+
+  return direction === "asc" ? first - second : second - first;
+}
+
 function getTagName(tag, language) {
   const canonicalTag = RECORD_TAGS[tag.slug];
 
@@ -1447,6 +1540,10 @@ function buildCollectivePatternStats({ dreams, allDreams, language, filtersActiv
   const emotionCounts = new Map();
   const symbolCounts = new Map();
   const dreamTypeCounts = new Map();
+  const psychologyCounts = new Map();
+  const analysisMarkerCounts = new Map();
+  const perspectiveCounts = new Map();
+  const weatherCounts = new Map();
   const languageCounts = new Map();
   const countryCounts = new Map();
   const cooccurrenceCounts = new Map();
@@ -1486,6 +1583,10 @@ function buildCollectivePatternStats({ dreams, allDreams, language, filtersActiv
 
       if (tag.category === "Emotions") incrementCount(emotionCounts, label);
       if (tag.category === "Dream Types") incrementCount(dreamTypeCounts, label);
+      if (tag.category === "Psychological Observables") incrementCount(psychologyCounts, label);
+      if (tag.category === "Dream Analysis") incrementCount(analysisMarkerCounts, label);
+      if (tag.category === "Perspective") incrementCount(perspectiveCounts, label);
+      if (tag.category === "Weather") incrementCount(weatherCounts, label);
       if (["Anomalies", "Dream Analysis", "Entities", "Environment"].includes(tag.category)) {
         incrementCount(symbolCounts, label);
       }
@@ -1505,6 +1606,10 @@ function buildCollectivePatternStats({ dreams, allDreams, language, filtersActiv
     emotionCounts,
     symbolCounts,
     dreamTypeCounts,
+    psychologyCounts,
+    analysisMarkerCounts,
+    perspectiveCounts,
+    weatherCounts,
     countryCounts,
     cooccurrenceCounts,
   ].reduce((total, map) => total + countSuppressedGroups(map), 0);
@@ -1519,6 +1624,10 @@ function buildCollectivePatternStats({ dreams, allDreams, language, filtersActiv
     emotions: toPrivacySafeEntries(emotionCounts),
     symbols: toPrivacySafeEntries(symbolCounts),
     dreamTypes: toPrivacySafeEntries(dreamTypeCounts),
+    psychology: toPrivacySafeEntries(psychologyCounts),
+    analysisMarkers: toPrivacySafeEntries(analysisMarkerCounts),
+    perspectives: toPrivacySafeEntries(perspectiveCounts),
+    weather: toPrivacySafeEntries(weatherCounts),
     languages: toPrivacySafeEntries(languageCounts, 1),
     countries: toPrivacySafeEntries(countryCounts),
     cooccurrences: toPrivacySafeEntries(cooccurrenceCounts),
@@ -2135,6 +2244,7 @@ function ResearchMetric({ label, value }) {
 }
 
 function CollectivePatternsPanel({ stats, copy, expanded, onToggle }) {
+  const [visualsOpen, setVisualsOpen] = useState(false);
   const sampleTooSmall = stats.sampleSize > 0 && stats.sampleSize < 10;
 
   return (
@@ -2156,7 +2266,16 @@ function CollectivePatternsPanel({ stats, copy, expanded, onToggle }) {
             />
           </div>
         </div>
-        <CollapseToggle expanded={expanded} copy={copy} onClick={onToggle} />
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setVisualsOpen(true)}
+            className="rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15"
+          >
+            {copy.patternVisualsButton}
+          </button>
+          <CollapseToggle expanded={expanded} copy={copy} onClick={onToggle} />
+        </div>
       </div>
 
       {expanded && (
@@ -2191,6 +2310,30 @@ function CollectivePatternsPanel({ stats, copy, expanded, onToggle }) {
         <PatternBarList
           title={copy.patternDreamTypes}
           items={stats.dreamTypes}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternPsychology}
+          items={stats.psychology}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternAnalysisMarkers}
+          items={stats.analysisMarkers}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternPerspectives}
+          items={stats.perspectives}
+          total={stats.sampleSize}
+          empty={copy.patternNoData}
+        />
+        <PatternBarList
+          title={copy.patternWeather}
+          items={stats.weather}
           total={stats.sampleSize}
           empty={copy.patternNoData}
         />
@@ -2230,7 +2373,74 @@ function CollectivePatternsPanel({ stats, copy, expanded, onToggle }) {
       </div>
         </>
       )}
+
+      {visualsOpen && (
+        <CollectiveVisualModal
+          stats={stats}
+          copy={copy}
+          onClose={() => setVisualsOpen(false)}
+        />
+      )}
     </section>
+  );
+}
+
+function CollectiveVisualModal({ stats, copy, onClose }) {
+  const visualGroups = [
+    { title: copy.patternEmotions, items: stats.emotions },
+    { title: copy.patternPsychology, items: stats.psychology },
+    { title: copy.patternAnalysisMarkers, items: stats.analysisMarkers },
+    { title: copy.patternCooccurrence, items: stats.cooccurrences },
+  ];
+  const orbitItems = [
+    ...(stats.emotions || []).slice(0, 3),
+    ...(stats.psychology || []).slice(0, 3),
+    ...(stats.analysisMarkers || []).slice(0, 3),
+    ...(stats.perspectives || []).slice(0, 2),
+  ].slice(0, 10);
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-3 backdrop-blur-md sm:p-6">
+      <section className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-6xl rounded-3xl border border-cyan-300/20 bg-zinc-950/95 p-5 shadow-[0_0_80px_rgba(34,211,238,.16)] sm:min-h-0 sm:p-7">
+        <div className="flex flex-col gap-4 border-b border-white/10 pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-cyan-200/70">
+              {copy.patternVisualsTitle}
+            </p>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300">
+              {copy.patternVisualsText}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <CompactSummaryPill label={copy.patternSampleSize} value={`N=${stats.sampleSize}`} />
+              <CompactSummaryPill label={copy.patternDateRange} value={stats.dateRange || copy.patternNoData} />
+              <CompactSummaryPill label={copy.patternFilters} value={stats.filtersActive ? copy.patternFiltered : copy.patternAllLoaded} />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="self-start rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-200 transition hover:border-cyan-300/35 hover:text-cyan-100"
+          >
+            {copy.closeVisuals}
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+          <VisualOrbit items={orbitItems} empty={copy.patternNoData} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {visualGroups.map((group) => (
+              <VisualBarCard
+                key={group.title}
+                title={group.title}
+                items={group.items}
+                total={stats.sampleSize}
+                empty={copy.patternNoData}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -2272,6 +2482,73 @@ function PatternBarList({ title, items = [], total, empty }) {
   );
 }
 
+function VisualOrbit({ items = [], empty }) {
+  return (
+    <div className="relative min-h-[22rem] overflow-hidden rounded-3xl border border-cyan-300/15 bg-black/35 p-5">
+      <div className="absolute inset-6 rounded-full border border-cyan-300/10" />
+      <div className="absolute inset-16 rounded-full border border-fuchsia-300/10" />
+      <div className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/25 bg-cyan-300/10 shadow-[0_0_38px_rgba(34,211,238,.16)]" />
+      <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-200 shadow-[0_0_20px_rgba(103,232,249,.9)]" />
+
+      {items.length > 0 ? (
+        <div className="relative grid min-h-[19rem] grid-cols-2 content-between gap-3 sm:grid-cols-3">
+          {items.map((item, index) => (
+            <span
+              key={`${item.label}-${index}`}
+              className="rounded-2xl border border-white/10 bg-zinc-950/80 px-3 py-2 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-slate-200 shadow-[0_0_24px_rgba(0,0,0,.25)]"
+            >
+              <span className="block truncate">{item.label}</span>
+              <span className="mt-1 block text-cyan-100">{item.count}</span>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="relative flex min-h-[19rem] items-center justify-center text-sm leading-relaxed text-slate-400">
+          {empty}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function VisualBarCard({ title, items = [], total, empty }) {
+  const maxCount = Math.max(1, ...items.map((item) => item.count || 0));
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-black/30 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-300">
+          {title}
+        </p>
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-100">
+          N={total}
+        </span>
+      </div>
+
+      {items.length > 0 ? (
+        <div className="mt-4 space-y-3">
+          {items.slice(0, 6).map((item) => (
+            <div key={item.label}>
+              <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                <span className="truncate text-slate-300">{item.label}</span>
+                <span className="font-mono text-cyan-100">{item.count}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="cdo-gradient-bar h-full rounded-full"
+                  style={{ width: `${Math.max(6, Math.round((item.count / maxCount) * 100))}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 text-sm leading-relaxed text-slate-400">{empty}</p>
+      )}
+    </section>
+  );
+}
+
 function FilterPanel({
   tags,
   tagCounts,
@@ -2280,8 +2557,6 @@ function FilterPanel({
   clearTags,
   matchMode,
   setMatchMode,
-  sortMode,
-  setSortMode,
   language,
   copy,
   expanded,
@@ -2305,14 +2580,6 @@ function FilterPanel({
   }
 
   const activeTagCount = selectedTagSlugs.length;
-  const sortLabel =
-    sortMode === "title"
-      ? copy.sortTitle
-      : sortMode === "coherence"
-        ? copy.sortCoherence
-        : sortMode === "oldest"
-          ? copy.sortOldest
-          : copy.sortNewest;
 
   return (
     <section className="mb-8 rounded-3xl border border-white/10 bg-zinc-950/60 p-5 shadow-[0_12px_50px_rgba(0,0,0,.30)] backdrop-blur sm:p-7">
@@ -2333,7 +2600,6 @@ function FilterPanel({
               label={copy.patternFilters}
               value={matchMode === "all" ? copy.matchAll : copy.matchAny}
             />
-            <CompactSummaryPill label={copy.sortSelectLabel} value={sortLabel} />
           </div>
         </div>
 
@@ -2360,18 +2626,6 @@ function FilterPanel({
           <SegmentButton active={matchMode === "any"} onClick={() => setMatchMode("any")}>
             {copy.matchAny}
           </SegmentButton>
-
-          <select
-            value={sortMode}
-            onChange={(event) => setSortMode(event.target.value)}
-            className="col-span-2 rounded-xl border border-white/10 bg-black/40 px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-200 outline-none transition focus:border-cyan-300/40 focus:ring-2 focus:ring-cyan-300/20 sm:col-span-1 sm:rounded-full"
-            aria-label={copy.sortSelectLabel}
-          >
-            <option value="coherence">{copy.sortCoherence}</option>
-            <option value="newest">{copy.sortNewest}</option>
-            <option value="oldest">{copy.sortOldest}</option>
-            <option value="title">{copy.sortTitle}</option>
-          </select>
         </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -2461,6 +2715,35 @@ function FilterPanel({
       )}
         </>
       )}
+    </section>
+  );
+}
+
+function ObservationSortBar({ sortMode, setSortMode, totalItems, copy }) {
+  return (
+    <section className="mb-5 flex flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-950/65 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+      <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+        {copy.showingLabel} <span className="text-cyan-100">{totalItems}</span>
+      </p>
+
+      <label className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[18rem] sm:flex-row sm:items-center sm:justify-end">
+        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+          {copy.sortSelectLabel}
+        </span>
+        <select
+          value={sortMode}
+          onChange={(event) => setSortMode(event.target.value)}
+          className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20 sm:w-60"
+          aria-label={copy.sortSelectLabel}
+        >
+          <option value="newest">{copy.sortNewest}</option>
+          <option value="oldest">{copy.sortOldest}</option>
+          <option value="updated">{copy.sortUpdated}</option>
+          <option value="title">{copy.sortTitle}</option>
+          <option value="author">{copy.sortAuthor}</option>
+          <option value="coherence">{copy.sortCoherence}</option>
+        </select>
+      </label>
     </section>
   );
 }
@@ -2788,7 +3071,7 @@ function ObservationCard({
           </div>
         )}
 
-        <div className="mt-6 border-t border-white/10 pt-5">
+        <div className="mt-6 border-t border-white/10 pt-5" title={copy.signalCoherenceInfo}>
           <div className="mb-2 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.18em]">
             <span className="text-zinc-500">{copy.signalCoherence}</span>
             <span className="text-cyan-100">{dream.signal_coherence}%</span>
@@ -2800,6 +3083,9 @@ function ObservationCard({
               style={{ width: `${dream.signal_coherence}%` }}
             />
           </div>
+          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-500">
+            {copy.signalCoherenceInfo}
+          </p>
           <button
             type="button"
             onClick={handleCollect}

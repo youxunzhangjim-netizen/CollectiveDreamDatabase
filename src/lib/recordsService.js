@@ -89,6 +89,47 @@ function getTimestampMillis(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+export function calculateDreamSignalCoherence({
+  dreamText = "",
+  title = "",
+  dreamDate = "",
+  dreamTime = "",
+  dreamPeriod = "",
+  dreamSequence = 1,
+  ageAtDream = "",
+  tags = [],
+} = {}) {
+  const text = String(dreamText || "").trim();
+  const normalizedTags = Array.isArray(tags) ? tags.filter(Boolean) : [];
+  const tagCategories = new Set(
+    normalizedTags.map((tag) => tag.category).filter(Boolean)
+  );
+  const tagSlugs = new Set(normalizedTags.map((tag) => tag.slug).filter(Boolean));
+  let score = 0;
+
+  if (text.length >= 40) score += 12;
+  if (text.length >= 180) score += 10;
+  if (text.length >= 600) score += 8;
+  if (text.length >= 1500) score += 4;
+
+  if (String(title || "").trim()) score += 4;
+  if (String(dreamDate || "").trim()) score += 8;
+  if (String(dreamTime || dreamPeriod || "").trim()) score += 4;
+  if (Number(dreamSequence || 1) > 1) score += 2;
+  if (Number.isFinite(Number(ageAtDream)) && Number(ageAtDream) > 0) score += 3;
+
+  score += Math.min(24, tagCategories.size * 4);
+  if (tagCategories.has("Emotions")) score += 8;
+  if (tagCategories.has("Psychological Observables")) score += 8;
+  if (tagCategories.has("Dream Analysis")) score += 8;
+  if (tagCategories.has("Perspective")) score += 4;
+  if (tagCategories.has("Dream Types")) score += 4;
+  if (tagSlugs.has("nightmare") || tagSlugs.has("lucid")) score += 3;
+  if (normalizedTags.some((tag) => tag.custom)) score += 3;
+
+  return Math.max(8, Math.min(96, Math.round(score)));
+}
+
 export async function fetchOwnedRecords(currentUser) {
   if (!currentUser?.uid) return [];
 
@@ -189,6 +230,16 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   );
   const dreamAnalysisTags = getTagSlugsByCategory(tags, "Dream Analysis");
   const customTags = tags.filter((tag) => tag.custom).map((tag) => tag.slug);
+  const signalCoherence = calculateDreamSignalCoherence({
+    dreamText,
+    title,
+    dreamDate,
+    dreamTime,
+    dreamPeriod,
+    dreamSequence,
+    ageAtDream,
+    tags,
+  });
   const languageFields = buildOriginalLanguageFields(
     originalLanguage,
     title,
@@ -245,7 +296,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     pseudoId: buildPseudoId(recordRef.id),
     adultContent,
     minimumViewerAge: adultContent ? 18 : 0,
-    signal_coherence: 50,
+    signal_coherence: signalCoherence,
     sourceType: draft?.sourceType || (draft?.importBatchId ? "diary_import" : "single_record"),
     importBatchId: draft?.importBatchId || "",
     importDraftId: draft?.importDraftId || "",
@@ -1124,6 +1175,40 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     metadata.dreamAnalysisTags = getTagSlugsByCategory(tags, "Dream Analysis");
     metadata.customTags = tags.filter((tag) => tag.custom).map((tag) => tag.slug);
     metadata.anomaly_tag_slugs = metadata.anomalyTags;
+    metadata.signal_coherence = calculateDreamSignalCoherence({
+      dreamText: existingRecord.originalText || existingRecord.dream_text || "",
+      title: existingRecord.originalTitle || existingRecord.title || "",
+      dreamDate: existingRecord.dreamDate || existingRecord.dream_date || "",
+      dreamTime: existingRecord.dreamTime || existingRecord.dream_time || "",
+      dreamPeriod: existingRecord.dreamPeriod || existingRecord.dream_period || "",
+      dreamSequence: existingRecord.dreamSequence || existingRecord.dream_sequence || 1,
+      ageAtDream: existingRecord.ageAtDream,
+      tags,
+    });
+  }
+
+  if (
+    "title" in updates ||
+    "dreamText" in updates ||
+    "dreamDate" in updates ||
+    "dreamDateStatus" in updates ||
+    "dreamTime" in updates ||
+    "dreamPeriod" in updates ||
+    "dreamSequence" in updates ||
+    "ageAtDream" in updates ||
+    "selectedTagSlugs" in updates ||
+    "customTagLabels" in updates
+  ) {
+    metadata.signal_coherence = calculateDreamSignalCoherence({
+      dreamText: metadata.dream_text || updates.dreamText || "",
+      title: metadata.title || updates.title || "",
+      dreamDate: metadata.dreamDate || updates.dreamDate || "",
+      dreamTime: metadata.dreamTime || updates.dreamTime || "",
+      dreamPeriod: metadata.dreamPeriod || updates.dreamPeriod || "",
+      dreamSequence: metadata.dreamSequence || updates.dreamSequence || 1,
+      ageAtDream: metadata.ageAtDream ?? updates.ageAtDream,
+      tags: metadata.tags || updates.tags || [],
+    });
   }
 
   await setDoc(doc(requireFirestore(), "Records", recordId), metadata, { merge: true });
