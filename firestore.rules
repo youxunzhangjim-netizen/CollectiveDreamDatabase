@@ -15,6 +15,17 @@ service cloud.firestore {
         && request.auth.token.firebase.sign_in_provider == "anonymous";
     }
 
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isTrustedServer() {
+      return isAdmin()
+        || (isSignedIn()
+          && request.auth.token.firebase.sign_in_provider == "custom"
+          && request.auth.token.server == true);
+    }
+
     function validLanguage(language) {
       return language in ["en", "zh", "es"];
     }
@@ -29,9 +40,7 @@ service cloud.firestore {
         "stats_only",
         "anonymous_public",
         "pseudonym_public",
-        "redacted_public",
-        "public_anonymous",
-        "public_pseudonym"
+        "redacted_public"
       ];
     }
 
@@ -43,9 +52,7 @@ service cloud.firestore {
       return mode in [
         "anonymous_public",
         "pseudonym_public",
-        "redacted_public",
-        "public_anonymous",
-        "public_pseudonym"
+        "redacted_public"
       ];
     }
 
@@ -248,6 +255,15 @@ service cloud.firestore {
       return optionalBool(data, "includedInResearchStats")
         && optionalBool(data, "researchConsent")
         && optionalBool(data, "publicConsent")
+        && (!data.keys().hasAll(["sharingMode", "isPublic"])
+          || data.sharingMode != "private"
+          || data.isPublic == false)
+        && (!data.keys().hasAll(["sharingMode", "publicConsent"])
+          || data.sharingMode != "private"
+          || data.publicConsent == false)
+        && (!data.keys().hasAll(["sharingMode", "isPublic"])
+          || data.sharingMode != "stats_only"
+          || data.isPublic == false)
         && (!data.keys().hasAll(["sharingMode", "includedInResearchStats"])
           || data.sharingMode != "stats_only"
           || data.includedInResearchStats == true)
@@ -259,7 +275,10 @@ service cloud.firestore {
           || data.publicConsent == true)
         && (!data.keys().hasAll(["sharingMode", "publicConsent"])
           || data.sharingMode != "stats_only"
-          || data.publicConsent == false);
+          || data.publicConsent == false)
+        && (!data.keys().hasAll(["sharingMode", "isPublic"])
+          || !isPublicSharingMode(data.sharingMode)
+          || data.isPublic == true);
     }
 
     function validRecordIdentity(data) {
@@ -332,14 +351,6 @@ service cloud.firestore {
         ])
         && validRecordSharingConsistency(data)
         && validRecordConsent(data);
-    }
-
-    function validRecordCreateMetadata(data) {
-      return validRecordMetadata(data)
-        && validRecordCreatePrivacy(data)
-        && (!isAnonymousAuth()
-          || !data.keys().hasAny(["recordIdentityMode"])
-          || data.recordIdentityMode == "anonymous");
     }
 
     function validRecordWriteMinimum(data) {
@@ -547,6 +558,66 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/Records/$(recordId)).data.ownerId == request.auth.uid;
     }
 
+    function validRecordPrivacyWrite(data) {
+      return (validRecordMetadata(data) || validRecordWriteMinimum(data))
+        && validRecordSharingConsistency(data)
+        && validRecordConsent(data)
+        && validAdultMetadata(data)
+        && (!data.keys().hasAny(["requestedSharingMode"])
+          || validSharingMode(data.requestedSharingMode))
+        && (!data.keys().hasAny(["publicReviewStatus"])
+          || data.publicReviewStatus in ["", "pending_review", "approved", "rejected"])
+        && (!data.keys().hasAny(["redactionStatus"])
+          || data.redactionStatus in ["", "draft", "user_confirmed"]);
+    }
+
+    function noForbiddenPublicDreamFields(data) {
+      return !data.keys().hasAny([
+        "ownerId",
+        "creatorId",
+        "userId",
+        "uid",
+        "email",
+        "creatorEmail",
+        "privateText",
+        "privateTitle",
+        "privateNotes",
+        "sensitivityNotes",
+        "dreamText",
+        "dream_text",
+        "originalText",
+        "rawText",
+        "cleanedText",
+        "importRawText",
+        "importBatchId",
+        "importDraftId",
+        "importMatchKey",
+        "sourceFileName",
+        "sourceLineStart",
+        "sourceLineEnd"
+      ]);
+    }
+
+    function publicDreamSourceRecordAllowsMirror(data, recordId) {
+      return exists(/databases/$(database)/documents/Records/$(recordId))
+        && get(/databases/$(database)/documents/Records/$(recordId)).data.sharingMode == data.sharingMode
+        && get(/databases/$(database)/documents/Records/$(recordId)).data.isPublic == true
+        && get(/databases/$(database)/documents/Records/$(recordId)).data.publicConsent == true
+        && isPublicSharingMode(get(/databases/$(database)/documents/Records/$(recordId)).data.sharingMode);
+    }
+
+    function redactedPublicDreamUsesReviewedText(data, recordId) {
+      return data.sharingMode != "redacted_public"
+        || (exists(/databases/$(database)/documents/Records/$(recordId))
+          && get(/databases/$(database)/documents/Records/$(recordId)).data.keys().hasAny(["publicText"])
+          && get(/databases/$(database)/documents/Records/$(recordId)).data.publicText is string
+          && get(/databases/$(database)/documents/Records/$(recordId)).data.publicText.size() > 0
+          && data.publicText == get(/databases/$(database)/documents/Records/$(recordId)).data.publicText
+          && data.publicText != get(/databases/$(database)/documents/Records/$(recordId)).data.dream_text
+          && (!get(/databases/$(database)/documents/Records/$(recordId)).data.keys().hasAny(["originalText"])
+            || data.publicText != get(/databases/$(database)/documents/Records/$(recordId)).data.originalText));
+    }
+
     function validPublicDreamMirror(data, recordId) {
       return data.keys().hasOnly([
           "publicTitle",
@@ -563,6 +634,7 @@ service cloud.firestore {
           "originalLanguage",
           "sharingMode"
         ])
+        && noForbiddenPublicDreamFields(data)
         && data.keys().hasAll(["publicText", "publicLanguage", "originalLanguage", "sharingMode", "adultContent"])
         && requiredString(data, "publicText", 1, 120000)
         && optionalString(data, "publicTitle", 220)
@@ -577,7 +649,9 @@ service cloud.firestore {
         && data.adultContent is bool
         && optionalList(data, "contentWarnings", 40)
         && validSharingMode(data.sharingMode)
-        && isPublicSharingMode(data.sharingMode);
+        && isPublicSharingMode(data.sharingMode)
+        && publicDreamSourceRecordAllowsMirror(data, recordId)
+        && redactedPublicDreamUsesReviewedText(data, recordId);
     }
 
     function validResearchSignal(data, signalId) {
@@ -645,9 +719,15 @@ service cloud.firestore {
         && optionalString(data, "importSourceType", 40)
         && optionalString(data, "titleSource", 80)
         && validSharingMode(data.sharingMode)
+        && (data.sharingMode == "stats_only" || isPublicSharingMode(data.sharingMode))
         && optionalString(data, "tagSource", 80)
         && data.confirmedByUser is bool
         && data.hasUnconfirmedAiTags is bool;
+    }
+
+    function canReadResearchSignal(data, signalId) {
+      return validResearchSignal(data, signalId)
+        && (!data.adultContent || isAgeVerifiedAdult());
     }
 
     function validOwnerAuditData(data) {
@@ -659,42 +739,46 @@ service cloud.firestore {
     match /PublicDreams/{recordId} {
       allow get, list: if canReadPublicRecord(resource.data);
 
-      allow create, update: if ownsRecordDocument(recordId)
-        && validPublicDreamMirror(request.resource.data, recordId);
+      allow create, update: if validPublicDreamMirror(request.resource.data, recordId)
+        && (isTrustedServer() || ownsRecordDocument(recordId));
 
-      allow delete: if ownsRecordDocument(recordId);
+      allow delete: if isTrustedServer() || ownsRecordDocument(recordId);
     }
 
     match /ResearchSignals/{signalId} {
-      allow read: if true;
+      allow get, list: if canReadResearchSignal(resource.data, signalId);
 
-      allow create, update: if isSignedIn()
+      allow create, update: if (isTrustedServer() || isSignedIn())
         && validResearchSignal(request.resource.data, signalId);
 
-      allow delete: if isSignedIn();
+      allow delete: if isTrustedServer() || isSignedIn();
     }
 
     match /ConsentEvents/{eventId} {
-      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow read: if isAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
       allow create: if isSignedIn() && validOwnerAuditData(request.resource.data);
       allow update, delete: if false;
     }
 
     match /BulkPrivacyJobs/{jobId} {
       allow read, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow create, update: if isSignedIn() && validOwnerAuditData(request.resource.data);
+      allow create: if isSignedIn() && validOwnerAuditData(request.resource.data);
+      allow update: if isSignedIn()
+        && resource.data.ownerId == request.auth.uid
+        && validOwnerAuditData(request.resource.data);
     }
 
     match /Records/{recordId} {
       allow get, list: if isOwner(resource.data.ownerId);
 
       allow create: if isOwner(request.resource.data.ownerId)
-        && validRecordWriteMinimum(request.resource.data);
+        && validRecordCreatePrivacy(request.resource.data)
+        && validRecordPrivacyWrite(request.resource.data);
 
       allow update: if isOwner(resource.data.ownerId)
         && request.resource.data.ownerId == resource.data.ownerId
         && anonymousLockUnchanged()
-        && validRecordWriteMinimum(request.resource.data);
+        && validRecordPrivacyWrite(request.resource.data);
 
       allow delete: if isOwner(resource.data.ownerId);
     }
