@@ -166,10 +166,14 @@ const DASHBOARD_COPY = {
     presetScopeBoth: "Future and existing dreams",
     presetScopeNone: "Choose future dreams, existing dreams, or both.",
     applyChoiceButton: "Apply selected scope",
+    applyFutureButton: "Use for future",
+    applyAllDreamsButton: "Apply to all dreams",
+    applySelectedDreamsButton: "Choose dreams",
     presetPublicLabel: "Public",
     presetPrivateLabel: "Private",
     presetStatsLabel: "Statistics",
     applyPresetButton: "Apply to existing dreams",
+    noAffectedDreams: "No dreams need this change yet. Adjust filters or choose another preset.",
     previewTitle: "Review before applying",
     previewDescription:
       "Review what will change before applying this preset to your existing observations.",
@@ -441,10 +445,14 @@ const DASHBOARD_COPY = {
     presetScopeBoth: "未來與既有夢境",
     presetScopeNone: "請選擇未來夢境、既有夢境，或兩者。",
     applyChoiceButton: "套用選擇範圍",
+    applyFutureButton: "用於未來",
+    applyAllDreamsButton: "套用全部夢境",
+    applySelectedDreamsButton: "選擇夢境",
     presetPublicLabel: "公開",
     presetPrivateLabel: "私人",
     presetStatsLabel: "統計",
     applyPresetButton: "套用到既有夢境",
+    noAffectedDreams: "目前沒有夢境需要此變更。可調整篩選或選擇其他模式。",
     previewTitle: "套用前檢查",
     previewDescription: "套用到既有觀測前，先確認會改變哪些夢境。",
     previewAffected: "將更新",
@@ -709,10 +717,14 @@ const DASHBOARD_COPY = {
     presetScopeBoth: "Sueños futuros y existentes",
     presetScopeNone: "Elige sueños futuros, existentes o ambos.",
     applyChoiceButton: "Aplicar alcance elegido",
+    applyFutureButton: "Usar para futuros",
+    applyAllDreamsButton: "Aplicar a todos",
+    applySelectedDreamsButton: "Elegir sueños",
     presetPublicLabel: "Público",
     presetPrivateLabel: "Privado",
     presetStatsLabel: "Estadísticas",
     applyPresetButton: "Aplicar a sueños existentes",
+    noAffectedDreams: "Ningún sueño necesita este cambio. Ajusta filtros o elige otro modo.",
     previewTitle: "Revisar antes de aplicar",
     previewDescription:
       "Revisa qué cambiará antes de aplicar este preset a tus observaciones existentes.",
@@ -1062,6 +1074,7 @@ export default function UserDashboard({
   const [bulkSharingMode, setBulkSharingMode] = useState("");
   const [bulkShareNotice, setBulkShareNotice] = useState("");
   const [bulkPreset, setBulkPreset] = useState(null);
+  const [bulkInitialFilters, setBulkInitialFilters] = useState(null);
   const [selectedPresetId, setSelectedPresetId] = useState("anonymous_archive");
   const [presetApplyFuture, setPresetApplyFuture] = useState(true);
   const [presetApplyExisting, setPresetApplyExisting] = useState(false);
@@ -1300,8 +1313,9 @@ export default function UserDashboard({
     }
   }
 
-  function handleOpenPresetPreview(preset) {
+  function handleOpenPresetPreview(preset, initialFilters = { scope: "all" }) {
     setSelectedPresetId(preset.id);
+    setBulkInitialFilters(initialFilters);
     setBulkPreset(preset);
   }
 
@@ -1739,7 +1753,13 @@ export default function UserDashboard({
                         disabled={profileSaving}
                         onSelect={() => setSelectedPresetId(preset.id)}
                         onUse={() => handleApplyPresetChoice(preset)}
-                        onApply={() => handleOpenPresetPreview(preset)}
+                        onApplyAll={() => handleOpenPresetPreview(preset, { scope: "all" })}
+                        onApplySelected={() =>
+                          handleOpenPresetPreview(preset, {
+                            scope: "selected",
+                            selectedIds: [],
+                          })
+                        }
                       />
                     ))}
                   </div>
@@ -1802,7 +1822,16 @@ export default function UserDashboard({
                 applyFuture={presetApplyFuture}
                 applyExisting={presetApplyExisting}
                 onUse={() => selectedPreset && handleApplyPresetChoice(selectedPreset)}
-                onApply={() => selectedPreset && handleOpenPresetPreview(selectedPreset)}
+                onApply={() =>
+                  selectedPreset && handleOpenPresetPreview(selectedPreset, { scope: "all" })
+                }
+                onApplySelected={() =>
+                  selectedPreset &&
+                  handleOpenPresetPreview(selectedPreset, {
+                    scope: "selected",
+                    selectedIds: [],
+                  })
+                }
               />
             </div>
           </section>
@@ -1913,7 +1942,11 @@ export default function UserDashboard({
             profile={profile}
             language={language}
             copy={copy}
-            onClose={() => setBulkPreset(null)}
+            initialFilters={bulkInitialFilters}
+            onClose={() => {
+              setBulkPreset(null);
+              setBulkInitialFilters(null);
+            }}
             onApplied={handleBulkSharingApplied}
           />
         )}
@@ -2564,6 +2597,7 @@ function PrivacyPresetPreview({
   applyExisting,
   onUse,
   onApply,
+  onApplySelected,
 }) {
   if (!preset) return null;
 
@@ -2621,19 +2655,29 @@ function PrivacyPresetPreview({
         >
           {copy.applyChoiceButton}
         </button>
-        <button
-          type="button"
-          onClick={onApply}
-          disabled={disabled}
-          className={[
-            "rounded-2xl border px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed disabled:opacity-60",
-            publicMode
-              ? "border-amber-300/30 bg-amber-300/10 text-amber-100 hover:border-amber-300/50"
-              : "border-fuchsia-300/25 bg-fuchsia-300/10 text-fuchsia-100 hover:border-fuchsia-300/45",
-          ].join(" ")}
-        >
-          {copy.applyPresetButton}
-        </button>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+          <button
+            type="button"
+            onClick={onApply}
+            disabled={disabled}
+            className={[
+              "rounded-2xl border px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed disabled:opacity-60",
+              publicMode
+                ? "border-amber-300/30 bg-amber-300/10 text-amber-100 hover:border-amber-300/50"
+                : "border-fuchsia-300/25 bg-fuchsia-300/10 text-fuchsia-100 hover:border-fuchsia-300/45",
+            ].join(" ")}
+          >
+            {copy.applyAllDreamsButton}
+          </button>
+          <button
+            type="button"
+            onClick={onApplySelected}
+            disabled={disabled}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-200 transition hover:border-cyan-300/35 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {copy.applySelectedDreamsButton}
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -3139,7 +3183,8 @@ function PresetCard({
   disabled,
   onSelect,
   onUse,
-  onApply,
+  onApplyAll,
+  onApplySelected,
 }) {
   const accent = ACCENT_STYLES[preset.accent] || ACCENT_STYLES.cyan;
   const publicMode = isPublicPrivacySharingMode(preset.sharingMode);
@@ -3207,7 +3252,7 @@ function PresetCard({
         )}
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-5 grid gap-3">
         <button
           type="button"
           onClick={(event) => {
@@ -3217,24 +3262,37 @@ function PresetCard({
           disabled={disabled}
           className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]"
         >
-          {copy.applyChoiceButton}
+          {copy.applyFutureButton}
         </button>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onApply?.();
-          }}
-          disabled={disabled}
-          className={[
-            "rounded-xl border px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] transition disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]",
-            publicMode
-              ? "border-amber-300/25 bg-amber-300/10 text-amber-100 hover:border-amber-300/45"
-              : "border-white/10 bg-white/[0.04] text-zinc-200 hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10",
-          ].join(" ")}
-        >
-          {copy.applyPresetButton}
-        </button>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onApplyAll?.();
+            }}
+            disabled={disabled}
+            className={[
+              "rounded-xl border px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] transition disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]",
+              publicMode
+                ? "border-amber-300/25 bg-amber-300/10 text-amber-100 hover:border-amber-300/45"
+                : "border-white/10 bg-white/[0.04] text-zinc-200 hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10",
+            ].join(" ")}
+          >
+            {copy.applyAllDreamsButton}
+          </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onApplySelected?.();
+            }}
+            disabled={disabled}
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-200 transition hover:border-cyan-300/35 hover:bg-cyan-300/10 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]"
+          >
+            {copy.applySelectedDreamsButton}
+          </button>
+        </div>
       </div>
     </article>
   );

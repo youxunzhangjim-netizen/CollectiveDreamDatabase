@@ -42,10 +42,17 @@ export default function BulkSharingModal({
   profile,
   language = "zh",
   copy,
+  initialFilters = null,
   onClose,
   onApplied,
 }) {
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState(() => ({
+    ...DEFAULT_FILTERS,
+    ...(initialFilters || {}),
+    selectedIds: Array.isArray(initialFilters?.selectedIds)
+      ? initialFilters.selectedIds
+      : DEFAULT_FILTERS.selectedIds,
+  }));
   const [phase, setPhase] = useState("preview");
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [jobId, setJobId] = useState("");
@@ -412,6 +419,29 @@ export default function BulkSharingModal({
               </div>
             </details>
 
+            {filters.scope === "selected" && (
+              <div className="mt-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-3">
+                <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100">
+                  {copy.bulkSelectedDreams}
+                </h4>
+                <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+                  {records.map((record) => (
+                    <Checkbox
+                      key={record.id}
+                      checked={filters.selectedIds.includes(record.id)}
+                      onChange={(checked) => {
+                        const selected = new Set(filters.selectedIds);
+                        if (checked) selected.add(record.id);
+                        else selected.delete(record.id);
+                        updateFilter({ selectedIds: [...selected] });
+                      }}
+                      label={getRecordTitle(record, copy)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             <details open className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
               <summary className="cursor-pointer font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100">
                 {copy.bulkSpecificTags}
@@ -461,28 +491,6 @@ export default function BulkSharingModal({
                 )}
               </div>
 
-              {filters.scope === "selected" && (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3">
-                  <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400">
-                    {copy.bulkSelectedDreams}
-                  </h4>
-                  <div className="mt-3 max-h-52 overflow-y-auto pr-1">
-                    {records.map((record) => (
-                      <Checkbox
-                        key={record.id}
-                        checked={filters.selectedIds.includes(record.id)}
-                        onChange={(checked) => {
-                          const selected = new Set(filters.selectedIds);
-                          if (checked) selected.add(record.id);
-                          else selected.delete(record.id);
-                          updateFilter({ selectedIds: [...selected] });
-                        }}
-                        label={getRecordTitle(record, copy)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
             </details>
 
             <button
@@ -553,6 +561,12 @@ export default function BulkSharingModal({
               <PreviewMetric label={copy.bulkSkippedMissingPublicText} value={preview.skippedMissingPublicTextCount} />
               <PreviewMetric label={copy.previewStats} value={preview.summary.statsCount} />
             </div>
+
+            {!canApply && !applying && !undoing && phase === "preview" && (
+              <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-3 text-sm leading-relaxed text-amber-100">
+                {copy.noAffectedDreams || "No dreams need this change."}
+              </p>
+            )}
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <BreakdownPanel
