@@ -414,7 +414,15 @@ service cloud.firestore {
           "contentWarnings",
           "originalLanguage",
           "sharingMode",
-          "publicTranslations",
+          "publicTitleEn",
+          "publicTextEn",
+          "publicExcerptEn",
+          "publicTitleZh",
+          "publicTextZh",
+          "publicExcerptZh",
+          "publicTitleEs",
+          "publicTextEs",
+          "publicExcerptEs",
           "translationLanguages",
           "translationSource"
         ])
@@ -433,7 +441,15 @@ service cloud.firestore {
         && data.publicConsent == true
         && data.adultContent is bool
         && optionalList(data, "contentWarnings", 40)
-        && validPublicTranslations(data)
+        && optionalString(data, "publicTitleEn", 220)
+        && optionalString(data, "publicTextEn", 120000)
+        && optionalString(data, "publicExcerptEn", 800)
+        && optionalString(data, "publicTitleZh", 220)
+        && optionalString(data, "publicTextZh", 120000)
+        && optionalString(data, "publicExcerptZh", 800)
+        && optionalString(data, "publicTitleEs", 220)
+        && optionalString(data, "publicTextEs", 120000)
+        && optionalString(data, "publicExcerptEs", 800)
         && optionalList(data, "translationLanguages", 3)
         && (!data.keys().hasAny(["translationSource"])
           || data.translationSource == "recorder_provided")
@@ -441,27 +457,6 @@ service cloud.firestore {
         && isPublicSharingMode(data.sharingMode)
         && publicDreamSourceRecordAllowsMirror(data, recordId)
         && redactedPublicDreamUsesReviewedText(data, recordId);
-    }
-
-    function validPublicTranslation(value) {
-      return value is map
-        && value.keys().hasOnly(["title", "text", "excerpt"])
-        && value.keys().hasAll(["text"])
-        && requiredString(value, "text", 1, 120000)
-        && optionalString(value, "title", 220)
-        && optionalString(value, "excerpt", 800);
-    }
-
-    function validPublicTranslations(data) {
-      return !data.keys().hasAny(["publicTranslations"])
-        || (data.publicTranslations is map
-          && data.publicTranslations.keys().hasOnly(["en", "zh", "es"])
-          && (!data.publicTranslations.keys().hasAny(["en"])
-            || validPublicTranslation(data.publicTranslations.en))
-          && (!data.publicTranslations.keys().hasAny(["zh"])
-            || validPublicTranslation(data.publicTranslations.zh))
-          && (!data.publicTranslations.keys().hasAny(["es"])
-            || validPublicTranslation(data.publicTranslations.es)));
     }
 
     function validResearchSignal(data, signalId) {

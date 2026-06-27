@@ -1199,7 +1199,18 @@ export default function UserDashboard({
         setCollectionRecords(
           collectionItems.map((item, index) => normalizeRecordItem(item, index + 2))
         );
-        syncOwnedPublicTranslations(user, ownedItems, profileData).catch(() => {});
+        const repairKey = `cdo-public-language-repair-v2:${user.uid}`;
+        const repairCompleted =
+          typeof window !== "undefined" &&
+          window.localStorage.getItem(repairKey) === "complete";
+
+        if (!repairCompleted) {
+          syncOwnedPublicTranslations(user, ownedItems, profileData)
+            .then(() => {
+              window.localStorage.setItem(repairKey, "complete");
+            })
+            .catch(() => {});
+        }
       } catch (error) {
         if (!ignore) {
           setRecordsError(error.message);

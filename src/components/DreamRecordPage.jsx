@@ -1271,20 +1271,37 @@ function normalizeDreamRecord(record) {
   const publicVersionZh = publicTranslations.zh || {};
   const publicVersionEs = publicTranslations.es || {};
   const title = record?.title || record?.publicTitle || "";
-  const titleEn = record?.titleEn || record?.title_en || publicVersionEn.title || "";
-  const titleZh = record?.titleZh || record?.title_zh || publicVersionZh.title || "";
-  const titleEs = record?.titleEs || record?.title_es || publicVersionEs.title || "";
+  const titleEn =
+    record?.titleEn ||
+    record?.title_en ||
+    record?.publicTitleEn ||
+    publicVersionEn.title ||
+    "";
+  const titleZh =
+    record?.titleZh ||
+    record?.title_zh ||
+    record?.publicTitleZh ||
+    publicVersionZh.title ||
+    "";
+  const titleEs =
+    record?.titleEs ||
+    record?.title_es ||
+    record?.publicTitleEs ||
+    publicVersionEs.title ||
+    "";
   const text = record?.dream_text || record?.text || record?.publicText || record?.excerpt || "";
   const textEn =
     record?.dream_text_en ||
     record?.textEn ||
     record?.text_en ||
+    record?.publicTextEn ||
     publicVersionEn.text ||
     record?.excerpt_en ||
     "";
   const textZh =
     record?.dream_text_zh ||
     record?.textZh ||
+    record?.publicTextZh ||
     publicVersionZh.text ||
     record?.excerpt_zh ||
     record?.excerpt ||
@@ -1292,6 +1309,7 @@ function normalizeDreamRecord(record) {
   const textEs =
     record?.dream_text_es ||
     record?.textEs ||
+    record?.publicTextEs ||
     publicVersionEs.text ||
     record?.excerpt_es ||
     record?.excerpt ||

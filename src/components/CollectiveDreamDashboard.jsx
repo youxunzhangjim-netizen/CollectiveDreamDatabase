@@ -1388,18 +1388,36 @@ function normalizeDreamCard(row) {
       row.translationSource ||
       (publicTranslationLanguages.length > 0 ? "recorder_provided" : ""),
     title: row.title || row.publicTitle || "",
-    titleEn: row.titleEn || row.title_en || publicVersionEn.title || "",
+    titleEn:
+      row.titleEn || row.title_en || row.publicTitleEn || publicVersionEn.title || "",
     title_en: row.title_en || row.titleEn || "",
-    titleZh: row.titleZh || row.title_zh || publicVersionZh.title || "",
+    titleZh:
+      row.titleZh || row.title_zh || row.publicTitleZh || publicVersionZh.title || "",
     title_zh: row.title_zh || row.titleZh,
-    titleEs: row.titleEs || row.title_es || publicVersionEs.title || "",
+    titleEs:
+      row.titleEs || row.title_es || row.publicTitleEs || publicVersionEs.title || "",
     title_es: row.title_es || row.titleEs,
     excerpt,
-    excerptEn: row.excerptEn || row.excerpt_en || publicVersionEn.excerpt || "",
+    excerptEn:
+      row.excerptEn ||
+      row.excerpt_en ||
+      row.publicExcerptEn ||
+      publicVersionEn.excerpt ||
+      "",
     excerpt_en: row.excerpt_en || row.excerptEn || "",
-    excerptZh: row.excerptZh || row.excerpt_zh || publicVersionZh.excerpt || "",
+    excerptZh:
+      row.excerptZh ||
+      row.excerpt_zh ||
+      row.publicExcerptZh ||
+      publicVersionZh.excerpt ||
+      "",
     excerpt_zh: row.excerpt_zh || row.excerptZh,
-    excerptEs: row.excerptEs || row.excerpt_es || publicVersionEs.excerpt || "",
+    excerptEs:
+      row.excerptEs ||
+      row.excerpt_es ||
+      row.publicExcerptEs ||
+      publicVersionEs.excerpt ||
+      "",
     excerpt_es: row.excerpt_es || row.excerptEs,
     dream_text: row.dream_text || row.dreamText || row.text || row.originalText || row.publicText,
     dream_text_en:
@@ -1407,28 +1425,46 @@ function normalizeDreamCard(row) {
       row.dreamTextEn ||
       row.textEn ||
       row.text_en ||
+      row.publicTextEn ||
       publicVersionEn.text ||
       "",
     textEn:
-      row.textEn || row.dream_text_en || row.text_en || publicVersionEn.text || "",
+      row.textEn ||
+      row.dream_text_en ||
+      row.text_en ||
+      row.publicTextEn ||
+      publicVersionEn.text ||
+      "",
     dream_text_zh:
       row.dream_text_zh ||
       row.dreamTextZh ||
       row.textZh ||
       row.text_zh ||
+      row.publicTextZh ||
       publicVersionZh.text ||
       "",
     textZh:
-      row.textZh || row.dream_text_zh || row.text_zh || publicVersionZh.text || "",
+      row.textZh ||
+      row.dream_text_zh ||
+      row.text_zh ||
+      row.publicTextZh ||
+      publicVersionZh.text ||
+      "",
     dream_text_es:
       row.dream_text_es ||
       row.dreamTextEs ||
       row.textEs ||
       row.text_es ||
+      row.publicTextEs ||
       publicVersionEs.text ||
       "",
     textEs:
-      row.textEs || row.dream_text_es || row.text_es || publicVersionEs.text || "",
+      row.textEs ||
+      row.dream_text_es ||
+      row.text_es ||
+      row.publicTextEs ||
+      publicVersionEs.text ||
+      "",
     dream_date: dreamDate,
     dreamDate,
     dreamDateStatus,

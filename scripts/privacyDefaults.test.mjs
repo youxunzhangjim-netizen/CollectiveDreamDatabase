@@ -197,10 +197,10 @@ assert.equal(
 
   assert.deepEqual(publicMirror.translationLanguages, ["zh", "es"]);
   assert.equal(publicMirror.translationSource, "recorder_provided");
-  assert.equal(publicMirror.publicTranslations.zh.title, "原始標題");
-  assert.equal(publicMirror.publicTranslations.zh.text, "原始夢境文字");
-  assert.equal(publicMirror.publicTranslations.es.title, "Título aportado");
-  assert.equal("ownerId" in publicMirror.publicTranslations.es, false);
+  assert.equal(publicMirror.publicTitleZh, "原始標題");
+  assert.equal(publicMirror.publicTextZh, "原始夢境文字");
+  assert.equal(publicMirror.publicTitleEs, "Título aportado");
+  assert.equal("publicTranslations" in publicMirror, false);
 }
 
 {
@@ -234,6 +234,7 @@ assert.equal(
   assert.notEqual(publicMirror.publicText, baseRecord.originalText);
   assert.equal("dream_text" in publicMirror, false);
   assert.equal("publicTranslations" in publicMirror, false);
+  assert.equal("publicTextEn" in publicMirror, false);
 }
 
 {

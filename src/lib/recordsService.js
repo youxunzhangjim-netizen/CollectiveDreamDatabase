@@ -390,14 +390,18 @@ function sanitizePublicTags(tags = []) {
       if (!slug) return null;
 
       return {
-        slug,
-        category: tag.category || "Custom",
-        labelEn: tag.labelEn || tag.nameEn || tag.label || tag.name || slug,
-        labelZh: tag.labelZh || tag.nameZh || tag.name_zh || "",
-        labelEs: tag.labelEs || tag.nameEs || tag.name_es || "",
+        slug: limitString(slug, 120),
+        category: limitString(tag.category || "Custom", 80),
+        labelEn: limitString(
+          tag.labelEn || tag.nameEn || tag.label || tag.name || slug,
+          80
+        ),
+        labelZh: limitString(tag.labelZh || tag.nameZh || tag.name_zh || "", 80),
+        labelEs: limitString(tag.labelEs || tag.nameEs || tag.name_es || "", 80),
       };
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, 160);
 }
 
 function getTagSlugsForCategory(tags = [], category) {
@@ -450,6 +454,10 @@ function getSensitivityLevelBucket(level) {
 
 function uniqueStrings(values = []) {
   return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function limitedUniqueStrings(values = [], limit = 160) {
+  return uniqueStrings(values).slice(0, limit);
 }
 
 function safeTimestampOrServerTimestamp(value) {
@@ -557,12 +565,11 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
   const publicTitle = getPublicTitle(record, normalizedMode);
   const originalLanguage = normalizeLanguage(record.originalLanguage || "zh");
   const publicLanguage = normalizeLanguage(record.publicLanguage || originalLanguage);
-  const publicTranslations = buildPublicRecorderTranslations(
+  const publicTranslationFields = buildPublicRecorderTranslationFields(
     record,
     normalizedMode,
     originalLanguage
   );
-  const translationLanguages = Object.keys(publicTranslations);
   const publicTags = sanitizePublicTags(record.tags);
   const publicDate = getPublicDateFields(record);
   const sensitivityLevel = calculateSensitivityLevel(record);
@@ -591,16 +598,12 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
     sharingMode: normalizedMode,
   };
 
-  if (translationLanguages.length > 0) {
-    publicDream.publicTranslations = publicTranslations;
-    publicDream.translationLanguages = translationLanguages;
-    publicDream.translationSource = "recorder_provided";
-  }
+  Object.assign(publicDream, publicTranslationFields);
 
   return publicDream;
 }
 
-function buildPublicRecorderTranslations(record, sharingMode, originalLanguage) {
+function buildPublicRecorderTranslationFields(record, sharingMode, originalLanguage) {
   if (
     normalizeSharingMode(sharingMode) === DREAM_SHARING_MODES.REDACTED_PUBLIC ||
     record.translationSource !== "recorder_provided"
@@ -608,31 +611,45 @@ function buildPublicRecorderTranslations(record, sharingMode, originalLanguage) 
     return {};
   }
 
-  return normalizeTranslationLanguages(record.translationLanguages).reduce(
-    (translations, language) => {
+  const fields = {};
+  const translationLanguages = [];
+
+  normalizeTranslationLanguages(record.translationLanguages).forEach(
+    (language) => {
       const normalizedLanguage = normalizeLanguage(language);
-      if (normalizedLanguage === originalLanguage) return translations;
+      if (normalizedLanguage === originalLanguage) return;
 
       const text = limitString(
         getLanguageSpecificValue(record, "text", normalizedLanguage),
         120000
       );
-      if (!text) return translations;
+      if (!text) return;
 
       const title = limitString(
         getLanguageSpecificValue(record, "title", normalizedLanguage),
         220
       );
+      const suffix =
+        normalizedLanguage === "zh"
+          ? "Zh"
+          : normalizedLanguage === "es"
+            ? "Es"
+            : "En";
 
-      translations[normalizedLanguage] = {
-        title,
-        text,
-        excerpt: createExcerpt(text),
-      };
-      return translations;
-    },
-    {}
+      fields[`publicTitle${suffix}`] = title;
+      fields[`publicText${suffix}`] = text;
+      fields[`publicExcerpt${suffix}`] = createExcerpt(text);
+      translationLanguages.push(normalizedLanguage);
+    }
   );
+
+  if (translationLanguages.length === 0) return {};
+
+  return {
+    ...fields,
+    translationLanguages: [...new Set(translationLanguages)].slice(0, 3),
+    translationSource: "recorder_provided",
+  };
 }
 
 export function buildResearchSignalDocument(record = {}, sharingMode = record.sharingMode, ownerUid = "") {
@@ -660,25 +677,44 @@ export function buildResearchSignalDocument(record = {}, sharingMode = record.sh
     yearBucket: /^\d{4}/.test(dreamDate) ? dreamDate.slice(0, 4) : "",
     period: normalizeDreamPeriod(record.dreamPeriod || record.dream_period),
     dreamLengthBucket: getDreamLengthBucket(dreamText),
-    tagSlugs: selectedTagSlugs,
-    selectedTagSlugs,
-    confirmedTagSlugs,
-    aiSuggestedTagSlugs,
-    emotionTags: uniqueStrings(record.emotionTags || getTagSlugsForCategory(tags, "Emotions")),
-    settingTags: uniqueStrings(record.environmentTags || getTagSlugsForCategory(tags, "Environment")),
-    entityTags: uniqueStrings(record.entityTags || getTagSlugsForCategory(tags, "Entities")),
-    dreamTypeTags: uniqueStrings(record.dreamTypeTags || getTagSlugsForCategory(tags, "Dream Types")),
+    tagSlugs: limitedUniqueStrings(selectedTagSlugs, 160),
+    selectedTagSlugs: limitedUniqueStrings(selectedTagSlugs, 160),
+    confirmedTagSlugs: limitedUniqueStrings(confirmedTagSlugs, 160),
+    aiSuggestedTagSlugs: limitedUniqueStrings(aiSuggestedTagSlugs, 160),
+    emotionTags: limitedUniqueStrings(
+      record.emotionTags || getTagSlugsForCategory(tags, "Emotions"),
+      80
+    ),
+    settingTags: limitedUniqueStrings(
+      record.environmentTags || getTagSlugsForCategory(tags, "Environment"),
+      80
+    ),
+    entityTags: limitedUniqueStrings(
+      record.entityTags || getTagSlugsForCategory(tags, "Entities"),
+      80
+    ),
+    dreamTypeTags: limitedUniqueStrings(
+      record.dreamTypeTags || getTagSlugsForCategory(tags, "Dream Types"),
+      80
+    ),
     psychologicalObservationTags:
-      uniqueStrings(
+      limitedUniqueStrings(
         record.psychologicalObservableTags ||
-          getTagSlugsForCategory(tags, "Psychological Observables")
+          getTagSlugsForCategory(tags, "Psychological Observables"),
+        80
       ),
     adultContent: Boolean(record.adultContent),
     sensitivityLevelBucket: getSensitivityLevelBucket(sensitivityLevel),
-    importSourceType: record.sourceType || (record.importBatchId ? "diary_import" : "single_record"),
-    titleSource: record.titleSource || record.title_source || "",
+    importSourceType: limitString(
+      record.sourceType || (record.importBatchId ? "diary_import" : "single_record"),
+      40
+    ),
+    titleSource: limitString(record.titleSource || record.title_source || "", 80),
     sharingMode: normalizedMode,
-    tagSource: record.tagsSource || record.tags_source || "user_or_import",
+    tagSource: limitString(
+      record.tagsSource || record.tags_source || "user_or_import",
+      80
+    ),
     confirmedByUser: Boolean(record.tagsReviewedByUser || record.tags_reviewed_by_user),
     hasUnconfirmedAiTags: hasUnconfirmedAiTags(record),
   };
@@ -701,21 +737,30 @@ async function syncPrivacyMirrorDocuments({
   const legacySignalRef = doc(firestore, "ResearchSignals", recordId);
   const publicDream = buildPublicDreamDocument(record, profile, normalizedMode);
   const researchSignal = buildResearchSignalDocument(record, normalizedMode, currentUser?.uid);
+  const failures = [];
 
-  if (publicDream) {
-    await setDoc(publicRef, publicDream);
-  } else {
-    await deleteDoc(publicRef).catch(() => {});
+  try {
+    if (publicDream) {
+      await setDoc(publicRef, publicDream);
+    } else {
+      await deleteDoc(publicRef).catch(() => {});
+    }
+  } catch (error) {
+    failures.push({ stage: "public mirror", error });
   }
 
-  if (researchSignal) {
-    await setDoc(signalRef, researchSignal);
-    if (signalId !== recordId) {
+  try {
+    if (researchSignal) {
+      await setDoc(signalRef, researchSignal);
+      if (signalId !== recordId) {
+        await deleteDoc(legacySignalRef).catch(() => {});
+      }
+    } else {
+      await deleteDoc(signalRef).catch(() => {});
       await deleteDoc(legacySignalRef).catch(() => {});
     }
-  } else {
-    await deleteDoc(signalRef).catch(() => {});
-    await deleteDoc(legacySignalRef).catch(() => {});
+  } catch (error) {
+    failures.push({ stage: "research signal", error });
   }
 
   if (currentUser?.uid) {
@@ -726,6 +771,18 @@ async function syncPrivacyMirrorDocuments({
       researchConsent: Boolean(researchSignal),
       source: "privacy_sync",
     }).catch(() => {});
+  }
+
+  if (failures.length > 0) {
+    const failure = failures[0];
+    const error = new Error(
+      failures
+        .map(({ stage, error: cause }) => `${stage}: ${cause?.message || "write failed"}`)
+        .join("; ")
+    );
+    error.code = failure.error?.code || "privacy-sync-failed";
+    error.stage = failure.stage;
+    throw error;
   }
 }
 
@@ -809,7 +866,7 @@ export async function syncOwnedPublicTranslations(currentUser, records = [], pro
   for (let index = 0; index < candidates.length; index += 10) {
     const batch = candidates.slice(index, index + 10);
     await Promise.allSettled(
-      batch.map((record) => {
+      batch.map(async (record) => {
         const publicDream = buildPublicDreamDocument(
           record,
           profile,
@@ -817,10 +874,32 @@ export async function syncOwnedPublicTranslations(currentUser, records = [], pro
         );
         if (!publicDream) return Promise.resolve();
 
-        return setDoc(
-          doc(firestore, "PublicDreams", record.id || record.dream_id),
-          publicDream
+        const researchSignal = buildResearchSignalDocument(
+          record,
+          record.sharingMode,
+          currentUser.uid
         );
+        const writes = [
+          setDoc(
+            doc(firestore, "PublicDreams", record.id || record.dream_id),
+            publicDream
+          ),
+        ];
+
+        if (researchSignal) {
+          writes.push(
+            setDoc(
+              doc(
+                firestore,
+                "ResearchSignals",
+                stableHashString(record.id || record.dream_id)
+              ),
+              researchSignal
+            )
+          );
+        }
+
+        await Promise.allSettled(writes);
       })
     );
   }
@@ -1364,26 +1443,44 @@ function normalizeRecordReference(record) {
   return {
     recordId,
     title: record?.title || publicTitle || "",
-    titleEn: record?.titleEn || record?.title_en || publicVersionEn.title || "",
-    titleZh: record?.titleZh || record?.title_zh || publicVersionZh.title || "",
-    titleEs: record?.titleEs || record?.title_es || publicVersionEs.title || "",
+    titleEn:
+      record?.titleEn ||
+      record?.title_en ||
+      record?.publicTitleEn ||
+      publicVersionEn.title ||
+      "",
+    titleZh:
+      record?.titleZh ||
+      record?.title_zh ||
+      record?.publicTitleZh ||
+      publicVersionZh.title ||
+      "",
+    titleEs:
+      record?.titleEs ||
+      record?.title_es ||
+      record?.publicTitleEs ||
+      publicVersionEs.title ||
+      "",
     text: record?.dream_text || record?.text || publicText || record?.excerpt || "",
     textEn:
       record?.dream_text_en ||
       record?.textEn ||
       record?.text_en ||
+      record?.publicTextEn ||
       publicVersionEn.text ||
       record?.excerpt_en ||
       "",
     textZh:
       record?.dream_text_zh ||
       record?.textZh ||
+      record?.publicTextZh ||
       publicVersionZh.text ||
       record?.excerpt_zh ||
       "",
     textEs:
       record?.dream_text_es ||
       record?.textEs ||
+      record?.publicTextEs ||
       publicVersionEs.text ||
       record?.excerpt_es ||
       "",
