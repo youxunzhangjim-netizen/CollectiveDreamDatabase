@@ -15,6 +15,12 @@ import {
   updateOwnedRecordSharing,
 } from "./recordsService.js";
 import {
+  ACCOUNT_DEFAULT_SHARING_MODE,
+  isPublicPrivacySharingMode,
+  normalizePrivacySettings,
+  normalizePrivacySharingMode,
+} from "./privacyDefaults.js";
+import {
   getTagLabel,
   makeSharedTagSlug,
   normalizeCustomTagLabel,
@@ -256,7 +262,7 @@ export async function createDreamDiaryImport({
   parserMode = DIARY_IMPORT_MODES.AUTO,
   sourceFormat = DIARY_IMPORT_MODES.AUTO,
   fileName = "dream-diary.txt",
-  sharingMode = "private",
+  sharingMode = ACCOUNT_DEFAULT_SHARING_MODE,
 }) {
   if (!currentUser?.uid) {
     throw new Error("A signed-in account is required to import dreams.");
@@ -284,6 +290,13 @@ export async function createDreamDiaryImport({
   const batchRef = doc(collection(firestore, "ImportBatches"));
   const safeFileName = sanitizeFileName(file?.name || fileName || "dream-diary.txt");
   const nowIso = new Date().toISOString();
+  const privacySettings = normalizePrivacySettings(profile, currentUser);
+  const effectiveImportSharingMode =
+    sharingMode === ACCOUNT_DEFAULT_SHARING_MODE
+      ? privacySettings.defaultApplyToImports
+        ? privacySettings.defaultSharingMode
+        : "private"
+      : normalizePrivacySharingMode(sharingMode);
   let storagePath = "";
   let storageUploadError = null;
   let importAuditError = null;
@@ -338,7 +351,7 @@ export async function createDreamDiaryImport({
     id: batchRef.id,
     ownerId: currentUser.uid,
     status: "importing",
-    privacyDefault: "private",
+    privacyDefault: effectiveImportSharingMode,
     originalFileName: safeFileName,
     originalFileType: file?.type || getContentTypeFromFileName(safeFileName),
     originalFileSize: file?.size || byteLength(rawText),
@@ -471,7 +484,7 @@ export async function createDreamDiaryImport({
         const sharedRecord = await applyImportSharingMode({
           currentUser,
           record,
-          sharingMode,
+          sharingMode: effectiveImportSharingMode,
           profile,
         });
 
@@ -514,7 +527,7 @@ export async function createDreamDiaryImport({
           customTagLabels: selectedCustomTags,
           sharedTags: draft.sharedTags || [],
           recordIdentityMode: "anonymous",
-          sharingMode: "private",
+          sharingMode: effectiveImportSharingMode,
           importBatchId: batchRef.id,
           importDraftId: draftRef.id,
           importMatchKey,
@@ -535,12 +548,7 @@ export async function createDreamDiaryImport({
         },
         profile
       );
-      const record = await applyImportSharingMode({
-        currentUser,
-        record: createdRecord,
-        sharingMode,
-        profile,
-      });
+      const record = createdRecord;
 
       importedRecords.push(record);
       matchableRecords.push(record);
@@ -632,17 +640,59 @@ async function applyImportSharingMode({
   sharingMode = "private",
   profile = null,
 }) {
-  if (!record || sharingMode === "private") return record;
+  const normalizedSharingMode = normalizePrivacySharingMode(sharingMode);
+  const privacySettings = normalizePrivacySettings(profile, currentUser);
+
+  if (!record || normalizedSharingMode === "private") return record;
 
   const recordId = getRecordId(record);
   if (!recordId) return record;
 
-  try {
-    await updateOwnedRecordSharing(currentUser, recordId, { sharingMode }, profile);
+  if (
+    privacySettings.requireReviewBeforePublic &&
+    isPublicPrivacySharingMode(normalizedSharingMode)
+  ) {
+    await updateOwnedRecordSharing(
+      currentUser,
+      recordId,
+      {
+        sharingMode:
+          privacySettings.defaultIncludeInResearchStats ||
+          privacySettings.defaultResearchConsent
+            ? "stats_only"
+            : "private",
+      },
+      profile
+    ).catch(() => {});
+    await setDoc(
+      doc(db, "Records", recordId),
+      {
+        requestedSharingMode: normalizedSharingMode,
+        publicReviewStatus: "pending_review",
+        reviewRequiredBeforePublic: true,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    ).catch(() => {});
 
     return {
       ...record,
-      ...buildImportSharingPatch(sharingMode, currentUser, profile),
+      requestedSharingMode: normalizedSharingMode,
+      publicReviewStatus: "pending_review",
+    };
+  }
+
+  try {
+    await updateOwnedRecordSharing(
+      currentUser,
+      recordId,
+      { sharingMode: normalizedSharingMode },
+      profile
+    );
+
+    return {
+      ...record,
+      ...buildImportSharingPatch(normalizedSharingMode, currentUser, profile),
     };
   } catch (error) {
     return {
@@ -654,29 +704,31 @@ async function applyImportSharingMode({
 }
 
 function buildImportSharingPatch(sharingMode, currentUser, profile) {
-  const publicMode =
-    sharingMode === "public_anonymous" || sharingMode === "public_pseudonym";
-  const statsOnly = sharingMode === "stats_only";
+  const normalizedSharingMode = normalizePrivacySharingMode(sharingMode);
+  const publicMode = isPublicPrivacySharingMode(normalizedSharingMode);
+  const statsOnly = normalizedSharingMode === "stats_only";
   const recordIdentityMode =
-    sharingMode === "public_pseudonym" ? "account" : "anonymous";
+    normalizedSharingMode === "pseudonym_public" ? "pseudonym" : "anonymous";
+  const privacySettings = normalizePrivacySettings(profile, currentUser);
 
   return {
-    visibility: statsOnly ? "stats_only" : publicMode ? "public" : "private",
+    visibility: publicMode ? "public" : "private",
     isPublic: publicMode,
-    sharingMode,
+    sharingMode: normalizedSharingMode,
+    requestedSharingMode: normalizedSharingMode,
     includedInResearchStats: publicMode || statsOnly,
     researchConsent: publicMode || statsOnly,
     publicConsent: publicMode,
     recordIdentityMode,
     attributionMode: recordIdentityMode,
     creatorDisplayName:
-      recordIdentityMode === "account"
-        ? profile?.displayName || currentUser?.displayName || ""
+      recordIdentityMode === "pseudonym"
+        ? privacySettings.defaultPseudonym ||
+          profile?.displayName ||
+          currentUser?.displayName ||
+          ""
         : "",
-    creatorEmail:
-      recordIdentityMode === "account" && profile?.showEmail
-        ? currentUser?.email || ""
-        : "",
+    creatorEmail: "",
   };
 }
 

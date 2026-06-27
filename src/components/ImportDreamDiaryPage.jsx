@@ -12,6 +12,7 @@ import {
 } from "../lib/dreamDiaryImportService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import { getLanguageName, LANGUAGE_OPTIONS, normalizeLanguage } from "../lib/language.js";
+import { ACCOUNT_DEFAULT_SHARING_MODE } from "../lib/privacyDefaults.js";
 import { getTagLabel, RECORD_TAGS } from "../lib/tagTaxonomy.js";
 import LanguageMenu from "./LanguageMenu.jsx";
 
@@ -56,8 +57,11 @@ const IMPORT_COPY = {
     sharingText:
       "Diary imports require an account so the records can appear in My Dream Map and be edited later.",
     sharingPrivate: "Keep private",
+    sharingAccountDefault: "Use account default",
     sharingAnonymous: "Share publicly as anonymous",
-    sharingAccount: "Share publicly with account",
+    sharingAccount: "Share publicly with pseudonym",
+    sharingStatsOnly: "Private text + anonymous statistics",
+    sharingRedacted: "Redacted public version after review",
     accountRequired: "Sign in with an account before importing a diary. Guest sessions can record one dream, but bulk diary import is account-only.",
     signInToImport: "Sign in to import",
     reviewTitle: "2. Review drafts before import",
@@ -175,8 +179,11 @@ const IMPORT_COPY = {
     sharingTitle: "匯入後的公開方式",
     sharingText: "日記匯入需要登入帳戶，這樣紀錄才會出現在「我的夢境地圖」並可在之後修改。",
     sharingPrivate: "保持私人",
+    sharingAccountDefault: "使用帳戶預設",
     sharingAnonymous: "匿名公開",
-    sharingAccount: "以帳戶公開",
+    sharingAccount: "以筆名公開",
+    sharingStatsOnly: "文字私人，匿名加入統計",
+    sharingRedacted: "審查後建立公開節錄版",
     accountRequired: "請先登入帳戶再匯入日記。訪客可以記錄單則夢境，但批次日記匯入只限帳戶使用。",
     signInToImport: "登入後匯入",
     reviewTitle: "2. 匯入前檢查草稿",
@@ -282,8 +289,11 @@ const IMPORT_COPY = {
     sharingText:
       "La importación de diario requiere una cuenta para que los registros aparezcan en Mi mapa de sueños y puedan editarse después.",
     sharingPrivate: "Mantener privado",
+    sharingAccountDefault: "Usar valor predeterminado",
     sharingAnonymous: "Compartir público anónimo",
-    sharingAccount: "Compartir público con cuenta",
+    sharingAccount: "Compartir público con seudónimo",
+    sharingStatsOnly: "Texto privado + estadísticas anónimas",
+    sharingRedacted: "Versión pública redactada tras revisión",
     accountRequired: "Inicia sesión con una cuenta antes de importar un diario. Las sesiones invitadas pueden registrar un sueño, pero la importación por lotes requiere cuenta.",
     signInToImport: "Iniciar sesión para importar",
     reviewTitle: "2. Revisa borradores antes de importar",
@@ -482,13 +492,16 @@ export default function ImportDreamDiaryPage({
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
   const [promptCopied, setPromptCopied] = useState(false);
-  const [sharingMode, setSharingMode] = useState("private");
+  const [sharingMode, setSharingMode] = useState(ACCOUNT_DEFAULT_SHARING_MODE);
   const timeCopy = getImportTimeCopy(language);
   const hasImportAccount = Boolean(currentUser?.uid && !currentUser.isAnonymous);
   const sharingOptions = [
+    { value: ACCOUNT_DEFAULT_SHARING_MODE, label: copy.sharingAccountDefault },
     { value: "private", label: copy.sharingPrivate },
-    { value: "public_anonymous", label: copy.sharingAnonymous },
-    { value: "public_pseudonym", label: copy.sharingAccount },
+    { value: "stats_only", label: copy.sharingStatsOnly },
+    { value: "anonymous_public", label: copy.sharingAnonymous },
+    { value: "pseudonym_public", label: copy.sharingAccount },
+    { value: "redacted_public", label: copy.sharingRedacted },
   ];
 
   const selectedCount = useMemo(
@@ -925,7 +938,7 @@ export default function ImportDreamDiaryPage({
                     key={option.value}
                     type="button"
                     onClick={() => setSharingMode(option.value)}
-                    disabled={option.value === "public_pseudonym" && !hasImportAccount}
+                    disabled={option.value === "pseudonym_public" && !hasImportAccount}
                     className={[
                       "min-w-0 rounded-xl border px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed disabled:opacity-45",
                       sharingMode === option.value

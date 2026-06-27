@@ -34,6 +34,12 @@ import {
   EXPORT_DETAIL_LEVELS,
 } from "../lib/researchExportService.js";
 import { suggestTagsForDream } from "../lib/dreamDiaryImportService.js";
+import {
+  PRIVACY_SHARING_MODES,
+  getConsentsForSharingMode,
+  normalizePrivacySettings,
+  normalizePrivacySharingMode,
+} from "../lib/privacyDefaults.js";
 import LanguageMenu from "./LanguageMenu.jsx";
 
 const DASHBOARD_COPY = {
@@ -100,6 +106,17 @@ const DASHBOARD_COPY = {
     biologicalSexPlaceholder: "Prefer not to say",
     showBiologicalSexLabel: "Show biological sex publicly",
     preferredLanguageLabel: "Preferred Language",
+    privacyDefaultsTitle: "Default privacy for new dreams",
+    privacyDefaultsDescription:
+      "Choose how future dreams should be saved. You can still change any dream later.",
+    privacyOptionPrivate: "Keep new dreams private",
+    privacyOptionStats: "Keep text private, contribute anonymous statistics",
+    privacyOptionAnonymous: "Share anonymously after review",
+    privacyOptionPseudonym: "Share with pseudonym after review",
+    privacyOptionRedacted: "Create public redacted versions after review",
+    defaultPseudonymLabel: "Default pseudonym",
+    defaultPseudonymPlaceholder: "Name shown only for pseudonym sharing",
+    reviewBeforePublicLabel: "Require review before public sharing",
     biologicalSexOptions: {
       female: "Female",
       male: "Male",
@@ -210,6 +227,16 @@ const DASHBOARD_COPY = {
     biologicalSexPlaceholder: "不透露",
     showBiologicalSexLabel: "公開顯示生理性別",
     preferredLanguageLabel: "偏好語言",
+    privacyDefaultsTitle: "新夢境的預設隱私",
+    privacyDefaultsDescription: "選擇未來夢境的儲存方式。之後仍可逐則修改。",
+    privacyOptionPrivate: "新夢境保持私人",
+    privacyOptionStats: "文字私人，匿名加入統計",
+    privacyOptionAnonymous: "審查後匿名公開",
+    privacyOptionPseudonym: "審查後以筆名公開",
+    privacyOptionRedacted: "審查後建立公開節錄版",
+    defaultPseudonymLabel: "預設筆名",
+    defaultPseudonymPlaceholder: "只在筆名公開時顯示",
+    reviewBeforePublicLabel: "公開前必須先審查",
     biologicalSexOptions: {
       female: "女性",
       male: "男性",
@@ -320,6 +347,17 @@ const DASHBOARD_COPY = {
     biologicalSexPlaceholder: "Prefiero no decirlo",
     showBiologicalSexLabel: "Mostrar sexo biológico públicamente",
     preferredLanguageLabel: "Idioma preferido",
+    privacyDefaultsTitle: "Privacidad predeterminada para nuevos sueños",
+    privacyDefaultsDescription:
+      "Elige cómo se guardarán los sueños futuros. Puedes cambiar cualquier sueño después.",
+    privacyOptionPrivate: "Mantener nuevos sueños privados",
+    privacyOptionStats: "Texto privado, estadísticas anónimas",
+    privacyOptionAnonymous: "Compartir anónimo tras revisión",
+    privacyOptionPseudonym: "Compartir con seudónimo tras revisión",
+    privacyOptionRedacted: "Crear versiones públicas redactadas tras revisión",
+    defaultPseudonymLabel: "Seudónimo predeterminado",
+    defaultPseudonymPlaceholder: "Nombre mostrado solo con seudónimo",
+    reviewBeforePublicLabel: "Revisar antes de publicar",
     biologicalSexOptions: {
       female: "Femenino",
       male: "Masculino",
@@ -377,6 +415,31 @@ const BIOLOGICAL_SEX_OPTIONS = [
   "intersex",
   "notListed",
 ];
+
+function getPrivacyDefaultOptions(copy) {
+  return [
+    {
+      value: PRIVACY_SHARING_MODES.PRIVATE,
+      label: copy.privacyOptionPrivate,
+    },
+    {
+      value: PRIVACY_SHARING_MODES.STATS_ONLY,
+      label: copy.privacyOptionStats,
+    },
+    {
+      value: PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC,
+      label: copy.privacyOptionAnonymous,
+    },
+    {
+      value: PRIVACY_SHARING_MODES.PSEUDONYM_PUBLIC,
+      label: copy.privacyOptionPseudonym,
+    },
+    {
+      value: PRIVACY_SHARING_MODES.REDACTED_PUBLIC,
+      label: copy.privacyOptionRedacted,
+    },
+  ];
+}
 
 const MOCK_OBSERVATIONS = [
   {
@@ -482,6 +545,10 @@ export default function UserDashboard({
     { value: EXPORT_DETAIL_LEVELS.CODED, label: copy.exportScopeCoded },
     { value: EXPORT_DETAIL_LEVELS.ANALYSIS, label: copy.exportScopeAnalysis },
   ];
+  const privacyDefaultOptions = useMemo(
+    () => getPrivacyDefaultOptions(copy),
+    [copy]
+  );
   const activeItems =
     activeTab === "observations"
       ? observations
@@ -617,6 +684,18 @@ export default function UserDashboard({
     }
   }
 
+  function handlePrivacyDefaultModeChange(nextMode) {
+    const defaultSharingMode = normalizePrivacySharingMode(nextMode);
+    const consents = getConsentsForSharingMode(defaultSharingMode);
+
+    setProfileDraft((current) => ({
+      ...normalizePrivacySettings(current || {}, user),
+      ...(current || {}),
+      defaultSharingMode,
+      ...consents,
+    }));
+  }
+
   async function handleShareAll(sharingMode) {
     if (!user?.uid || observations.length === 0 || bulkSharingMode) return;
 
@@ -648,7 +727,7 @@ export default function UserDashboard({
 
       setBulkShareNotice(
         successfulIds.size === observations.length
-          ? sharingMode === "public_pseudonym"
+          ? normalizePrivacySharingMode(sharingMode) === "pseudonym_public"
             ? copy.bulkShareAccountDone({ count: successfulIds.size })
             : copy.bulkShareAnonymousDone({ count: successfulIds.size })
           : copy.bulkShareFailed
@@ -786,45 +865,81 @@ export default function UserDashboard({
                 />
               </div>
 
-              <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-3">
-                <h2 className="cdo-card-heading">
-                  {copy.bulkShareTitle}
-                </h2>
-                <p className="cdo-muted-copy mt-2 text-xs">
-                  {copy.bulkShareText}
-                </p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {profileDraft && (
+                <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
+                  <h2 className="cdo-card-heading">
+                    {copy.privacyDefaultsTitle}
+                  </h2>
+                  <p className="cdo-muted-copy mt-2 text-xs leading-relaxed">
+                    {copy.privacyDefaultsDescription}
+                  </p>
+                  <div className="mt-3 grid gap-2 min-[520px]:grid-cols-2">
+                    {privacyDefaultOptions.map((option) => {
+                      const active =
+                        normalizePrivacySharingMode(profileDraft.defaultSharingMode) ===
+                        option.value;
+
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => handlePrivacyDefaultModeChange(option.value)}
+                          className={[
+                            "min-h-12 rounded-xl border px-3 py-2 text-left font-mono text-[10px] font-bold uppercase leading-relaxed tracking-[0.11em] transition",
+                            active
+                              ? "border-cyan-300/45 bg-cyan-300 text-zinc-950 shadow-[0_0_24px_rgba(34,211,238,.18)]"
+                              : "border-white/10 bg-black/25 text-zinc-300 hover:border-cyan-300/35 hover:text-cyan-100",
+                          ].join(" ")}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 grid gap-3 min-[520px]:grid-cols-[minmax(0,1fr)_auto]">
+                    <label className="block min-w-0">
+                      <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                        {copy.defaultPseudonymLabel}
+                      </span>
+                      <input
+                        value={profileDraft.defaultPseudonym || ""}
+                        onChange={(event) =>
+                          setProfileDraft((current) => ({
+                            ...current,
+                            defaultPseudonym: event.target.value,
+                          }))
+                        }
+                        placeholder={copy.defaultPseudonymPlaceholder}
+                        className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 font-mono text-xs text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                      />
+                    </label>
+                    <label className="flex min-h-12 items-center gap-3 rounded-xl border border-white/10 bg-black/30 px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={profileDraft.requireReviewBeforePublic !== false}
+                        onChange={(event) =>
+                          setProfileDraft((current) => ({
+                            ...current,
+                            requireReviewBeforePublic: event.target.checked,
+                          }))
+                        }
+                        className="h-4 w-4 accent-cyan-300"
+                      />
+                      <span className="font-mono text-[10px] font-bold uppercase leading-relaxed tracking-[0.12em] text-zinc-300">
+                        {copy.reviewBeforePublicLabel}
+                      </span>
+                    </label>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => handleShareAll("public_anonymous")}
-                    disabled={observations.length === 0 || Boolean(bulkSharingMode)}
-                    className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={handleSaveProfile}
+                    disabled={profileSaving}
+                    className="mt-3 w-full rounded-xl border border-cyan-300/35 bg-cyan-300 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {bulkSharingMode === "public_anonymous"
-                      ? copy.bulkSharing
-                      : copy.shareAllAnonymous}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleShareAll("public_pseudonym")}
-                    disabled={
-                      observations.length === 0 ||
-                      Boolean(bulkSharingMode) ||
-                      Boolean(user?.isAnonymous)
-                    }
-                    className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-fuchsia-300/45 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {bulkSharingMode === "public_pseudonym"
-                      ? copy.bulkSharing
-                      : copy.shareAllAccount}
+                    {profileSaving ? "..." : copy.saveProfile}
                   </button>
                 </div>
-                {bulkShareNotice && (
-                  <p className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300">
-                    {bulkShareNotice}
-                  </p>
-                )}
-              </div>
+              )}
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-3">
                 <h2 className="cdo-card-heading mb-2">
@@ -1194,22 +1309,29 @@ function getBiologicalSexLabel(value, copy) {
 }
 
 function buildDashboardSharingPatch(sharingMode, user, profile) {
-  const isPublic = sharingMode === "public_anonymous" || sharingMode === "public_pseudonym";
-  const recordIdentityMode = sharingMode === "public_pseudonym" ? "account" : "anonymous";
+  const normalizedSharingMode = normalizePrivacySharingMode(sharingMode);
+  const isPublic =
+    normalizedSharingMode === "anonymous_public" ||
+    normalizedSharingMode === "pseudonym_public" ||
+    normalizedSharingMode === "redacted_public";
+  const recordIdentityMode =
+    normalizedSharingMode === "pseudonym_public" ? "pseudonym" : "anonymous";
 
   return {
     visibility: isPublic ? "public" : "private",
     isPublic,
-    sharingMode,
-    includedInResearchStats: isPublic || sharingMode === "stats_only",
-    researchConsent: isPublic || sharingMode === "stats_only",
+    sharingMode: normalizedSharingMode,
+    requestedSharingMode: normalizedSharingMode,
+    includedInResearchStats: isPublic || normalizedSharingMode === "stats_only",
+    researchConsent: isPublic || normalizedSharingMode === "stats_only",
     publicConsent: isPublic,
     recordIdentityMode,
     attributionMode: recordIdentityMode,
     creatorDisplayName:
-      recordIdentityMode === "account" ? profile?.displayName || user?.displayName || "" : "",
-    creatorEmail:
-      recordIdentityMode === "account" && profile?.showEmail ? user?.email || "" : "",
+      recordIdentityMode === "pseudonym"
+        ? profile?.defaultPseudonym || profile?.displayName || user?.displayName || ""
+        : "",
+    creatorEmail: "",
   };
 }
 
@@ -1302,8 +1424,11 @@ function normalizeRecordItem(item, index) {
     creatorId: item.creatorId || item.ownerId || "",
     anonymousLocked: Boolean(item.anonymousLocked),
     recordIdentityMode:
-      item.recordIdentityMode === "account" || item.attributionMode === "account"
-        ? "account"
+      item.recordIdentityMode === "pseudonym" ||
+      item.attributionMode === "pseudonym" ||
+      item.recordIdentityMode === "account" ||
+      item.attributionMode === "account"
+        ? "pseudonym"
         : "anonymous",
     creatorDisplayName: item.creatorDisplayName || "",
     authorName: item.authorName || item.creatorDisplayName || "",
@@ -1311,14 +1436,19 @@ function normalizeRecordItem(item, index) {
     visibility: item.visibility || (item.isPublic === false ? "private" : "public"),
     isPublic: typeof item.isPublic === "boolean" ? item.isPublic : item.visibility === "public",
     sharingMode:
-      item.sharingMode ||
-      (item.visibility === "stats_only"
+      normalizePrivacySharingMode(
+        item.sharingMode ||
+        (item.visibility === "stats_only"
         ? "stats_only"
         : item.isPublic
-          ? item.recordIdentityMode === "account" || item.attributionMode === "account"
-            ? "public_pseudonym"
-            : "public_anonymous"
-          : "private"),
+          ? item.recordIdentityMode === "pseudonym" ||
+            item.attributionMode === "pseudonym" ||
+            item.recordIdentityMode === "account" ||
+            item.attributionMode === "account"
+            ? "pseudonym_public"
+            : "anonymous_public"
+          : "private")
+      ),
     includedInResearchStats: Boolean(
       item.includedInResearchStats || item.researchConsent
     ),

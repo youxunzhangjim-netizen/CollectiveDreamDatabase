@@ -1,6 +1,7 @@
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebaseClient.js";
 import { isSupportedLanguage } from "./language.js";
+import { normalizePrivacySettings } from "./privacyDefaults.js";
 
 function requireFirestore() {
   if (!isFirebaseConfigured || !db) {
@@ -16,6 +17,8 @@ function formatAuthJoinedAt(currentUser) {
 }
 
 export function createDefaultProfile(currentUser) {
+  const privacySettings = normalizePrivacySettings({}, currentUser);
+
   return {
     uid: currentUser.uid,
     email: currentUser.email || "",
@@ -28,6 +31,7 @@ export function createDefaultProfile(currentUser) {
     biologicalSex: "",
     showBiologicalSex: false,
     preferredLanguage: "zh",
+    ...privacySettings,
   };
 }
 
@@ -66,6 +70,7 @@ export async function saveUserProfile(currentUser, updates) {
 
   const normalizedAge =
     updates.age === "" || updates.age == null ? "" : Math.max(0, Number(updates.age));
+  const privacySettings = normalizePrivacySettings(updates, currentUser);
 
   const profileRef = doc(requireFirestore(), "users", currentUser.uid);
 
@@ -81,6 +86,9 @@ export async function saveUserProfile(currentUser, updates) {
       showAge: Boolean(updates.showAge),
       biologicalSex: updates.biologicalSex || "",
       showBiologicalSex: Boolean(updates.showBiologicalSex),
+      ...privacySettings,
+      privacyDefaultsUpdatedBy: currentUser.uid,
+      privacyDefaultsUpdatedAt: serverTimestamp(),
       preferredLanguage: isSupportedLanguage(updates.preferredLanguage)
         ? updates.preferredLanguage
         : "zh",

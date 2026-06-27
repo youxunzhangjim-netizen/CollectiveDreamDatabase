@@ -26,14 +26,27 @@ service cloud.firestore {
     function validSharingMode(mode) {
       return mode in [
         "private",
+        "stats_only",
+        "anonymous_public",
+        "pseudonym_public",
+        "redacted_public",
         "public_anonymous",
-        "public_pseudonym",
-        "stats_only"
+        "public_pseudonym"
       ];
     }
 
     function validVisibility(visibility) {
       return visibility in ["private", "public", "stats_only"];
+    }
+
+    function isPublicSharingMode(mode) {
+      return mode in [
+        "anonymous_public",
+        "pseudonym_public",
+        "redacted_public",
+        "public_anonymous",
+        "public_pseudonym"
+      ];
     }
 
     function optionalString(data, field, maxSize) {
@@ -143,6 +156,8 @@ service cloud.firestore {
         && optionalString(data, "title_en", 220)
         && optionalString(data, "title_zh", 220)
         && optionalString(data, "title_es", 220)
+        && optionalString(data, "publicTitle", 220)
+        && optionalString(data, "redactedTitle", 220)
         && optionalString(data, "excerpt", 520)
         && optionalString(data, "originalExcerpt", 520)
         && optionalString(data, "excerptEn", 520)
@@ -150,7 +165,10 @@ service cloud.firestore {
         && optionalString(data, "excerptEs", 520)
         && optionalString(data, "excerpt_en", 520)
         && optionalString(data, "excerpt_zh", 520)
-        && optionalString(data, "excerpt_es", 520);
+        && optionalString(data, "excerpt_es", 520)
+        && optionalString(data, "publicText", 120000)
+        && optionalString(data, "redactedText", 120000)
+        && optionalString(data, "publicExcerpt", 520);
     }
 
     function validRecordTaxonomy(data) {
@@ -211,11 +229,11 @@ service cloud.firestore {
           || (data.sharingMode != "private"
             || (data.visibility == "private" && data.isPublic == false)))
         && (!data.keys().hasAll(["sharingMode", "visibility", "isPublic"])
-          || (!(data.sharingMode in ["public_anonymous", "public_pseudonym"])
+          || (!isPublicSharingMode(data.sharingMode)
             || (data.visibility == "public" && data.isPublic == true)))
         && (!data.keys().hasAll(["sharingMode", "visibility", "isPublic"])
           || (data.sharingMode != "stats_only"
-            || (data.visibility == "stats_only" && data.isPublic == false)));
+            || (data.visibility in ["private", "stats_only"] && data.isPublic == false)));
     }
 
     function validRecordConsent(data) {
@@ -229,7 +247,7 @@ service cloud.firestore {
           || data.sharingMode != "stats_only"
           || data.researchConsent == true)
         && (!data.keys().hasAll(["sharingMode", "publicConsent"])
-          || !(data.sharingMode in ["public_anonymous", "public_pseudonym"])
+          || !isPublicSharingMode(data.sharingMode)
           || data.publicConsent == true)
         && (!data.keys().hasAll(["sharingMode", "publicConsent"])
           || data.sharingMode != "stats_only"
@@ -238,13 +256,14 @@ service cloud.firestore {
 
     function validRecordIdentity(data) {
       return (!data.keys().hasAny(["recordIdentityMode"])
-          || data.recordIdentityMode in ["account", "anonymous"])
+          || data.recordIdentityMode in ["account", "anonymous", "pseudonym"])
         && (!data.keys().hasAny(["attributionMode"])
-          || data.attributionMode in ["account", "anonymous"])
+          || data.attributionMode in ["account", "anonymous", "pseudonym"])
         && optionalString(data, "creatorDisplayName", 120)
         && optionalString(data, "creatorEmail", 254)
         && optionalString(data, "creatorCountry", 120)
         && optionalString(data, "creatorCountryRegion", 120)
+        && optionalString(data, "publicRecorderId", 128)
         && optionalString(data, "pseudoId", 80)
         && optionalString(data, "pseudo_id", 80);
     }
@@ -269,6 +288,16 @@ service cloud.firestore {
         && optionalBool(data, "anonymousLocked")
         && optionalBool(data, "analysisDisclaimerAccepted")
         && optionalString(data, "consentVersion", 80)
+        && (!data.keys().hasAny(["requestedSharingMode"])
+          || validSharingMode(data.requestedSharingMode))
+        && (!data.keys().hasAny(["publicReviewStatus"])
+          || data.publicReviewStatus in ["", "pending_review", "approved", "rejected"])
+        && (!data.keys().hasAny(["redactionStatus"])
+          || data.redactionStatus in ["", "draft", "user_confirmed"])
+        && optionalBool(data, "reviewRequiredBeforePublic")
+        && optionalBool(data, "defaultPrivacyApplied")
+        && optionalString(data, "privacyDefaultSource", 40)
+        && optionalNumber(data, "sensitivityLevel", 0, 4)
         && optionalNumber(data, "signal_coherence", 0, 100)
         && validAdultMetadata(data);
     }
@@ -293,12 +322,8 @@ service cloud.firestore {
           "researchConsent",
           "publicConsent"
         ])
-        && data.visibility == "private"
-        && data.isPublic == false
-        && data.sharingMode == "private"
-        && data.includedInResearchStats == false
-        && data.researchConsent == false
-        && data.publicConsent == false;
+        && validRecordSharingConsistency(data)
+        && validRecordConsent(data);
     }
 
     function validRecordCreateMetadata(data) {
@@ -346,6 +371,19 @@ service cloud.firestore {
           ])
         && (!data.keys().hasAny(["preferredLanguage"])
           || validLanguage(data.preferredLanguage))
+        && (!data.keys().hasAny(["defaultSharingMode"])
+          || validSharingMode(data.defaultSharingMode))
+        && optionalBool(data, "defaultResearchConsent")
+        && optionalBool(data, "defaultPublicConsent")
+        && optionalBool(data, "defaultIncludeInResearchStats")
+        && optionalString(data, "defaultPseudonym", 120)
+        && optionalBool(data, "defaultApplyToImports")
+        && optionalBool(data, "defaultApplyToSingleDreams")
+        && optionalBool(data, "requireReviewBeforePublic")
+        && optionalBool(data, "skipAdultContentForBulkPublic")
+        && optionalBool(data, "skipHighSensitivityForBulkPublic")
+        && optionalNumber(data, "sensitivityAutoSkipThreshold", 1, 4)
+        && optionalString(data, "privacyDefaultsUpdatedBy", 128)
         && optionalString(data, "joinedAt", 32);
     }
 
@@ -409,7 +447,7 @@ service cloud.firestore {
         && data.ownerId is string
         && validImportStatus(data.status)
         && (!data.keys().hasAny(["privacyDefault"])
-          || data.privacyDefault == "private")
+          || validSharingMode(data.privacyDefault))
         && (!data.keys().hasAny(["defaultVisibility"])
           || data.defaultVisibility == "private")
         && optionalString(data, "id", 128)
@@ -493,6 +531,107 @@ service cloud.firestore {
         && (!data.keys().hasAny(["visibility"]) || validVisibility(data.visibility))
         && (!data.keys().hasAny(["sharingMode"]) || validSharingMode(data.sharingMode))
         && validAdultMetadata(data);
+    }
+
+    function ownsRecordDocument(recordId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/Records/$(recordId))
+        && get(/databases/$(database)/documents/Records/$(recordId)).data.ownerId == request.auth.uid;
+    }
+
+    function validPublicDreamMirror(data, recordId) {
+      return data.keys().hasAll(["recordId", "dream_text", "sharingMode", "visibility", "isPublic"])
+        && data.recordId == recordId
+        && requiredString(data, "dream_text", 1, 120000)
+        && optionalString(data, "title", 220)
+        && optionalString(data, "originalTitle", 220)
+        && optionalString(data, "originalText", 120000)
+        && optionalString(data, "publicTitle", 220)
+        && optionalString(data, "publicText", 120000)
+        && optionalString(data, "excerpt", 520)
+        && optionalString(data, "publicExcerpt", 520)
+        && validSharingMode(data.sharingMode)
+        && isPublicSharingMode(data.sharingMode)
+        && data.visibility == "public"
+        && data.isPublic == true
+        && data.publicConsent == true
+        && data.researchConsent == true
+        && (!data.keys().hasAny(["ownerId", "creatorId", "creatorEmail", "email"]))
+        && optionalString(data, "recorderId", 128)
+        && optionalString(data, "publicRecorderId", 128)
+        && optionalString(data, "creatorDisplayName", 120)
+        && optionalString(data, "authorName", 120)
+        && optionalList(data, "tags", 160)
+        && validRecordTaxonomy(data)
+        && validAdultMetadata(data)
+        && optionalNumber(data, "sensitivityLevel", 0, 4);
+    }
+
+    function validResearchSignal(data, recordId) {
+      return data.keys().hasAll(["recordId", "sharingMode", "researchConsent"])
+        && data.recordId == recordId
+        && validSharingMode(data.sharingMode)
+        && data.researchConsent == true
+        && (!data.keys().hasAny([
+          "ownerId",
+          "creatorId",
+          "email",
+          "creatorEmail",
+          "title",
+          "originalTitle",
+          "dream_text",
+          "originalText",
+          "text",
+          "excerpt",
+          "publicText"
+        ]))
+        && validOptionalLanguageField(data, "originalLanguage")
+        && optionalString(data, "dreamMonth", 16)
+        && validOptionalDreamDateStatusField(data, "dreamDateStatus")
+        && optionalString(data, "dreamPeriod", 32)
+        && optionalNumber(data, "dreamSequence", 1, 12)
+        && validOptionalAge(data, "ageAtDream")
+        && optionalNumber(data, "sensitivityLevel", 0, 4)
+        && optionalNumber(data, "signal_coherence", 0, 100)
+        && optionalList(data, "tagSlugs", 160)
+        && optionalList(data, "tagCategories", 40)
+        && validRecordTaxonomy(data)
+        && validAdultMetadata(data);
+    }
+
+    function validOwnerAuditData(data) {
+      return data.keys().hasAll(["ownerId"])
+        && data.ownerId == request.auth.uid
+        && (!data.keys().hasAny(["userId"]) || data.userId == request.auth.uid);
+    }
+
+    match /PublicDreams/{recordId} {
+      allow get, list: if canReadPublicRecord(resource.data);
+
+      allow create, update: if ownsRecordDocument(recordId)
+        && validPublicDreamMirror(request.resource.data, recordId);
+
+      allow delete: if ownsRecordDocument(recordId);
+    }
+
+    match /ResearchSignals/{recordId} {
+      allow read: if true;
+
+      allow create, update: if ownsRecordDocument(recordId)
+        && validResearchSignal(request.resource.data, recordId);
+
+      allow delete: if ownsRecordDocument(recordId);
+    }
+
+    match /ConsentEvents/{eventId} {
+      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && validOwnerAuditData(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /BulkPrivacyJobs/{jobId} {
+      allow read, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create, update: if isSignedIn() && validOwnerAuditData(request.resource.data);
     }
 
     match /Records/{recordId} {

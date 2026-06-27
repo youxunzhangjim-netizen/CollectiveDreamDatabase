@@ -1,6 +1,10 @@
 import { getLanguageName, normalizeLanguage } from "./language.js";
 import { getDreamDateStatus, getVisibleDreamDate } from "./dreamDate.js";
 import {
+  isPublicPrivacySharingMode,
+  normalizePrivacySharingMode,
+} from "./privacyDefaults.js";
+import {
   getCategoryLabel,
   getTagLabel,
   RECORD_TAGS,
@@ -270,11 +274,12 @@ function normalizeExportDetailLevel(value) {
 
 
 function isPublicResearchExportable(record) {
+  const sharingMode = normalizePrivacySharingMode(record?.sharingMode);
+
   return Boolean(
     record?.visibility === "public" ||
       record?.isPublic === true ||
-      record?.sharingMode === "public_anonymous" ||
-      record?.sharingMode === "public_pseudonym"
+      isPublicPrivacySharingMode(sharingMode)
   );
 }
 
@@ -314,7 +319,10 @@ function sanitizeRecordForResearch(record, index, language, detailLevel = EXPORT
         record.adult_content ||
         Number(record.minimumViewerAge || record.minimum_viewer_age || 0) >= 18
     ),
-    sharing_mode: record.sharingMode || record.sharing_mode || "public_anonymous",
+    sharing_mode:
+      record.sharingMode || record.sharing_mode
+        ? normalizePrivacySharingMode(record.sharingMode || record.sharing_mode)
+        : "anonymous_public",
     included_in_research_stats: Boolean(
       record.includedInResearchStats || record.included_in_research_stats || record.researchConsent || record.isPublic
     ),

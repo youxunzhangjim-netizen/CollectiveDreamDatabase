@@ -166,6 +166,7 @@ const DETAIL_COPY = {
     keepPrivate: "Keep private",
     shareAnonymously: "Share anonymously",
     shareWithPseudonym: "Share with pseudonym",
+    shareRedacted: "Share redacted version",
     contributeStatsOnly: "Stats only",
     unpublishRecord: "Unpublish",
     deleteRecord: "Delete Dream",
@@ -256,6 +257,7 @@ const DETAIL_COPY = {
     keepPrivate: "保持私人",
     shareAnonymously: "匿名分享",
     shareWithPseudonym: "以暱稱分享",
+    shareRedacted: "公開節錄版",
     contributeStatsOnly: "只加入統計",
     unpublishRecord: "取消公開",
     deleteRecord: "刪除夢境",
@@ -344,6 +346,7 @@ const DETAIL_COPY = {
     keepPrivate: "Mantener privado",
     shareAnonymously: "Compartir anónimo",
     shareWithPseudonym: "Compartir con seudónimo",
+    shareRedacted: "Compartir versión redactada",
     contributeStatsOnly: "Solo estadísticas",
     unpublishRecord: "Retirar publicación",
     deleteRecord: "Eliminar sueño",
@@ -679,7 +682,7 @@ export default function DreamRecordPage({
     setStatus("");
 
     if (
-      nextSharingMode === "public_pseudonym" &&
+      nextSharingMode === "pseudonym_public" &&
       (!currentUser?.uid || currentUser.isAnonymous)
     ) {
       setStatus(copy.accountNeededForPseudonym);
@@ -699,7 +702,7 @@ export default function DreamRecordPage({
       );
       setSharingMode(nextSharingMode);
       setRecordIdentityMode(
-        nextSharingMode === "public_pseudonym" ? "account" : "anonymous"
+        nextSharingMode === "pseudonym_public" ? "pseudonym" : "anonymous"
       );
       setLocalRecord((current) =>
         mergeSharingEdits(current, nextSharingMode, currentUser, profile)
@@ -1189,9 +1192,10 @@ function SharingControlPanel({
 }) {
   const modes = [
     { value: "private", label: copy.keepPrivate },
-    { value: "public_anonymous", label: copy.shareAnonymously },
-    { value: "public_pseudonym", label: copy.shareWithPseudonym },
     { value: "stats_only", label: copy.contributeStatsOnly },
+    { value: "anonymous_public", label: copy.shareAnonymously },
+    { value: "pseudonym_public", label: copy.shareWithPseudonym },
+    { value: "redacted_public", label: copy.shareRedacted },
   ];
 
   return (
@@ -1368,20 +1372,33 @@ function normalizeDreamRecord(record) {
 }
 
 function getSharingModeFromRawRecord(record) {
+  const legacyMap = {
+    public_anonymous: "anonymous_public",
+    public_pseudonym: "pseudonym_public",
+  };
+  const mode = legacyMap[record?.sharingMode] || record?.sharingMode;
+
   if (
-    ["private", "public_anonymous", "public_pseudonym", "stats_only"].includes(
-      record?.sharingMode
-    )
+    [
+      "private",
+      "anonymous_public",
+      "pseudonym_public",
+      "redacted_public",
+      "stats_only",
+    ].includes(mode)
   ) {
-    return record.sharingMode;
+    return mode;
   }
 
   if (record?.visibility === "stats_only") return "stats_only";
 
   if (record?.visibility === "public" || record?.isPublic) {
-    return record?.recordIdentityMode === "account" || record?.attributionMode === "account"
-      ? "public_pseudonym"
-      : "public_anonymous";
+    return record?.recordIdentityMode === "pseudonym" ||
+      record?.attributionMode === "pseudonym" ||
+      record?.recordIdentityMode === "account" ||
+      record?.attributionMode === "account"
+      ? "pseudonym_public"
+      : "anonymous_public";
   }
 
   return "private";
@@ -1615,28 +1632,28 @@ function mergeRecordEdits(record, updates) {
 
 function mergeSharingEdits(record, sharingMode, currentUser, profile) {
   const publicMode =
-    sharingMode === "public_anonymous" || sharingMode === "public_pseudonym";
+    sharingMode === "anonymous_public" ||
+    sharingMode === "pseudonym_public" ||
+    sharingMode === "redacted_public";
   const recordIdentityMode =
-    sharingMode === "public_pseudonym" ? "account" : "anonymous";
+    sharingMode === "pseudonym_public" ? "pseudonym" : "anonymous";
 
   return {
     ...record,
-    visibility: sharingMode === "stats_only" ? "stats_only" : publicMode ? "public" : "private",
+    visibility: publicMode ? "public" : "private",
     isPublic: publicMode,
     sharingMode,
+    requestedSharingMode: sharingMode,
     includedInResearchStats: sharingMode === "stats_only" || publicMode,
     researchConsent: sharingMode === "stats_only" || publicMode,
     publicConsent: publicMode,
     recordIdentityMode,
     attributionMode: recordIdentityMode,
     creatorDisplayName:
-      recordIdentityMode === "account"
-        ? profile?.displayName || currentUser?.displayName || ""
+      recordIdentityMode === "pseudonym"
+        ? profile?.defaultPseudonym || profile?.displayName || currentUser?.displayName || ""
         : "",
-    creatorEmail:
-      recordIdentityMode === "account" && profile?.showEmail
-        ? currentUser?.email || ""
-        : "",
+    creatorEmail: "",
   };
 }
 

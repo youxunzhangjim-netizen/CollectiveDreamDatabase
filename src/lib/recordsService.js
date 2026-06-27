@@ -25,6 +25,14 @@ import {
 } from "./dreamDate.js";
 import { normalizeLanguage } from "./language.js";
 import { buildRecordTags, getTagSlugsByCategory } from "./tagTaxonomy.js";
+import {
+  ACCOUNT_DEFAULT_SHARING_MODE,
+  DEFAULT_PRIVACY_SETTINGS,
+  PRIVACY_SHARING_MODES,
+  isPublicPrivacySharingMode,
+  normalizePrivacySettings,
+  normalizePrivacySharingMode,
+} from "./privacyDefaults.js";
 
 function requireFirestore() {
   if (!isFirebaseConfigured || !db) {
@@ -41,36 +49,38 @@ function mapRecordSnapshot(snapshot) {
   }));
 }
 
-export const DREAM_SHARING_MODES = {
-  PRIVATE: "private",
-  PUBLIC_ANONYMOUS: "public_anonymous",
-  PUBLIC_PSEUDONYM: "public_pseudonym",
-  STATS_ONLY: "stats_only",
+export const DREAM_SHARING_MODES = PRIVACY_SHARING_MODES;
+
+export const PRIVACY_PRESETS = {
+  PERSONAL_JOURNAL: "personal_journal",
+  RESEARCH_CONTRIBUTOR: "research_contributor",
+  ANONYMOUS_ARCHIVE: "anonymous_archive",
+  PSEUDONYM_ARCHIVE: "pseudonym_archive",
+  REDACTED_ARCHIVE: "redacted_archive",
+  CUSTOM: "custom",
 };
 
 export const DREAM_PERIODS = ["morning", "afternoon", "evening", "night"];
 
-const PUBLIC_SHARING_MODES = new Set([
-  DREAM_SHARING_MODES.PUBLIC_ANONYMOUS,
-  DREAM_SHARING_MODES.PUBLIC_PSEUDONYM,
-]);
-
-function normalizeSharingMode(value) {
-  return Object.values(DREAM_SHARING_MODES).includes(value)
-    ? value
-    : DREAM_SHARING_MODES.PRIVATE;
+export function normalizeSharingMode(value) {
+  return normalizePrivacySharingMode(value);
 }
 
 function getSharingVisibility(sharingMode) {
-  if (sharingMode === DREAM_SHARING_MODES.STATS_ONLY) return "stats_only";
-  if (PUBLIC_SHARING_MODES.has(sharingMode)) return "public";
+  if (sharingMode === DREAM_SHARING_MODES.STATS_ONLY) return "private";
+  if (isPublicPrivacySharingMode(sharingMode)) return "public";
 
   return "private";
 }
 
 function getRecordIdentityForSharing(sharingMode, fallback = "anonymous") {
-  if (sharingMode === DREAM_SHARING_MODES.PUBLIC_PSEUDONYM) return "account";
-  if (sharingMode === DREAM_SHARING_MODES.PUBLIC_ANONYMOUS) return "anonymous";
+  if (sharingMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC) return "pseudonym";
+  if (
+    sharingMode === DREAM_SHARING_MODES.ANONYMOUS_PUBLIC ||
+    sharingMode === DREAM_SHARING_MODES.REDACTED_PUBLIC
+  ) {
+    return "anonymous";
+  }
 
   return fallback === "account" ? "account" : "anonymous";
 }
@@ -78,7 +88,7 @@ function getRecordIdentityForSharing(sharingMode, fallback = "anonymous") {
 function shouldIncludeInResearchStats(sharingMode, explicitValue) {
   if (typeof explicitValue === "boolean") return explicitValue;
 
-  return sharingMode === DREAM_SHARING_MODES.STATS_ONLY || PUBLIC_SHARING_MODES.has(sharingMode);
+  return sharingMode === DREAM_SHARING_MODES.STATS_ONLY || isPublicPrivacySharingMode(sharingMode);
 }
 
 function getTimestampMillis(value) {
@@ -130,6 +140,380 @@ export function calculateDreamSignalCoherence({
   return Math.max(8, Math.min(96, Math.round(score)));
 }
 
+export function getSharingModeFromPreset(preset) {
+  const mapping = {
+    [PRIVACY_PRESETS.PERSONAL_JOURNAL]: DREAM_SHARING_MODES.PRIVATE,
+    [PRIVACY_PRESETS.RESEARCH_CONTRIBUTOR]: DREAM_SHARING_MODES.STATS_ONLY,
+    [PRIVACY_PRESETS.ANONYMOUS_ARCHIVE]: DREAM_SHARING_MODES.ANONYMOUS_PUBLIC,
+    [PRIVACY_PRESETS.PSEUDONYM_ARCHIVE]: DREAM_SHARING_MODES.PSEUDONYM_PUBLIC,
+    [PRIVACY_PRESETS.REDACTED_ARCHIVE]: DREAM_SHARING_MODES.REDACTED_PUBLIC,
+  };
+
+  return mapping[preset] || DREAM_SHARING_MODES.PRIVATE;
+}
+
+export function buildSharingState(
+  sharingMode,
+  {
+    recordIdentityMode = "anonymous",
+    redactionStatus = "",
+  } = {}
+) {
+  const normalizedMode = normalizeSharingMode(sharingMode);
+  const publicMode = isPublicPrivacySharingMode(normalizedMode);
+  const researchMode =
+    normalizedMode === DREAM_SHARING_MODES.STATS_ONLY || publicMode;
+  const visibility = getSharingVisibility(normalizedMode);
+  const identityMode = getRecordIdentityForSharing(
+    normalizedMode,
+    recordIdentityMode
+  );
+
+  return {
+    sharingMode: normalizedMode,
+    visibility,
+    isPublic: publicMode,
+    researchConsent: researchMode,
+    publicConsent: publicMode,
+    includedInResearchStats: researchMode,
+    recordIdentityMode: identityMode,
+    attributionMode: identityMode,
+    redactionStatus:
+      normalizedMode === DREAM_SHARING_MODES.REDACTED_PUBLIC
+        ? redactionStatus || "user_confirmed"
+        : "",
+  };
+}
+
+function getDraftSourceType(draft = {}) {
+  return draft.sourceType || (draft.importBatchId ? "diary_import" : "single_record");
+}
+
+function shouldApplyProfilePrivacyDefault(profileSettings, sourceType) {
+  if (sourceType === "diary_import") return profileSettings.defaultApplyToImports;
+  return profileSettings.defaultApplyToSingleDreams;
+}
+
+export function resolveNewRecordPrivacyState({
+  currentUser,
+  draft = {},
+  profile = null,
+} = {}) {
+  const accountBacked = Boolean(currentUser?.uid && !currentUser.isAnonymous);
+  const profileSettings = normalizePrivacySettings(
+    profile || DEFAULT_PRIVACY_SETTINGS,
+    currentUser
+  );
+  const sourceType = getDraftSourceType(draft);
+  const explicitSharingMode =
+    draft.sharingMode && draft.sharingMode !== ACCOUNT_DEFAULT_SHARING_MODE
+      ? normalizeSharingMode(draft.sharingMode)
+      : "";
+  const usesProfileDefault =
+    !explicitSharingMode &&
+    accountBacked &&
+    shouldApplyProfilePrivacyDefault(profileSettings, sourceType);
+  const requestedSharingMode = normalizeSharingMode(
+    explicitSharingMode ||
+      (usesProfileDefault
+        ? profileSettings.defaultSharingMode
+        : DREAM_SHARING_MODES.PRIVATE)
+  );
+  const requiresPublicReview =
+    accountBacked &&
+    isPublicPrivacySharingMode(requestedSharingMode) &&
+    Boolean(profileSettings.requireReviewBeforePublic) &&
+    draft.publicReviewStatus !== "approved";
+  const effectiveSharingMode = requiresPublicReview
+    ? profileSettings.defaultIncludeInResearchStats ||
+      profileSettings.defaultResearchConsent
+      ? DREAM_SHARING_MODES.STATS_ONLY
+      : DREAM_SHARING_MODES.PRIVATE
+    : requestedSharingMode;
+  const state = buildSharingState(effectiveSharingMode, {
+    recordIdentityMode:
+      requestedSharingMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC
+        ? "pseudonym"
+        : draft.recordIdentityMode,
+    redactionStatus: draft.redactionStatus,
+  });
+
+  return {
+    ...state,
+    requestedSharingMode,
+    defaultPrivacyApplied: usesProfileDefault,
+    privacyDefaultSource: usesProfileDefault ? sourceType : "",
+    publicReviewStatus: requiresPublicReview
+      ? "pending_review"
+      : draft.publicReviewStatus || "",
+    reviewRequiredBeforePublic: requiresPublicReview,
+    defaultPseudonym: profileSettings.defaultPseudonym,
+  };
+}
+
+export function calculateSensitivityLevel(record = {}) {
+  const tags = Array.isArray(record.tags) ? record.tags : [];
+  const tagSlugs = new Set(tags.map((tag) => tag.slug).filter(Boolean));
+  const text = [
+    record.originalText,
+    record.dream_text,
+    record.text,
+    record.publicText,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  let level = 0;
+
+  if (record.adultContent || Number(record.minimumViewerAge || 0) >= 18) level = 3;
+  if (tagSlugs.has("adult-content")) level = Math.max(level, 3);
+  if (tagSlugs.has("violence") || tagSlugs.has("death") || tagSlugs.has("blood")) {
+    level = Math.max(level, 2);
+  }
+  if (/(murder|corpse|body|blood|suicide|sexual|rape|abuse|屍|血|殺|性|自殺|虐待|cadáver|sangre|asesin)/iu.test(text)) {
+    level = Math.max(level, 3);
+  }
+  if (/(address|phone|email|full name|地址|電話|電子郵件|correo|dirección)/iu.test(text)) {
+    level = Math.max(level, 3);
+  }
+
+  return Math.min(4, level);
+}
+
+function shouldWritePublicDream(sharingMode) {
+  return isPublicPrivacySharingMode(sharingMode);
+}
+
+function shouldWriteResearchSignal(sharingMode) {
+  const normalizedMode = normalizeSharingMode(sharingMode);
+  return normalizedMode === DREAM_SHARING_MODES.STATS_ONLY || shouldWritePublicDream(normalizedMode);
+}
+
+function getPublicTitle(record = {}, sharingMode) {
+  if (normalizeSharingMode(sharingMode) === DREAM_SHARING_MODES.REDACTED_PUBLIC) {
+    return limitString(record.publicTitle || record.redactedTitle || "", 220);
+  }
+
+  return limitString(record.originalTitle || record.title || "", 220);
+}
+
+function getPublicText(record = {}, sharingMode) {
+  if (normalizeSharingMode(sharingMode) === DREAM_SHARING_MODES.REDACTED_PUBLIC) {
+    return limitString(record.publicText || record.redactedText || "", 120000);
+  }
+
+  return limitString(record.originalText || record.dream_text || record.text || "", 120000);
+}
+
+export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode = record.sharingMode) {
+  const normalizedMode = normalizeSharingMode(sharingMode);
+  if (!shouldWritePublicDream(normalizedMode)) return null;
+
+  const publicText = getPublicText(record, normalizedMode);
+  if (!publicText) return null;
+
+  const publicTitle = getPublicTitle(record, normalizedMode);
+  const pseudonym =
+    normalizedMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC
+      ? profile.defaultPseudonym ||
+        profile.publicPseudonym ||
+        profile.displayName ||
+        record.creatorDisplayName ||
+        "Dream Observer"
+      : "";
+  const publicRecorderId =
+    normalizedMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC
+      ? profile.publicRecorderId || record.publicRecorderId || record.pseudoId || buildPseudoId(record.id || record.dream_id)
+      : "";
+
+  return {
+    id: record.id || record.dream_id,
+    recordId: record.id || record.dream_id,
+    recorderId: publicRecorderId,
+    publicRecorderId,
+    originalLanguage: normalizeLanguage(record.originalLanguage || "zh"),
+    originalTitle: publicTitle,
+    originalText: publicText,
+    originalExcerpt: createExcerpt(publicText),
+    title: publicTitle,
+    dream_text: publicText,
+    excerpt: createExcerpt(publicText),
+    publicTitle,
+    publicText,
+    publicExcerpt: createExcerpt(publicText),
+    sharingMode: normalizedMode,
+    visibility: "public",
+    isPublic: true,
+    publicConsent: true,
+    researchConsent: true,
+    includedInResearchStats: true,
+    recordIdentityMode:
+      normalizedMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC ? "pseudonym" : "anonymous",
+    attributionMode:
+      normalizedMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC ? "pseudonym" : "anonymous",
+    publicAuthorName: pseudonym,
+    creatorDisplayName: pseudonym,
+    creatorEmail: "",
+    authorName: pseudonym,
+    pseudoId: record.pseudoId || record.pseudo_id || buildPseudoId(record.id || record.dream_id),
+    dreamDate: record.dreamDate || record.dream_date || "",
+    dream_date: record.dreamDate || record.dream_date || "",
+    dreamDateStatus: record.dreamDateStatus || record.dream_date_status || "unknown",
+    dream_date_status: record.dreamDateStatus || record.dream_date_status || "unknown",
+    dreamTime: record.dreamTime || record.dream_time || "",
+    dream_time: record.dreamTime || record.dream_time || "",
+    dreamPeriod: record.dreamPeriod || record.dream_period || "",
+    dream_period: record.dreamPeriod || record.dream_period || "",
+    dreamSequence: record.dreamSequence || record.dream_sequence || 1,
+    dream_sequence: record.dreamSequence || record.dream_sequence || 1,
+    tags: Array.isArray(record.tags) ? record.tags : [],
+    environmentTags: record.environmentTags || [],
+    entityTags: record.entityTags || [],
+    anomalyTags: record.anomalyTags || [],
+    emotionTags: record.emotionTags || [],
+    styleTags: record.styleTags || [],
+    eraTags: record.eraTags || [],
+    weatherTags: record.weatherTags || [],
+    dreamTypeTags: record.dreamTypeTags || [],
+    perspectiveTags: record.perspectiveTags || [],
+    psychologicalObservableTags: record.psychologicalObservableTags || [],
+    dreamAnalysisTags: record.dreamAnalysisTags || [],
+    customTags: record.customTags || [],
+    adultContent: Boolean(record.adultContent),
+    minimumViewerAge: Number(record.minimumViewerAge || 0),
+    sensitivityLevel: calculateSensitivityLevel(record),
+    redactionStatus:
+      normalizedMode === DREAM_SHARING_MODES.REDACTED_PUBLIC
+        ? record.redactionStatus || "user_confirmed"
+        : "",
+    sourceType: record.sourceType || "",
+    importBatchId: record.importBatchId || "",
+    signal_coherence: Number(record.signal_coherence || 0),
+    createdAt: record.createdAt || serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
+
+export function buildResearchSignalDocument(record = {}, sharingMode = record.sharingMode) {
+  const normalizedMode = normalizeSharingMode(sharingMode);
+  if (!shouldWriteResearchSignal(normalizedMode)) return null;
+
+  const tags = Array.isArray(record.tags) ? record.tags : [];
+  const dreamDate = record.dreamDate || record.dream_date || "";
+
+  return {
+    id: record.id || record.dream_id,
+    recordId: record.id || record.dream_id,
+    sharingMode: normalizedMode,
+    researchConsent: true,
+    publicConsent: shouldWritePublicDream(normalizedMode),
+    originalLanguage: normalizeLanguage(record.originalLanguage || "zh"),
+    dreamMonth: /^\d{4}-\d{2}/.test(dreamDate) ? dreamDate.slice(0, 7) : "",
+    dreamDateStatus: record.dreamDateStatus || record.dream_date_status || "unknown",
+    dreamPeriod: record.dreamPeriod || record.dream_period || "",
+    dreamSequence: record.dreamSequence || record.dream_sequence || 1,
+    ageAtDream:
+      Number.isFinite(Number(record.ageAtDream)) && Number(record.ageAtDream) > 0
+        ? Number(record.ageAtDream)
+        : "",
+    adultContent: Boolean(record.adultContent),
+    minimumViewerAge: Number(record.minimumViewerAge || 0),
+    sensitivityLevel: calculateSensitivityLevel(record),
+    tagSlugs: tags.map((tag) => tag.slug).filter(Boolean),
+    tagCategories: [...new Set(tags.map((tag) => tag.category).filter(Boolean))],
+    environmentTags: record.environmentTags || [],
+    entityTags: record.entityTags || [],
+    anomalyTags: record.anomalyTags || [],
+    emotionTags: record.emotionTags || [],
+    styleTags: record.styleTags || [],
+    eraTags: record.eraTags || [],
+    weatherTags: record.weatherTags || [],
+    dreamTypeTags: record.dreamTypeTags || [],
+    perspectiveTags: record.perspectiveTags || [],
+    psychologicalObservableTags: record.psychologicalObservableTags || [],
+    dreamAnalysisTags: record.dreamAnalysisTags || [],
+    signal_coherence: Number(record.signal_coherence || 0),
+    sourceType: record.sourceType || "",
+    importBatchId: record.importBatchId || "",
+    createdAt: record.createdAt || serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
+
+async function syncPrivacyMirrorDocuments({
+  firestore,
+  currentUser,
+  record,
+  profile,
+  sharingMode,
+}) {
+  if (!record?.id && !record?.dream_id) return;
+
+  const recordId = record.id || record.dream_id;
+  const normalizedMode = normalizeSharingMode(sharingMode || record.sharingMode);
+  const publicRef = doc(firestore, "PublicDreams", recordId);
+  const signalRef = doc(firestore, "ResearchSignals", recordId);
+  const publicDream = buildPublicDreamDocument(record, profile, normalizedMode);
+  const researchSignal = buildResearchSignalDocument(record, normalizedMode);
+
+  if (publicDream) {
+    await setDoc(publicRef, publicDream, { merge: true });
+  } else {
+    await deleteDoc(publicRef).catch(() => {});
+  }
+
+  if (researchSignal) {
+    await setDoc(signalRef, researchSignal, { merge: true });
+  } else {
+    await deleteDoc(signalRef).catch(() => {});
+  }
+
+  if (currentUser?.uid) {
+    await logConsentEvent(currentUser, {
+      recordId,
+      sharingMode: normalizedMode,
+      publicConsent: Boolean(publicDream),
+      researchConsent: Boolean(researchSignal),
+      source: "privacy_sync",
+    }).catch(() => {});
+  }
+}
+
+export async function logConsentEvent(currentUser, event = {}) {
+  if (!currentUser?.uid) return;
+
+  const firestore = requireFirestore();
+  const eventRef = doc(collection(firestore, "ConsentEvents"));
+
+  await setDoc(eventRef, {
+    id: eventRef.id,
+    ownerId: currentUser.uid,
+    userId: currentUser.uid,
+    ...event,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function createBulkPrivacyJob(currentUser, job = {}) {
+  if (!currentUser?.uid) return null;
+
+  const firestore = requireFirestore();
+  const jobRef = doc(collection(firestore, "BulkPrivacyJobs"));
+
+  await setDoc(jobRef, {
+    id: jobRef.id,
+    ownerId: currentUser.uid,
+    userId: currentUser.uid,
+    status: "applied",
+    undoAvailableUntil: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    ...job,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  return jobRef.id;
+}
+
 export async function fetchOwnedRecords(currentUser) {
   if (!currentUser?.uid) return [];
 
@@ -143,8 +527,21 @@ export async function fetchOwnedRecords(currentUser) {
 }
 
 export async function fetchPublicRecords({ includeAdult = false } = {}) {
-  const recordsCollection = collection(requireFirestore(), "Records");
-  const publicRecordsQuery = includeAdult
+  const firestore = requireFirestore();
+  const publicDreamsCollection = collection(firestore, "PublicDreams");
+  const publicDreamsQuery = includeAdult
+    ? query(publicDreamsCollection, where("isPublic", "==", true))
+    : query(
+        publicDreamsCollection,
+        where("isPublic", "==", true),
+        where("adultContent", "==", false),
+        where("minimumViewerAge", "==", 0)
+      );
+  const publicDreamsSnapshot = await getDocs(publicDreamsQuery);
+  const publicDreams = mapRecordSnapshot(publicDreamsSnapshot);
+
+  const recordsCollection = collection(firestore, "Records");
+  const legacyPublicRecordsQuery = includeAdult
     ? query(recordsCollection, where("isPublic", "==", true))
     : query(
         recordsCollection,
@@ -152,10 +549,27 @@ export async function fetchPublicRecords({ includeAdult = false } = {}) {
         where("adultContent", "==", false),
         where("minimumViewerAge", "==", 0)
       );
+  const legacySnapshot = await getDocs(legacyPublicRecordsQuery).catch(() => ({
+    docs: [],
+  }));
+  const publicIds = new Set(publicDreams.map((record) => record.recordId || record.id));
+  const legacyRecords = mapRecordSnapshot(legacySnapshot)
+    .filter((record) => {
+      const recordId = record.id || record.dream_id;
+      const sharingMode = normalizeSharingMode(record.sharingMode);
 
-  const snapshot = await getDocs(publicRecordsQuery);
+      return (
+        !publicIds.has(recordId) &&
+        sharingMode !== DREAM_SHARING_MODES.REDACTED_PUBLIC &&
+        sharingMode !== DREAM_SHARING_MODES.STATS_ONLY
+      );
+    })
+    .map((record) => ({
+      ...record,
+      publicMirrorMissing: true,
+    }));
 
-  return mapRecordSnapshot(snapshot).sort(
+  return [...publicDreams, ...legacyRecords].sort(
     (a, b) => getTimestampMillis(b.createdAt) - getTimestampMillis(a.createdAt)
   );
 }
@@ -192,17 +606,28 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
       ? ""
       : Math.max(0, Number(draft.ageAtDream));
   const adultContent = Boolean(draft?.adultContent);
-  const accountBacked = !currentUser.isAnonymous;
-  const requestedSharingMode = normalizeSharingMode(draft?.sharingMode);
-  const sharingMode = DREAM_SHARING_MODES.PRIVATE;
-  const visibility = getSharingVisibility(sharingMode);
-  const isPublic = false;
-  const recordIdentityMode = getRecordIdentityForSharing(
-    sharingMode,
-    accountBacked && draft?.recordIdentityMode === "account" ? "account" : "anonymous"
+  const privacyState = resolveNewRecordPrivacyState({
+    currentUser,
+    draft,
+    profile,
+  });
+  const profileSettings = normalizePrivacySettings(
+    profile || DEFAULT_PRIVACY_SETTINGS,
+    currentUser
   );
+  const requestedSharingMode = privacyState.requestedSharingMode;
+  const sharingMode = privacyState.sharingMode;
+  const visibility = privacyState.visibility;
+  const isPublic = privacyState.isPublic;
+  const recordIdentityMode = privacyState.recordIdentityMode;
   const creatorDisplayName =
-    recordIdentityMode === "account"
+    recordIdentityMode === "pseudonym"
+      ? profileSettings.defaultPseudonym ||
+        profile?.publicPseudonym ||
+        profile?.displayName ||
+        currentUser.displayName ||
+        ""
+      : recordIdentityMode === "account"
       ? profile?.displayName || currentUser.displayName || ""
       : "";
   const creatorEmail =
@@ -230,6 +655,17 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   );
   const dreamAnalysisTags = getTagSlugsByCategory(tags, "Dream Analysis");
   const customTags = tags.filter((tag) => tag.custom).map((tag) => tag.slug);
+  const publicTitle = limitString(draft?.publicTitle || draft?.redactedTitle || "", 220);
+  const publicText = limitString(draft?.publicText || draft?.redactedText || "", 120000);
+  const publicExcerpt = publicText ? createExcerpt(publicText) : "";
+  const sensitivityLevel = calculateSensitivityLevel({
+    originalText: dreamText,
+    dream_text: dreamText,
+    publicText,
+    adultContent,
+    minimumViewerAge: adultContent ? 18 : 0,
+    tags,
+  });
   const signalCoherence = calculateDreamSignalCoherence({
     dreamText,
     title,
@@ -260,9 +696,13 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     isPublic,
     sharingMode,
     requestedSharingMode,
-    includedInResearchStats: false,
-    researchConsent: false,
-    publicConsent: false,
+    includedInResearchStats: privacyState.includedInResearchStats,
+    researchConsent: privacyState.researchConsent,
+    publicConsent: privacyState.publicConsent,
+    publicReviewStatus: privacyState.publicReviewStatus,
+    reviewRequiredBeforePublic: privacyState.reviewRequiredBeforePublic,
+    defaultPrivacyApplied: privacyState.defaultPrivacyApplied,
+    privacyDefaultSource: privacyState.privacyDefaultSource,
     consentVersion: "privacy-first-2026-06",
     analysisDisclaimerAccepted: true,
     originalLanguage,
@@ -272,6 +712,10 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     title,
     dream_text: dreamText,
     excerpt,
+    publicTitle,
+    publicText,
+    publicExcerpt,
+    redactionStatus: privacyState.redactionStatus,
     ...languageFields,
     ...translationFields,
     dreamDate,
@@ -293,9 +737,14 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     creatorEmail,
     creatorCountry: "",
     creatorCountryRegion: "",
+    publicRecorderId:
+      recordIdentityMode === "pseudonym"
+        ? profile?.publicRecorderId || buildPseudoId(recordRef.id)
+        : "",
     pseudoId: buildPseudoId(recordRef.id),
     adultContent,
     minimumViewerAge: adultContent ? 18 : 0,
+    sensitivityLevel,
     signal_coherence: signalCoherence,
     sourceType: draft?.sourceType || (draft?.importBatchId ? "diary_import" : "single_record"),
     importBatchId: draft?.importBatchId || "",
@@ -367,6 +816,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
 
   let metadataMergeError = null;
   let customTagCatalogError = null;
+  let privacySyncError = null;
 
   try {
     await setDoc(recordRef, optionalRecord, { merge: true });
@@ -394,8 +844,24 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     customTagCatalogError,
   };
 
+  try {
+    await syncPrivacyMirrorDocuments({
+      firestore,
+      currentUser,
+      record,
+      profile: profileSettings,
+      sharingMode,
+    });
+  } catch (error) {
+    privacySyncError = {
+      code: error?.code || "privacy/sync-failed",
+      message: error?.message || "Privacy mirror sync failed.",
+    };
+  }
+
   return {
     ...record,
+    privacySyncError,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -982,7 +1448,13 @@ export async function removeCollectedRecord(
 export async function deleteOwnedRecord(currentUser, recordId) {
   if (!currentUser?.uid || !recordId) return;
 
-  await deleteDoc(doc(requireFirestore(), "Records", recordId));
+  const firestore = requireFirestore();
+
+  await Promise.allSettled([
+    deleteDoc(doc(firestore, "PublicDreams", recordId)),
+    deleteDoc(doc(firestore, "ResearchSignals", recordId)),
+  ]);
+  await deleteDoc(doc(firestore, "Records", recordId));
 }
 
 export async function updateOwnedRecordSharing(
@@ -993,9 +1465,23 @@ export async function updateOwnedRecordSharing(
 ) {
   if (!currentUser?.uid || !recordId) return;
 
+  const firestore = requireFirestore();
+  const recordRef = doc(firestore, "Records", recordId);
+  const snapshot = await getDoc(recordRef);
+  const existingRecord = snapshot.exists()
+    ? { id: snapshot.id, ...snapshot.data() }
+    : { id: recordId, ownerId: currentUser.uid };
   const sharingMode = normalizeSharingMode(updates.sharingMode);
-  const visibility = getSharingVisibility(sharingMode);
-  const isPublic = visibility === "public";
+  const sharingState = buildSharingState(sharingMode, {
+    recordIdentityMode: updates.recordIdentityMode,
+    redactionStatus: updates.redactionStatus,
+  });
+  const profileSettings = normalizePrivacySettings(
+    profile || DEFAULT_PRIVACY_SETTINGS,
+    currentUser
+  );
+  const visibility = sharingState.visibility;
+  const isPublic = sharingState.isPublic;
   const recordIdentityMode = getRecordIdentityForSharing(
     sharingMode,
     updates.recordIdentityMode
@@ -1005,7 +1491,13 @@ export async function updateOwnedRecordSharing(
     updates.includedInResearchStats
   );
   const creatorDisplayName =
-    recordIdentityMode === "account"
+    recordIdentityMode === "pseudonym"
+      ? profileSettings.defaultPseudonym ||
+        profile?.publicPseudonym ||
+        profile?.displayName ||
+        currentUser.displayName ||
+        ""
+      : recordIdentityMode === "account"
       ? profile?.displayName || currentUser.displayName || ""
       : "";
   const creatorEmail =
@@ -1013,28 +1505,63 @@ export async function updateOwnedRecordSharing(
       ? currentUser.email || ""
       : "";
 
-  await setDoc(
-    doc(requireFirestore(), "Records", recordId),
-    {
-      visibility,
-      isPublic,
-      sharingMode,
-      includedInResearchStats,
-      researchConsent: includedInResearchStats,
-      publicConsent: isPublic,
-      recordIdentityMode,
-      attributionMode: recordIdentityMode,
-      creatorDisplayName,
-      creatorEmail,
-      sharingUpdatedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
+  const publicText = "publicText" in updates
+    ? limitString(updates.publicText || "", 120000)
+    : existingRecord.publicText || "";
+  const publicTitle = "publicTitle" in updates
+    ? limitString(updates.publicTitle || "", 220)
+    : existingRecord.publicTitle || "";
+  const sharingPatch = {
+    visibility,
+    isPublic,
+    sharingMode,
+    requestedSharingMode: sharingMode,
+    includedInResearchStats,
+    researchConsent: includedInResearchStats,
+    publicConsent: isPublic,
+    publicReviewStatus: isPublic ? updates.publicReviewStatus || "approved" : "",
+    reviewRequiredBeforePublic: false,
+    recordIdentityMode,
+    attributionMode: recordIdentityMode,
+    creatorDisplayName,
+    creatorEmail,
+    publicRecorderId:
+      recordIdentityMode === "pseudonym"
+        ? profile?.publicRecorderId || existingRecord.publicRecorderId || existingRecord.pseudoId || buildPseudoId(recordId)
+        : "",
+    publicTitle,
+    publicText,
+    publicExcerpt: publicText ? createExcerpt(publicText) : "",
+    redactionStatus: sharingState.redactionStatus,
+    sensitivityLevel: calculateSensitivityLevel({
+      ...existingRecord,
+      ...updates,
+      publicText,
+    }),
+    sharingUpdatedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  await setDoc(recordRef, sharingPatch, { merge: true });
+
+  await syncPrivacyMirrorDocuments({
+    firestore,
+    currentUser,
+    record: { ...existingRecord, ...sharingPatch },
+    profile: profileSettings,
+    sharingMode,
+  });
 }
 
 export async function updateOwnedRecordMetadata(currentUser, recordId, updates) {
   if (!currentUser?.uid || !recordId) return;
+
+  const firestore = requireFirestore();
+  const recordRef = doc(firestore, "Records", recordId);
+  const snapshot = await getDoc(recordRef);
+  const existingRecord = snapshot.exists()
+    ? { id: snapshot.id, ...snapshot.data() }
+    : { id: recordId, ownerId: currentUser.uid };
 
   const metadata = {
     updatedAt: serverTimestamp(),
@@ -1136,6 +1663,15 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
       : 0;
   }
 
+  if ("publicTitle" in updates) {
+    metadata.publicTitle = limitString(updates.publicTitle || "", 220);
+  }
+
+  if ("publicText" in updates) {
+    metadata.publicText = limitString(updates.publicText || "", 120000);
+    metadata.publicExcerpt = metadata.publicText ? createExcerpt(metadata.publicText) : "";
+  }
+
   if ("recordIdentityMode" in updates) {
     const recordIdentityMode =
       updates.recordIdentityMode === "account" ? "account" : "anonymous";
@@ -1154,7 +1690,7 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     const tags = buildRecordTags(
       updates.selectedTagSlugs || [],
       updates.customTagLabels || [],
-      Boolean(metadata.adultContent ?? updates.adultContent),
+      Boolean(metadata.adultContent ?? existingRecord.adultContent ?? updates.adultContent),
       updates.sharedTags || []
     );
 
@@ -1200,18 +1736,31 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     "customTagLabels" in updates
   ) {
     metadata.signal_coherence = calculateDreamSignalCoherence({
-      dreamText: metadata.dream_text || updates.dreamText || "",
-      title: metadata.title || updates.title || "",
-      dreamDate: metadata.dreamDate || updates.dreamDate || "",
-      dreamTime: metadata.dreamTime || updates.dreamTime || "",
-      dreamPeriod: metadata.dreamPeriod || updates.dreamPeriod || "",
-      dreamSequence: metadata.dreamSequence || updates.dreamSequence || 1,
-      ageAtDream: metadata.ageAtDream ?? updates.ageAtDream,
-      tags: metadata.tags || updates.tags || [],
+      dreamText: metadata.dream_text || updates.dreamText || existingRecord.dream_text || "",
+      title: metadata.title || updates.title || existingRecord.title || "",
+      dreamDate: metadata.dreamDate || updates.dreamDate || existingRecord.dreamDate || "",
+      dreamTime: metadata.dreamTime || updates.dreamTime || existingRecord.dreamTime || "",
+      dreamPeriod: metadata.dreamPeriod || updates.dreamPeriod || existingRecord.dreamPeriod || "",
+      dreamSequence: metadata.dreamSequence || updates.dreamSequence || existingRecord.dreamSequence || 1,
+      ageAtDream: metadata.ageAtDream ?? updates.ageAtDream ?? existingRecord.ageAtDream,
+      tags: metadata.tags || updates.tags || existingRecord.tags || [],
     });
   }
 
-  await setDoc(doc(requireFirestore(), "Records", recordId), metadata, { merge: true });
+  metadata.sensitivityLevel = calculateSensitivityLevel({
+    ...existingRecord,
+    ...metadata,
+  });
+
+  await setDoc(recordRef, metadata, { merge: true });
+
+  await syncPrivacyMirrorDocuments({
+    firestore,
+    currentUser,
+    record: { ...existingRecord, ...metadata },
+    profile: existingRecord,
+    sharingMode: metadata.sharingMode || existingRecord.sharingMode,
+  }).catch(() => {});
 
   if ("customTagLabels" in updates) {
     await upsertSharedCustomTags(currentUser, updates.customTagLabels || []).catch(
@@ -1302,6 +1851,14 @@ export async function addRecorderTranslationToRecord(currentUser, recordId, tran
   }
 
   await setDoc(recordRef, metadata, { merge: true });
+
+  await syncPrivacyMirrorDocuments({
+    firestore: requireFirestore(),
+    currentUser,
+    record: { ...existingRecord, ...metadata, id: recordId },
+    profile: existingRecord,
+    sharingMode: existingRecord.sharingMode,
+  }).catch(() => {});
 
   if (Array.isArray(translation?.customTagLabels) && translation.customTagLabels.length > 0) {
     await upsertSharedCustomTags(currentUser, translation.customTagLabels).catch(() => {});

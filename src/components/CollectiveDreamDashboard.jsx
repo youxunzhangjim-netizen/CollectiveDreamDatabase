@@ -13,6 +13,7 @@ import {
   getDreamDateStatus,
   getVisibleDreamDate,
 } from "../lib/dreamDate.js";
+import { normalizePrivacySharingMode } from "../lib/privacyDefaults.js";
 import { fetchSharedCustomTags } from "../lib/customTagsService.js";
 import {
   collectRecordForUser,
@@ -1211,8 +1212,11 @@ function normalizeDreamCard(row) {
     authorName: row.authorName || row.creatorDisplayName || row.displayName || "",
     anonymousLocked: Boolean(row.anonymousLocked),
     recordIdentityMode:
-      row.recordIdentityMode === "account" || row.attributionMode === "account"
-        ? "account"
+      row.recordIdentityMode === "pseudonym" ||
+      row.attributionMode === "pseudonym" ||
+      row.recordIdentityMode === "account" ||
+      row.attributionMode === "account"
+        ? "pseudonym"
         : "anonymous",
     creatorDisplayName: row.creatorDisplayName || "",
     creatorEmail: row.creatorEmail || "",
@@ -1220,14 +1224,19 @@ function normalizeDreamCard(row) {
     visibility: row.visibility || (row.isPublic === false ? "private" : "public"),
     isPublic: typeof row.isPublic === "boolean" ? row.isPublic : row.visibility === "public",
     sharingMode:
-      row.sharingMode ||
-      (row.visibility === "stats_only"
+      normalizePrivacySharingMode(
+        row.sharingMode ||
+        (row.visibility === "stats_only"
         ? "stats_only"
         : row.isPublic
-          ? row.recordIdentityMode === "account" || row.attributionMode === "account"
-            ? "public_pseudonym"
-            : "public_anonymous"
-          : "private"),
+          ? row.recordIdentityMode === "pseudonym" ||
+            row.attributionMode === "pseudonym" ||
+            row.recordIdentityMode === "account" ||
+            row.attributionMode === "account"
+            ? "pseudonym_public"
+            : "anonymous_public"
+          : "private")
+      ),
     includedInResearchStats: Boolean(
       row.includedInResearchStats || row.researchConsent
     ),
