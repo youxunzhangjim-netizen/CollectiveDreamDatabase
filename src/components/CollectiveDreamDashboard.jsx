@@ -159,10 +159,10 @@ const UI_COPY = {
     loadStates: {
       loading: "Connecting to live archive",
       live: "Live research archive",
-      fallback: "Live archive unavailable",
+      fallback: "Public archive reconnecting",
       empty: "No public records yet",
     },
-    loadError: "The public records are temporarily unavailable.",
+    loadError: "The public archive is reconnecting. Recording and account tools remain available.",
     schemaFocus: "Pattern Focus",
     anomalySearch: "Emotion tagging",
     ontologyConsistency: "Psychological observables",
@@ -370,12 +370,12 @@ const UI_COPY = {
     visibleLabel: "可見",
     anomalyFiltersLabel: "異常篩選",
     loadStates: {
-      loading: "連線至即時檔案庫",
-      live: "即時研究檔案庫",
-      fallback: "即時檔案庫無法使用",
+      loading: "連線至公開檔案庫",
+      live: "公開研究檔案庫",
+      fallback: "公開檔案庫重新連線中",
       empty: "尚無公開紀錄",
     },
-    loadError: "公開紀錄暫時無法讀取。",
+    loadError: "公開檔案庫正在重新連線；你仍可記錄夢境或進入帳戶。",
     schemaFocus: "心理模式焦點",
     anomalySearch: "情緒標記",
     ontologyConsistency: "心理觀察項",
@@ -581,11 +581,11 @@ const UI_COPY = {
     loadStates: {
       loading: "Conectando con el archivo activo",
       live: "Archivo de investigación activo",
-      fallback: "Archivo activo no disponible",
+      fallback: "Reconectando archivo público",
       empty: "Aún no hay registros públicos",
     },
     loadError:
-      "Los registros públicos no están disponibles por ahora.",
+      "El archivo público se está reconectando. El registro y la cuenta siguen disponibles.",
     schemaFocus: "Enfoque de patrones",
     anomalySearch: "Etiquetado emocional",
     ontologyConsistency: "Observables psicológicos",
@@ -790,18 +790,17 @@ export default function CollectiveDreamDashboard({
       let sharedTags = [];
 
       try {
-        [firestoreDreams, safeResearchSignals, sharedTags] = await Promise.all([
-          fetchPublicRecords({
-            includeAdult: canLoadAdultRecords,
-          }),
-          fetchResearchSignals({
-            includeAdult: true,
-          }),
-          fetchSharedCustomTags(),
-        ]);
+        firestoreDreams = await fetchPublicRecords({
+          includeAdult: canLoadAdultRecords,
+        });
       } catch (error) {
         loadErrors.push(error.message);
       }
+
+      safeResearchSignals = await fetchResearchSignals({
+        includeAdult: canLoadAdultRecords,
+      }).catch(() => []);
+      sharedTags = await fetchSharedCustomTags().catch(() => []);
 
       if (ignore) return;
 
@@ -2562,8 +2561,14 @@ function CollapseToggle({ expanded, copy, onClick }) {
       type="button"
       aria-expanded={expanded}
       onClick={onClick}
-      className="shrink-0 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/15"
+      className="inline-flex shrink-0 items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/15"
     >
+      <span
+        aria-hidden="true"
+        className={["inline-block transition", expanded ? "rotate-90" : ""].join(" ")}
+      >
+        &gt;
+      </span>
       {expanded ? copy.collapsePanel : copy.expandPanel}
     </button>
   );

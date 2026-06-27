@@ -44,6 +44,10 @@ service cloud.firestore {
       ];
     }
 
+    function validPrivacyOnboardingChoice(choice) {
+      return choice in ["private", "stats_only", "dream_by_dream"];
+    }
+
     function validVisibility(visibility) {
       return visibility in ["private", "public", "stats_only"];
     }
@@ -369,6 +373,29 @@ service cloud.firestore {
           && request.resource.data.anonymousLocked == resource.data.anonymousLocked);
     }
 
+    function validPrivacySettingsMap(settings) {
+      return settings == null
+        || (settings is map
+          && (!settings.keys().hasAny(["defaultSharingMode"])
+            || validSharingMode(settings.defaultSharingMode))
+          && optionalBool(settings, "defaultResearchConsent")
+          && optionalBool(settings, "defaultPublicConsent")
+          && optionalBool(settings, "defaultIncludeInResearchStats")
+          && optionalString(settings, "defaultPseudonym", 120)
+          && optionalBool(settings, "defaultApplyToImports")
+          && optionalBool(settings, "defaultApplyToSingleDreams")
+          && optionalBool(settings, "requireReviewBeforePublic")
+          && optionalBool(settings, "skipAdultContentForBulkPublic")
+          && optionalBool(settings, "skipHighSensitivityForBulkPublic")
+          && optionalNumber(settings, "sensitivityAutoSkipThreshold", 1, 4)
+          && optionalString(settings, "privacyDefaultsUpdatedBy", 128)
+          && optionalString(settings, "updatedBy", 128)
+          && optionalTimestamp(settings, "updatedAt")
+          && (!settings.keys().hasAny(["onboardingChoice"])
+            || validPrivacyOnboardingChoice(settings.onboardingChoice))
+          && optionalBool(settings, "onboardingCompleted"));
+    }
+
     function validProfileMetadata(data, userId) {
       return data.keys().hasAny(["uid"])
         && data.uid == userId
@@ -403,6 +430,12 @@ service cloud.firestore {
         && optionalBool(data, "skipHighSensitivityForBulkPublic")
         && optionalNumber(data, "sensitivityAutoSkipThreshold", 1, 4)
         && optionalString(data, "privacyDefaultsUpdatedBy", 128)
+        && optionalBool(data, "privacyOnboardingCompleted")
+        && (!data.keys().hasAny(["privacyOnboardingChoice"])
+          || validPrivacyOnboardingChoice(data.privacyOnboardingChoice))
+        && optionalMap(data, "privacySettings")
+        && (!data.keys().hasAny(["privacySettings"])
+          || validPrivacySettingsMap(data.privacySettings))
         && optionalString(data, "joinedAt", 32);
     }
 

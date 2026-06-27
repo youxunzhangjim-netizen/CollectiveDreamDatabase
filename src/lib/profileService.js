@@ -1,7 +1,13 @@
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebaseClient.js";
 import { isSupportedLanguage } from "./language.js";
-import { normalizePrivacySettings } from "./privacyDefaults.js";
+import {
+  buildPrivacySettingsMap,
+  getConsentsForSharingMode,
+  getSharingModeForOnboardingChoice,
+  normalizePrivacyOnboardingChoice,
+  normalizePrivacySettings,
+} from "./privacyDefaults.js";
 
 function requireFirestore() {
   if (!isFirebaseConfigured || !db) {
@@ -18,6 +24,14 @@ function formatAuthJoinedAt(currentUser) {
 
 export function createDefaultProfile(currentUser) {
   const privacySettings = normalizePrivacySettings({}, currentUser);
+  const privacySettingsMap = buildPrivacySettingsMap(
+    {
+      ...privacySettings,
+      privacyOnboardingCompleted: false,
+      privacyOnboardingChoice: "private",
+    },
+    currentUser
+  );
 
   return {
     uid: currentUser.uid,
@@ -32,6 +46,9 @@ export function createDefaultProfile(currentUser) {
     showBiologicalSex: false,
     preferredLanguage: "zh",
     ...privacySettings,
+    privacySettings: privacySettingsMap,
+    privacyOnboardingCompleted: false,
+    privacyOnboardingChoice: "private",
   };
 }
 
@@ -43,9 +60,17 @@ export async function getOrCreateUserProfile(currentUser) {
   const defaultProfile = createDefaultProfile(currentUser);
 
   if (snapshot.exists()) {
-    return {
+    const profileData = {
       ...defaultProfile,
       ...snapshot.data(),
+      uid: currentUser.uid,
+    };
+    const privacySettings = normalizePrivacySettings(profileData, currentUser);
+
+    return {
+      ...profileData,
+      ...privacySettings,
+      privacySettings: buildPrivacySettingsMap(profileData, currentUser),
       uid: currentUser.uid,
     };
   }
@@ -71,6 +96,23 @@ export async function saveUserProfile(currentUser, updates) {
   const normalizedAge =
     updates.age === "" || updates.age == null ? "" : Math.max(0, Number(updates.age));
   const privacySettings = normalizePrivacySettings(updates, currentUser);
+  const privacyOnboardingChoice = normalizePrivacyOnboardingChoice(
+    updates.privacyOnboardingChoice || updates.privacySettings?.onboardingChoice
+  );
+  const privacyOnboardingCompleted = Boolean(
+    updates.privacyOnboardingCompleted ||
+      updates.privacySettings?.onboardingCompleted
+  );
+  const privacySettingsMap = buildPrivacySettingsMap(
+    {
+      ...updates,
+      ...privacySettings,
+      privacyOnboardingChoice,
+      privacyOnboardingCompleted,
+    },
+    currentUser,
+    { includeTimestamp: true, serverTimestampValue: serverTimestamp() }
+  );
 
   const profileRef = doc(requireFirestore(), "users", currentUser.uid);
 
@@ -87,6 +129,9 @@ export async function saveUserProfile(currentUser, updates) {
       biologicalSex: updates.biologicalSex || "",
       showBiologicalSex: Boolean(updates.showBiologicalSex),
       ...privacySettings,
+      privacySettings: privacySettingsMap,
+      privacyOnboardingChoice,
+      privacyOnboardingCompleted,
       privacyDefaultsUpdatedBy: currentUser.uid,
       privacyDefaultsUpdatedAt: serverTimestamp(),
       preferredLanguage: isSupportedLanguage(updates.preferredLanguage)
@@ -97,6 +142,34 @@ export async function saveUserProfile(currentUser, updates) {
     },
     { merge: true }
   );
+}
+
+export async function savePrivacyOnboardingChoice(currentUser, profile, choice) {
+  if (!currentUser?.uid) {
+    throw new Error("A signed-in user is required to save privacy settings.");
+  }
+
+  const privacyOnboardingChoice = normalizePrivacyOnboardingChoice(choice);
+  const defaultSharingMode = getSharingModeForOnboardingChoice(privacyOnboardingChoice);
+  const consents = getConsentsForSharingMode(defaultSharingMode);
+  const nextProfile = {
+    ...(profile || createDefaultProfile(currentUser)),
+    defaultSharingMode,
+    ...consents,
+    defaultApplyToSingleDreams: true,
+    defaultApplyToImports: true,
+    requireReviewBeforePublic: true,
+    privacyOnboardingChoice,
+    privacyOnboardingCompleted: true,
+  };
+
+  await saveUserProfile(currentUser, nextProfile);
+
+  return {
+    ...nextProfile,
+    ...normalizePrivacySettings(nextProfile, currentUser),
+    privacySettings: buildPrivacySettingsMap(nextProfile, currentUser),
+  };
 }
 
 export async function savePreferredLanguage(currentUser, language) {

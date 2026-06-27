@@ -157,10 +157,17 @@ const DASHBOARD_COPY = {
     reviewBeforePublicLabel: "Require review before public sharing",
     presetsTitle: "One-click modes",
     presetsDescription: "A quick helper. Pick the posture that feels right, then adjust details later.",
+    presetScopeTitle: "Apply this preset to",
+    presetScopeFuture: "Use this for future dreams",
+    presetScopeExisting: "Also apply to existing dreams",
+    presetScopeFutureOnly: "Future dreams only",
+    presetScopeExistingOnly: "Existing dreams only",
+    presetScopeBoth: "Future and existing dreams",
+    presetScopeNone: "Choose future dreams, existing dreams, or both.",
+    applyChoiceButton: "Apply selected scope",
     presetPublicLabel: "Public",
     presetPrivateLabel: "Private",
     presetStatsLabel: "Statistics",
-    usePresetButton: "Use this preset",
     applyPresetButton: "Apply to existing dreams",
     previewTitle: "Review before applying",
     previewDescription:
@@ -283,6 +290,8 @@ const DASHBOARD_COPY = {
     joinedDate: "Joined",
     hiddenAge: "Hidden",
     originalLanguageLabel: "Original language",
+    expandPanel: "Expand section",
+    collapsePanel: "Collapse section",
     recordedBy: "Recorded by",
     anonymousObserver: "Anonymous Observer",
     unknownDate: "Date unknown",
@@ -422,10 +431,17 @@ const DASHBOARD_COPY = {
     reviewBeforePublicLabel: "公開前必須先審查",
     presetsTitle: "一鍵模式",
     presetsDescription: "快速輔助選擇。先選一種姿態，之後仍可調整細節。",
+    presetScopeTitle: "將此模式套用到",
+    presetScopeFuture: "用於未來夢境",
+    presetScopeExisting: "也套用到既有夢境",
+    presetScopeFutureOnly: "只套用未來夢境",
+    presetScopeExistingOnly: "只套用既有夢境",
+    presetScopeBoth: "未來與既有夢境",
+    presetScopeNone: "請選擇未來夢境、既有夢境，或兩者。",
+    applyChoiceButton: "套用選擇範圍",
     presetPublicLabel: "公開",
     presetPrivateLabel: "私人",
     presetStatsLabel: "統計",
-    usePresetButton: "使用此預設",
     applyPresetButton: "套用到既有夢境",
     previewTitle: "套用前檢查",
     previewDescription: "套用到既有觀測前，先確認會改變哪些夢境。",
@@ -539,6 +555,8 @@ const DASHBOARD_COPY = {
     joinedDate: "加入日期",
     hiddenAge: "已隱藏",
     originalLanguageLabel: "原始語言",
+    expandPanel: "展開區塊",
+    collapsePanel: "收合區塊",
     recordedBy: "記錄者",
     anonymousObserver: "匿名觀察者",
     unknownDate: "日期不確定",
@@ -680,10 +698,17 @@ const DASHBOARD_COPY = {
     reviewBeforePublicLabel: "Revisar antes de publicar",
     presetsTitle: "Modos de un clic",
     presetsDescription: "Una ayuda rápida. Elige una postura y ajusta detalles después.",
+    presetScopeTitle: "Aplicar este modo a",
+    presetScopeFuture: "Usar para sueños futuros",
+    presetScopeExisting: "Aplicar también a sueños existentes",
+    presetScopeFutureOnly: "Solo sueños futuros",
+    presetScopeExistingOnly: "Solo sueños existentes",
+    presetScopeBoth: "Sueños futuros y existentes",
+    presetScopeNone: "Elige sueños futuros, existentes o ambos.",
+    applyChoiceButton: "Aplicar alcance elegido",
     presetPublicLabel: "Público",
     presetPrivateLabel: "Privado",
     presetStatsLabel: "Estadísticas",
-    usePresetButton: "Usar este preset",
     applyPresetButton: "Aplicar a sueños existentes",
     previewTitle: "Revisar antes de aplicar",
     previewDescription:
@@ -806,6 +831,8 @@ const DASHBOARD_COPY = {
     joinedDate: "Fecha de ingreso",
     hiddenAge: "Oculta",
     originalLanguageLabel: "Idioma original",
+    expandPanel: "Expandir sección",
+    collapsePanel: "Contraer sección",
     recordedBy: "Registrado por",
     anonymousObserver: "Observador anónimo",
     unknownDate: "Fecha desconocida",
@@ -1032,6 +1059,8 @@ export default function UserDashboard({
   const [bulkShareNotice, setBulkShareNotice] = useState("");
   const [bulkPreset, setBulkPreset] = useState(null);
   const [selectedPresetId, setSelectedPresetId] = useState("research_contributor");
+  const [presetApplyFuture, setPresetApplyFuture] = useState(true);
+  const [presetApplyExisting, setPresetApplyExisting] = useState(false);
   const [selectedPublicVersionId, setSelectedPublicVersionId] = useState("");
   const [publicVersionDrafts, setPublicVersionDrafts] = useState({});
   const [publicVersionNotice, setPublicVersionNotice] = useState("");
@@ -1218,7 +1247,7 @@ export default function UserDashboard({
     }));
   }
 
-  async function handleUsePresetDefault(preset) {
+  async function savePresetAsFutureDefault(preset) {
     if (!profileDraft) return;
 
     setSelectedPresetId(preset.id);
@@ -1247,6 +1276,23 @@ export default function UserDashboard({
       setProfileNotice(error.message);
     } finally {
       setProfileSaving(false);
+    }
+  }
+
+  async function handleApplyPresetChoice(preset) {
+    if (!presetApplyFuture && !presetApplyExisting) {
+      setProfileNotice(copy.presetScopeNone);
+      return;
+    }
+
+    if (presetApplyFuture) {
+      await savePresetAsFutureDefault(preset);
+    } else {
+      setSelectedPresetId(preset.id);
+    }
+
+    if (presetApplyExisting) {
+      handleOpenPresetPreview(preset);
     }
   }
 
@@ -1540,6 +1586,18 @@ export default function UserDashboard({
           </div>
         </section>
 
+        <AccountDetailsSection
+          profileDraft={profileDraft}
+          setProfileDraft={setProfileDraft}
+          displayUser={displayUser}
+          copy={copy}
+          language={language}
+          setLanguage={setLanguage}
+          profileSaving={profileSaving}
+          profileNotice={profileNotice}
+          onSave={handleSaveProfile}
+        />
+
         {profileDraft && (
           <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/65 p-5 shadow-[0_0_36px_rgba(34,211,238,.08)] backdrop-blur sm:p-7">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -1637,22 +1695,32 @@ export default function UserDashboard({
                   </button>
                 </div>
 
-                <details className="rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-5 sm:p-6">
+                <details className="group rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-5 sm:p-6">
                   <summary className="cursor-pointer list-none">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <h2 className="cdo-card-heading">
-                        {copy.presetsTitle}
-                      </h2>
-                      <p className="cdo-muted-copy mt-2 text-xs leading-relaxed">
-                        {copy.presetsDescription}
-                      </p>
+                    <div className="flex items-start gap-3">
+                      <DisclosureArrow copy={copy} />
+                      <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                          <h2 className="cdo-card-heading">
+                            {copy.presetsTitle}
+                          </h2>
+                          <p className="cdo-muted-copy mt-2 text-xs leading-relaxed">
+                            {copy.presetsDescription}
+                          </p>
+                        </div>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+                          {copy.notDiagnosisReminder}
+                        </p>
+                      </div>
                     </div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
-                      {copy.notDiagnosisReminder}
-                    </p>
-                  </div>
                   </summary>
+                  <PresetScopeControl
+                    copy={copy}
+                    applyFuture={presetApplyFuture}
+                    applyExisting={presetApplyExisting}
+                    onFutureChange={setPresetApplyFuture}
+                    onExistingChange={setPresetApplyExisting}
+                  />
                   <div className="mt-4 grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
                     {oneClickPresets.map((preset) => (
                       <PresetCard
@@ -1666,7 +1734,7 @@ export default function UserDashboard({
                         selected={selectedPreset?.id === preset.id}
                         disabled={profileSaving}
                         onSelect={() => setSelectedPresetId(preset.id)}
-                        onUse={() => handleUsePresetDefault(preset)}
+                        onUse={() => handleApplyPresetChoice(preset)}
                         onApply={() => handleOpenPresetPreview(preset)}
                       />
                     ))}
@@ -1727,7 +1795,9 @@ export default function UserDashboard({
                 preset={selectedPreset}
                 copy={copy}
                 disabled={profileSaving}
-                onUse={() => selectedPreset && handleUsePresetDefault(selectedPreset)}
+                applyFuture={presetApplyFuture}
+                applyExisting={presetApplyExisting}
+                onUse={() => selectedPreset && handleApplyPresetChoice(selectedPreset)}
                 onApply={() => selectedPreset && handleOpenPresetPreview(selectedPreset)}
               />
             </div>
@@ -1750,188 +1820,6 @@ export default function UserDashboard({
             onApprove={handleApprovePublicVersion}
             onReject={handleRejectPublicVersion}
           />
-        )}
-
-        {profileDraft && (
-          <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/60 p-5 backdrop-blur sm:p-7">
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="cdo-panel-heading">
-                {copy.accountDetails}
-              </h2>
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
-                {copy.joinedDate}: {displayUser.memberSince}
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <label className="block">
-                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                  {copy.displayNameLabel}
-                </span>
-                <input
-                  value={profileDraft.displayName || ""}
-                  onChange={(event) =>
-                    setProfileDraft((current) => ({
-                      ...current,
-                      displayName: event.target.value,
-                    }))
-                  }
-                  placeholder={copy.displayNamePlaceholder}
-                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                  {copy.countryLabel}
-                </span>
-                <input
-                  value={profileDraft.country || ""}
-                  onChange={(event) =>
-                    setProfileDraft((current) => ({
-                      ...current,
-                      country: event.target.value,
-                    }))
-                  }
-                  placeholder={copy.countryPlaceholder}
-                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                  {copy.ageLabel}
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  value={profileDraft.age || ""}
-                  onChange={(event) =>
-                    setProfileDraft((current) => ({
-                      ...current,
-                      age: event.target.value,
-                    }))
-                  }
-                  placeholder={copy.agePlaceholder}
-                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                  {copy.biologicalSexLabel}
-                </span>
-                <select
-                  value={profileDraft.biologicalSex || "preferNotToSay"}
-                  onChange={(event) =>
-                    setProfileDraft((current) => ({
-                      ...current,
-                      biologicalSex: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
-                >
-                  {BIOLOGICAL_SEX_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {copy.biologicalSexOptions[option] || copy.biologicalSexPlaceholder}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                  {copy.preferredLanguageLabel}
-                </span>
-                <select
-                  value={profileDraft.preferredLanguage || language}
-                  onChange={(event) => {
-                    const nextLanguage = event.target.value;
-                    setProfileDraft((current) => ({
-                      ...current,
-                      preferredLanguage: nextLanguage,
-                    }));
-                    setLanguage(nextLanguage);
-                  }}
-                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
-                >
-                  {LANGUAGE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label} / {getLanguageName(option.value, language)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(profileDraft.showEmail)}
-                    onChange={(event) =>
-                      setProfileDraft((current) => ({
-                        ...current,
-                        showEmail: event.target.checked,
-                      }))
-                    }
-                    className="h-4 w-4 accent-cyan-300"
-                  />
-                  <span className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-300">
-                    <span className="break-words">{copy.showEmailLabel}</span>
-                  </span>
-                </label>
-                <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(profileDraft.showAge)}
-                    onChange={(event) =>
-                      setProfileDraft((current) => ({
-                        ...current,
-                        showAge: event.target.checked,
-                      }))
-                    }
-                    className="h-4 w-4 accent-cyan-300"
-                  />
-                  <span className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-300">
-                    <span className="break-words">{copy.showAgeLabel}</span>
-                  </span>
-                </label>
-                <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(profileDraft.showBiologicalSex)}
-                    onChange={(event) =>
-                      setProfileDraft((current) => ({
-                        ...current,
-                        showBiologicalSex: event.target.checked,
-                      }))
-                    }
-                    className="h-4 w-4 accent-cyan-300"
-                  />
-                  <span className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-300">
-                    <span className="break-words">{copy.showBiologicalSexLabel}</span>
-                  </span>
-                </label>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleSaveProfile}
-                disabled={profileSaving}
-                className="rounded-2xl border border-cyan-300/35 bg-cyan-300 px-5 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70 sm:tracking-[0.2em] lg:min-w-48"
-              >
-                {profileSaving ? "..." : copy.saveProfile}
-              </button>
-            </div>
-
-            {profileNotice && (
-              <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em] text-cyan-100">
-                {profileNotice}
-              </p>
-            )}
-          </section>
         )}
 
         <PersonalAnalysisPanel stats={personalAnalysis} copy={copy} />
@@ -2664,7 +2552,15 @@ function getEmotionFallbackLabel(emotion, language) {
   return labels[emotion]?.[language] || labels[emotion]?.en || emotion;
 }
 
-function PrivacyPresetPreview({ preset, copy, disabled, onUse, onApply }) {
+function PrivacyPresetPreview({
+  preset,
+  copy,
+  disabled,
+  applyFuture,
+  applyExisting,
+  onUse,
+  onApply,
+}) {
   if (!preset) return null;
 
   const accent = ACCENT_STYLES[preset.accent] || ACCENT_STYLES.cyan;
@@ -2693,6 +2589,10 @@ function PrivacyPresetPreview({ preset, copy, disabled, onUse, onApply }) {
         <PresetFact label={copy.presetPublicLabel} value={preset.publicLine} />
         <PresetFact label={copy.presetPrivateLabel} value={preset.privateLine} />
         <PresetFact label={copy.presetStatsLabel} value={preset.statsLine} />
+        <PresetFact
+          label={copy.presetScopeTitle}
+          value={getPresetScopeLabel(copy, applyFuture, applyExisting)}
+        />
       </dl>
 
       <p
@@ -2715,7 +2615,7 @@ function PrivacyPresetPreview({ preset, copy, disabled, onUse, onApply }) {
           disabled={disabled}
           className="rounded-2xl border border-cyan-300/35 bg-cyan-300 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {copy.usePresetButton}
+          {copy.applyChoiceButton}
         </button>
         <button
           type="button"
@@ -2732,6 +2632,279 @@ function PrivacyPresetPreview({ preset, copy, disabled, onUse, onApply }) {
         </button>
       </div>
     </aside>
+  );
+}
+
+function PresetScopeControl({
+  copy,
+  applyFuture,
+  applyExisting,
+  onFutureChange,
+  onExistingChange,
+}) {
+  return (
+    <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h3 className="cdo-card-heading">{copy.presetScopeTitle}</h3>
+          <p className="cdo-muted-copy mt-2 text-xs leading-relaxed">
+            {getPresetScopeLabel(copy, applyFuture, applyExisting)}
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[26rem]">
+          <TogglePill
+            checked={applyFuture}
+            label={copy.presetScopeFuture}
+            onChange={onFutureChange}
+          />
+          <TogglePill
+            checked={applyExisting}
+            label={copy.presetScopeExisting}
+            onChange={onExistingChange}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DisclosureArrow({ copy }) {
+  return (
+    <span
+      aria-hidden="true"
+      title={copy.expandPanel || copy.presetsTitle}
+      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-300/25 bg-cyan-300/10 font-mono text-sm font-bold text-cyan-100 transition group-open:rotate-90"
+    >
+      &gt;
+    </span>
+  );
+}
+
+function TogglePill({ checked, label, onChange }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={checked}
+      onClick={() => onChange?.(!checked)}
+      className={[
+        "flex min-h-12 items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition",
+        checked
+          ? "border-cyan-300/45 bg-cyan-300/10 text-cyan-100"
+          : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+      ].join(" ")}
+    >
+      <span className="min-w-0 font-mono text-[10px] font-bold uppercase leading-relaxed tracking-[0.1em]">
+        {label}
+      </span>
+      <span
+        className={[
+          "flex h-5 w-9 shrink-0 items-center rounded-full border p-0.5 transition",
+          checked ? "border-cyan-300/50 bg-cyan-300/30" : "border-white/15 bg-black/30",
+        ].join(" ")}
+      >
+        <span
+          className={[
+            "h-3.5 w-3.5 rounded-full transition",
+            checked ? "translate-x-3.5 bg-cyan-100" : "translate-x-0 bg-zinc-500",
+          ].join(" ")}
+        />
+      </span>
+    </button>
+  );
+}
+
+function getPresetScopeLabel(copy, applyFuture, applyExisting) {
+  if (applyFuture && applyExisting) return copy.presetScopeBoth;
+  if (applyFuture) return copy.presetScopeFutureOnly;
+  if (applyExisting) return copy.presetScopeExistingOnly;
+  return copy.presetScopeNone;
+}
+
+function AccountDetailsSection({
+  profileDraft,
+  setProfileDraft,
+  displayUser,
+  copy,
+  language,
+  setLanguage,
+  profileSaving,
+  profileNotice,
+  onSave,
+}) {
+  if (!profileDraft) return null;
+
+  return (
+    <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/60 p-5 backdrop-blur sm:p-7">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="cdo-panel-heading">
+          {copy.accountDetails}
+        </h2>
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+          {copy.joinedDate}: {displayUser.memberSince}
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+            {copy.displayNameLabel}
+          </span>
+          <input
+            value={profileDraft.displayName || ""}
+            onChange={(event) =>
+              setProfileDraft((current) => ({
+                ...current,
+                displayName: event.target.value,
+              }))
+            }
+            placeholder={copy.displayNamePlaceholder}
+            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+            {copy.countryLabel}
+          </span>
+          <input
+            value={profileDraft.country || ""}
+            onChange={(event) =>
+              setProfileDraft((current) => ({
+                ...current,
+                country: event.target.value,
+              }))
+            }
+            placeholder={copy.countryPlaceholder}
+            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+            {copy.ageLabel}
+          </span>
+          <input
+            type="number"
+            min="0"
+            value={profileDraft.age || ""}
+            onChange={(event) =>
+              setProfileDraft((current) => ({
+                ...current,
+                age: event.target.value,
+              }))
+            }
+            placeholder={copy.agePlaceholder}
+            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+            {copy.biologicalSexLabel}
+          </span>
+          <select
+            value={profileDraft.biologicalSex || "preferNotToSay"}
+            onChange={(event) =>
+              setProfileDraft((current) => ({
+                ...current,
+                biologicalSex: event.target.value,
+              }))
+            }
+            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+          >
+            {BIOLOGICAL_SEX_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {copy.biologicalSexOptions[option] || copy.biologicalSexPlaceholder}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+            {copy.preferredLanguageLabel}
+          </span>
+          <select
+            value={profileDraft.preferredLanguage || language}
+            onChange={(event) => {
+              const nextLanguage = event.target.value;
+              setProfileDraft((current) => ({
+                ...current,
+                preferredLanguage: nextLanguage,
+              }));
+              setLanguage(nextLanguage);
+            }}
+            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+          >
+            {LANGUAGE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} / {getLanguageName(option.value, language)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <VisibilityCheckbox
+            checked={Boolean(profileDraft.showEmail)}
+            label={copy.showEmailLabel}
+            onChange={(checked) =>
+              setProfileDraft((current) => ({ ...current, showEmail: checked }))
+            }
+          />
+          <VisibilityCheckbox
+            checked={Boolean(profileDraft.showAge)}
+            label={copy.showAgeLabel}
+            onChange={(checked) =>
+              setProfileDraft((current) => ({ ...current, showAge: checked }))
+            }
+          />
+          <VisibilityCheckbox
+            checked={Boolean(profileDraft.showBiologicalSex)}
+            label={copy.showBiologicalSexLabel}
+            onChange={(checked) =>
+              setProfileDraft((current) => ({
+                ...current,
+                showBiologicalSex: checked,
+              }))
+            }
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={profileSaving}
+          className="rounded-2xl border border-cyan-300/35 bg-cyan-300 px-5 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70 sm:tracking-[0.2em] lg:min-w-48"
+        >
+          {profileSaving ? "..." : copy.saveProfile}
+        </button>
+      </div>
+
+      {profileNotice && (
+        <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em] text-cyan-100">
+          {profileNotice}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function VisibilityCheckbox({ checked, label, onChange }) {
+  return (
+    <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="h-4 w-4 accent-cyan-300"
+      />
+      <span className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-300">
+        <span className="break-words">{label}</span>
+      </span>
+    </label>
   );
 }
 
@@ -2764,18 +2937,21 @@ function PublicVersionTool({
   const busy = Boolean(selectedRecord?.id && savingId === selectedRecord.id);
 
   return (
-    <details className="mb-6 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-7">
+    <details className="group mb-6 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-7">
       <summary className="cursor-pointer list-none">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="cdo-kicker">{copy.publicVersionTitle}</p>
-            <p className="cdo-body-copy mt-3 max-w-3xl">
-              {copy.publicVersionDescription}
+        <div className="flex items-start gap-3">
+          <DisclosureArrow copy={copy} />
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="cdo-kicker">{copy.publicVersionTitle}</p>
+              <p className="cdo-body-copy mt-3 max-w-3xl">
+                {copy.publicVersionDescription}
+              </p>
+            </div>
+            <p className="max-w-lg rounded-2xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs leading-relaxed text-amber-100">
+              {copy.publicVersionNotice}
             </p>
           </div>
-          <p className="max-w-lg rounded-2xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs leading-relaxed text-amber-100">
-            {copy.publicVersionNotice}
-          </p>
         </div>
       </summary>
 
@@ -3032,7 +3208,7 @@ function PresetCard({
           disabled={disabled}
           className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]"
         >
-          {copy.usePresetButton}
+          {copy.applyChoiceButton}
         </button>
         <button
           type="button"
@@ -3101,15 +3277,18 @@ function PersonalAnalysisPanel({ stats, copy }) {
   const [visualsOpen, setVisualsOpen] = useState(false);
 
   return (
-    <details className="mb-8 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-7">
+    <details className="group mb-8 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-7">
       <summary className="cursor-pointer list-none">
-        <div>
-          <p className="cdo-kicker">
-            {copy.analysisTitle}
-          </p>
-          <p className="cdo-body-copy mt-3 max-w-3xl">
-            {copy.analysisText}
-          </p>
+        <div className="flex items-start gap-3">
+          <DisclosureArrow copy={copy} />
+          <div className="min-w-0">
+            <p className="cdo-kicker">
+              {copy.analysisTitle}
+            </p>
+            <p className="cdo-body-copy mt-3 max-w-3xl">
+              {copy.analysisText}
+            </p>
+          </div>
         </div>
       </summary>
       <div className="mt-5 flex justify-start sm:justify-end">

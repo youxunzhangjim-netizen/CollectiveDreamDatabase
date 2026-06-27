@@ -66,6 +66,20 @@ assert.equal(
 
 {
   const profile = normalizePrivacySettings({
+    privacySettings: {
+      defaultSharingMode: DREAM_SHARING_MODES.STATS_ONLY,
+      defaultApplyToSingleDreams: true,
+    },
+  });
+  const state = resolveNewRecordPrivacyState({ currentUser: user, profile });
+
+  assert.equal(state.sharingMode, DREAM_SHARING_MODES.STATS_ONLY);
+  assert.equal(state.defaultPrivacyApplied, true);
+  assert.equal(state.privacyDefaultSource, "single_record");
+}
+
+{
+  const profile = normalizePrivacySettings({
     defaultSharingMode: DREAM_SHARING_MODES.STATS_ONLY,
   });
   const state = resolveNewRecordPrivacyState({
