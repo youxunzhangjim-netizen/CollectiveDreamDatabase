@@ -693,10 +693,16 @@ export async function fetchOwnedRecords(currentUser) {
 export async function fetchPublicRecords({ includeAdult = false } = {}) {
   const firestore = requireFirestore();
   const publicDreamsCollection = collection(firestore, "PublicDreams");
+  const publicModes = [
+    DREAM_SHARING_MODES.ANONYMOUS_PUBLIC,
+    DREAM_SHARING_MODES.PSEUDONYM_PUBLIC,
+    DREAM_SHARING_MODES.REDACTED_PUBLIC,
+  ];
   const publicDreamsQuery = includeAdult
-    ? query(publicDreamsCollection)
+    ? query(publicDreamsCollection, where("sharingMode", "in", publicModes))
     : query(
         publicDreamsCollection,
+        where("sharingMode", "in", publicModes),
         where("adultContent", "==", false)
       );
   const publicDreamsSnapshot = await getDocs(publicDreamsQuery);

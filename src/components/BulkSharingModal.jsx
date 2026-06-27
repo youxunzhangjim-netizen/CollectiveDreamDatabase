@@ -757,13 +757,7 @@ function buildBulkSharingPreview(records, preset, filters) {
       statsOnlyRiskCount += 1;
     }
 
-    const alreadyMatching =
-      currentMode === targetMode &&
-      (!preset.requiresPublicText || record.redactionStatus === "user_confirmed");
-
-    if (!alreadyMatching) {
-      affectedRecords.push(record);
-    }
+    affectedRecords.push(record);
 
     newBreakdown[targetMode] = (newBreakdown[targetMode] || 0) + 1;
   });
