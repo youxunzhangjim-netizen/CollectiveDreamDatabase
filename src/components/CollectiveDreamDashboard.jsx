@@ -18,6 +18,7 @@ import { fetchSharedCustomTags } from "../lib/customTagsService.js";
 import {
   collectRecordForUser,
   fetchFollowingRecorders,
+  fetchOwnedRecords,
   fetchPublicRecords,
   fetchResearchSignals,
   followRecorderForUser,
@@ -243,6 +244,26 @@ const UI_COPY = {
       `Sample size is ${count}. Treat charts as exploration, not research evidence, until N ≥ 10.`,
     patternSuppressed: "Small groups below privacy threshold are hidden.",
     patternNoData: "No aggregate data yet",
+    biasCoverageTitle: "Bias & Coverage Report",
+    biasCoverageText:
+      "These statistics describe dreams submitted to this platform and authorized for public reading or anonymous statistical use. They do not represent all dreams or all people.",
+    publicReadableDreams: "Public readable dreams",
+    statsOnlyDreams: "Stats-only private dreams",
+    fullyPrivateExcludedDreams: "Fully private excluded dreams",
+    ownerOnlyCoverage: "Owner-only count when available",
+    missingLanguage: "Missing language",
+    missingTags: "Missing tags",
+    unconfirmedAiTags: "Unconfirmed AI tags",
+    adultExcluded: "Adult-content excluded",
+    highSensitivityExcluded: "High-sensitivity excluded",
+    signalSample: "Signal sample",
+    possibleBiasTitle: "Possible publication bias",
+    possibleBiasItems: [
+      "Intimate dreams may be underrepresented in the public archive.",
+      "Family, relationship, sexual, shame, or trauma themes may appear more often in stats-only mode.",
+      "The public archive may overrepresent adventurous, cinematic, funny, or less personally identifying dreams.",
+      "Do not treat these charts as universal conclusions.",
+    ],
     patternAllLoaded: "All loaded records",
     patternFiltered: "Current filters applied",
     patternEmotions: "Common emotions",
@@ -432,6 +453,26 @@ const UI_COPY = {
       `目前樣本數為 ${count}。在 N ≥ 10 前，圖表只能作為探索，不應作為研究證據。`,
     patternSuppressed: "低於隱私門檻的小群體已隱藏。",
     patternNoData: "尚無整體資料",
+    biasCoverageTitle: "偏差與覆蓋報告",
+    biasCoverageText:
+      "這些統計描述的是提交到本平台，並被授權公開閱讀或匿名統計使用的夢境。它們不代表所有夢，也不代表所有人。",
+    publicReadableDreams: "可公開閱讀夢境",
+    statsOnlyDreams: "僅供統計的私人夢境",
+    fullyPrivateExcludedDreams: "完全私人且排除的夢境",
+    ownerOnlyCoverage: "僅擁有者可見的計數",
+    missingLanguage: "缺少語言",
+    missingTags: "缺少標籤",
+    unconfirmedAiTags: "未確認 AI 標籤",
+    adultExcluded: "因成人內容排除",
+    highSensitivityExcluded: "因高度敏感排除",
+    signalSample: "訊號樣本",
+    possibleBiasTitle: "可能的發布偏差",
+    possibleBiasItems: [
+      "親密或非常私人的夢可能在公開檔案中被低估。",
+      "家庭、關係、性、羞恥或創傷主題，可能更常出現在僅供統計模式。",
+      "公開檔案可能較多呈現冒險、電影感、有趣或較不容易識別個人的夢。",
+      "不要把這些圖表解讀成普遍結論。",
+    ],
     patternAllLoaded: "所有已載入紀錄",
     patternFiltered: "已套用目前篩選",
     patternEmotions: "常見情緒",
@@ -626,6 +667,26 @@ const UI_COPY = {
       `El tamaño de muestra es ${count}. Usa los gráficos como exploración, no evidencia de investigación, hasta N ≥ 10.`,
     patternSuppressed: "Los grupos pequeños bajo el umbral de privacidad están ocultos.",
     patternNoData: "Aún no hay datos agregados",
+    biasCoverageTitle: "Informe de sesgo y cobertura",
+    biasCoverageText:
+      "Estas estadísticas describen sueños enviados a esta plataforma y autorizados para lectura pública o uso estadístico anónimo. No representan todos los sueños ni a todas las personas.",
+    publicReadableDreams: "Sueños públicos legibles",
+    statsOnlyDreams: "Sueños privados solo estadísticos",
+    fullyPrivateExcludedDreams: "Sueños totalmente privados excluidos",
+    ownerOnlyCoverage: "Conteo visible solo para la persona propietaria",
+    missingLanguage: "Idioma faltante",
+    missingTags: "Etiquetas faltantes",
+    unconfirmedAiTags: "Etiquetas de IA sin confirmar",
+    adultExcluded: "Excluidos por contenido adulto",
+    highSensitivityExcluded: "Excluidos por alta sensibilidad",
+    signalSample: "Muestra de señales",
+    possibleBiasTitle: "Posible sesgo de publicación",
+    possibleBiasItems: [
+      "Los sueños íntimos pueden estar subrepresentados en el archivo público.",
+      "Temas de familia, relaciones, sexualidad, vergüenza o trauma pueden aparecer más en modo solo estadístico.",
+      "El archivo público puede sobrerrepresentar sueños aventureros, cinematográficos, graciosos o menos identificables.",
+      "No conviertas estos gráficos en conclusiones universales.",
+    ],
     patternAllLoaded: "Todos los registros cargados",
     patternFiltered: "Filtros actuales aplicados",
     patternEmotions: "Emociones comunes",
@@ -704,6 +765,7 @@ export default function CollectiveDreamDashboard({
   const [viewerProfile, setViewerProfile] = useState(null);
   const [followingRecorders, setFollowingRecorders] = useState([]);
   const [researchSignals, setResearchSignals] = useState([]);
+  const [ownerCoverageRecords, setOwnerCoverageRecords] = useState([]);
   const [adultConfirmations, setAdultConfirmations] = useState({});
   const copy = UI_COPY[language] || UI_COPY.zh;
   const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
@@ -733,7 +795,7 @@ export default function CollectiveDreamDashboard({
             includeAdult: canLoadAdultRecords,
           }),
           fetchResearchSignals({
-            includeAdult: canLoadAdultRecords,
+            includeAdult: true,
           }),
           fetchSharedCustomTags(),
         ]);
@@ -816,6 +878,30 @@ export default function CollectiveDreamDashboard({
     }
 
     loadFollowingRecorders();
+
+    return () => {
+      ignore = true;
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser?.uid || currentUser.isAnonymous) {
+      setOwnerCoverageRecords([]);
+      return undefined;
+    }
+
+    let ignore = false;
+
+    async function loadOwnerCoverageRecords() {
+      try {
+        const records = await fetchOwnedRecords(currentUser);
+        if (!ignore) setOwnerCoverageRecords(records);
+      } catch {
+        if (!ignore) setOwnerCoverageRecords([]);
+      }
+    }
+
+    loadOwnerCoverageRecords();
 
     return () => {
       ignore = true;
@@ -956,10 +1042,26 @@ export default function CollectiveDreamDashboard({
       buildCollectivePatternStats({
         dreams: filteredDreams,
         allDreams: dreams,
+        researchSignals,
+        ownerRecords: ownerCoverageRecords,
         language,
         filtersActive: Boolean(query.trim() || selectedTagSlugs.length > 0),
+        queryActive: Boolean(query.trim()),
+        selectedTagSlugs,
+        matchMode,
+        canLoadAdultRecords,
       }),
-    [dreams, filteredDreams, language, query, selectedTagSlugs]
+    [
+      dreams,
+      filteredDreams,
+      researchSignals,
+      ownerCoverageRecords,
+      language,
+      query,
+      selectedTagSlugs,
+      matchMode,
+      canLoadAdultRecords,
+    ]
   );
   const schemaStats = useMemo(() => buildSchemaStats(dreams), [dreams]);
   const tagCounts = useMemo(() => buildTagCounts(dreams), [dreams]);
@@ -1582,7 +1684,18 @@ function mergeDreamSets(...dreamSets) {
   return [...merged.values()];
 }
 
-function buildCollectivePatternStats({ dreams, allDreams, language, filtersActive }) {
+function buildCollectivePatternStats({
+  dreams,
+  allDreams,
+  researchSignals = [],
+  ownerRecords = [],
+  language,
+  filtersActive,
+  queryActive = false,
+  selectedTagSlugs = [],
+  matchMode = "any",
+  canLoadAdultRecords = false,
+}) {
   const emotionCounts = new Map();
   const symbolCounts = new Map();
   const dreamTypeCounts = new Map();
@@ -1596,56 +1709,106 @@ function buildCollectivePatternStats({ dreams, allDreams, language, filtersActiv
   const lengthBinCounts = new Map();
   const datedDreams = [];
   let missingDateCount = 0;
+  let missingLanguageCount = 0;
+  let missingTagsCount = 0;
   let lucidCount = 0;
   let nightmareCount = 0;
+  const allSignals = Array.isArray(researchSignals) ? researchSignals.filter(Boolean) : [];
+  const safeSignals = allSignals.filter((signal) =>
+    canUseSignalInPublicPatterns(signal, canLoadAdultRecords)
+  );
+  const filteredSignals = safeSignals.filter((signal) =>
+    matchesSignalTagFilters(signal, selectedTagSlugs, matchMode)
+  );
+  const useSignals = !queryActive && filteredSignals.length > 0;
 
-  dreams.forEach((dream) => {
-    const originalLanguage = normalizeLanguage(dream.originalLanguage);
-    incrementCount(languageCounts, getLanguageName(originalLanguage, language));
+  if (useSignals) {
+    filteredSignals.forEach((signal) => {
+      const originalLanguage = normalizeLanguage(signal.language || "zh");
+      incrementCount(languageCounts, getLanguageName(originalLanguage, language));
+      if (signal.languageMissing) missingLanguageCount += 1;
 
-    const dreamDate = dream.dreamDateStatus === "hidden" ? "" : dream.dreamDate || dream.dream_date || "";
-    const parsedDate = new Date(dreamDate).getTime();
-    if (Number.isFinite(parsedDate)) {
-      datedDreams.push(parsedDate);
-    } else {
-      missingDateCount += 1;
-    }
-
-    const country = String(dream.creatorCountry || dream.creatorCountryRegion || "").trim();
-    if (country) incrementCount(countryCounts, country);
-
-    const dreamText = getDreamText(dream);
-    incrementCount(lengthBinCounts, getDreamLengthBin(dreamText));
-
-    if (hasDreamSlug(dream, "lucid")) lucidCount += 1;
-    if (hasDreamSlug(dream, "nightmare")) nightmareCount += 1;
-
-    const visibleTagLabels = [];
-
-    dream.tags?.forEach((tag) => {
-      if (!tag?.slug) return;
-      const label = getTagName(tag, language);
-      visibleTagLabels.push(label);
-
-      if (tag.category === "Emotions") incrementCount(emotionCounts, label);
-      if (tag.category === "Dream Types") incrementCount(dreamTypeCounts, label);
-      if (tag.category === "Psychological Observables") incrementCount(psychologyCounts, label);
-      if (tag.category === "Dream Analysis") incrementCount(analysisMarkerCounts, label);
-      if (tag.category === "Perspective") incrementCount(perspectiveCounts, label);
-      if (tag.category === "Weather") incrementCount(weatherCounts, label);
-      if (["Anomalies", "Dream Analysis", "Entities", "Environment"].includes(tag.category)) {
-        incrementCount(symbolCounts, label);
+      if (signal.monthBucket) {
+        const parsedDate = new Date(`${signal.monthBucket}-01`).getTime();
+        if (Number.isFinite(parsedDate)) datedDreams.push(parsedDate);
+      } else if (signal.yearBucket) {
+        const parsedDate = new Date(`${signal.yearBucket}-01-01`).getTime();
+        if (Number.isFinite(parsedDate)) datedDreams.push(parsedDate);
+      } else {
+        missingDateCount += 1;
       }
+
+      const selectedSlugs = getSignalSelectedSlugs(signal);
+      const allSignalSlugs = getSignalAllSlugs(signal);
+
+      if (allSignalSlugs.length === 0) missingTagsCount += 1;
+
+      incrementCount(lengthBinCounts, getSignalLengthBinLabel(signal.dreamLengthBucket));
+
+      if (allSignalSlugs.includes("lucid")) lucidCount += 1;
+      if (allSignalSlugs.includes("nightmare")) nightmareCount += 1;
+
+      addSlugCounts(emotionCounts, signal.emotionTags, language);
+      addSlugCounts(dreamTypeCounts, signal.dreamTypeTags, language);
+      addSlugCounts(psychologyCounts, signal.psychologicalObservationTags, language);
+      addSlugCounts(symbolCounts, [
+        ...(signal.settingTags || []),
+        ...(signal.entityTags || []),
+        ...(signal.aiSuggestedTagSlugs || []),
+      ], language);
+
+      const cooccurrenceLabels = uniqueValues(selectedSlugs)
+        .map((slug) => getSignalTagLabel(slug, language))
+        .filter(Boolean)
+        .slice(0, 18);
+
+      addCooccurrenceCounts(cooccurrenceCounts, cooccurrenceLabels);
     });
+  } else {
+    dreams.forEach((dream) => {
+      const originalLanguage = normalizeLanguage(dream.originalLanguage);
+      incrementCount(languageCounts, getLanguageName(originalLanguage, language));
+      if (!dream.originalLanguage) missingLanguageCount += 1;
 
-    const uniqueLabels = [...new Set(visibleTagLabels)].slice(0, 18);
-    for (let leftIndex = 0; leftIndex < uniqueLabels.length; leftIndex += 1) {
-      for (let rightIndex = leftIndex + 1; rightIndex < uniqueLabels.length; rightIndex += 1) {
-        const pair = [uniqueLabels[leftIndex], uniqueLabels[rightIndex]].sort().join(" + ");
-        incrementCount(cooccurrenceCounts, pair);
+      const dreamDate = dream.dreamDateStatus === "hidden" ? "" : dream.dreamDate || dream.dream_date || "";
+      const parsedDate = new Date(dreamDate).getTime();
+      if (Number.isFinite(parsedDate)) {
+        datedDreams.push(parsedDate);
+      } else {
+        missingDateCount += 1;
       }
-    }
-  });
+
+      const country = String(dream.creatorCountry || dream.creatorCountryRegion || "").trim();
+      if (country) incrementCount(countryCounts, country);
+
+      const dreamText = getDreamText(dream);
+      incrementCount(lengthBinCounts, getDreamLengthBin(dreamText));
+
+      if (hasDreamSlug(dream, "lucid")) lucidCount += 1;
+      if (hasDreamSlug(dream, "nightmare")) nightmareCount += 1;
+
+      const visibleTagLabels = [];
+
+      dream.tags?.forEach((tag) => {
+        if (!tag?.slug) return;
+        const label = getTagName(tag, language);
+        visibleTagLabels.push(label);
+
+        if (tag.category === "Emotions") incrementCount(emotionCounts, label);
+        if (tag.category === "Dream Types") incrementCount(dreamTypeCounts, label);
+        if (tag.category === "Psychological Observables") incrementCount(psychologyCounts, label);
+        if (tag.category === "Dream Analysis") incrementCount(analysisMarkerCounts, label);
+        if (tag.category === "Perspective") incrementCount(perspectiveCounts, label);
+        if (tag.category === "Weather") incrementCount(weatherCounts, label);
+        if (["Anomalies", "Dream Analysis", "Entities", "Environment"].includes(tag.category)) {
+          incrementCount(symbolCounts, label);
+        }
+      });
+
+      if (visibleTagLabels.length === 0) missingTagsCount += 1;
+      addCooccurrenceCounts(cooccurrenceCounts, [...new Set(visibleTagLabels)].slice(0, 18));
+    });
+  }
 
   const dateRange = buildDateRangeLabel(datedDreams);
   const suppressedCount = [
@@ -1659,14 +1822,24 @@ function buildCollectivePatternStats({ dreams, allDreams, language, filtersActiv
     countryCounts,
     cooccurrenceCounts,
   ].reduce((total, map) => total + countSuppressedGroups(map), 0);
+  const sampleSize = useSignals ? filteredSignals.length : dreams.length;
 
   return {
-    sampleSize: dreams.length,
+    sampleSize,
     totalLoaded: allDreams.length,
     filtersActive,
+    statsSource: useSignals ? "research_signals" : "public_records",
     dateRange,
     missingDateCount,
+    missingLanguageCount,
+    missingTagsCount,
     suppressedCount,
+    coverageReport: buildBiasCoverageReport({
+      allDreams,
+      allSignals,
+      ownerRecords,
+      canLoadAdultRecords,
+    }),
     emotions: toPrivacySafeEntries(emotionCounts),
     symbols: toPrivacySafeEntries(symbolCounts),
     dreamTypes: toPrivacySafeEntries(dreamTypeCounts),
@@ -1681,6 +1854,134 @@ function buildCollectivePatternStats({ dreams, allDreams, language, filtersActiv
     lucidCount,
     nightmareCount,
   };
+}
+
+function canUseSignalInPublicPatterns(signal, canLoadAdultRecords) {
+  if (!signal) return false;
+  if (signal.adultContent && !canLoadAdultRecords) return false;
+  if (isHighSensitivityBucket(signal.sensitivityLevelBucket)) return false;
+  return true;
+}
+
+function isHighSensitivityBucket(bucket) {
+  return bucket === "high" || bucket === "restricted";
+}
+
+function matchesSignalTagFilters(signal, selectedTagSlugs = [], matchMode = "any") {
+  if (!selectedTagSlugs.length) return true;
+
+  const signalSlugs = getSignalAllSlugs(signal);
+
+  return matchMode === "all"
+    ? selectedTagSlugs.every((slug) => signalSlugs.includes(slug))
+    : selectedTagSlugs.some((slug) => signalSlugs.includes(slug));
+}
+
+function getSignalSelectedSlugs(signal = {}) {
+  return uniqueValues([
+    ...(signal.selectedTagSlugs || []),
+    ...(signal.tagSlugs || []),
+    ...(signal.confirmedTagSlugs || []),
+  ]);
+}
+
+function getSignalAllSlugs(signal = {}) {
+  return uniqueValues([
+    ...getSignalSelectedSlugs(signal),
+    ...(signal.aiSuggestedTagSlugs || []),
+    ...(signal.emotionTags || []),
+    ...(signal.settingTags || []),
+    ...(signal.entityTags || []),
+    ...(signal.dreamTypeTags || []),
+    ...(signal.psychologicalObservationTags || []),
+  ]);
+}
+
+function uniqueValues(values = []) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function addSlugCounts(map, slugs = [], language) {
+  uniqueValues(slugs).forEach((slug) => incrementCount(map, getSignalTagLabel(slug, language)));
+}
+
+function getSignalTagLabel(slug, language) {
+  const tag = RECORD_TAGS[slug] || { slug, name: slug };
+  return getTagName(tag, language) || slug;
+}
+
+function addCooccurrenceCounts(map, labels = []) {
+  const uniqueLabels = uniqueValues(labels).slice(0, 18);
+
+  for (let leftIndex = 0; leftIndex < uniqueLabels.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < uniqueLabels.length; rightIndex += 1) {
+      const pair = [uniqueLabels[leftIndex], uniqueLabels[rightIndex]].sort().join(" + ");
+      incrementCount(map, pair);
+    }
+  }
+}
+
+function getSignalLengthBinLabel(bucket) {
+  const normalized = String(bucket || "").trim();
+  const labels = {
+    empty: "0",
+    short: "1-50",
+    medium: "51-200",
+    long: "201-800",
+    very_long: "801+",
+  };
+
+  return labels[normalized] || normalized || "0";
+}
+
+function buildBiasCoverageReport({
+  allDreams = [],
+  allSignals = [],
+  ownerRecords = [],
+  canLoadAdultRecords = false,
+}) {
+  const statsOnlySignals = allSignals.filter((signal) => signal.sharingMode === "stats_only");
+  const missingDateSignals = allSignals.filter(
+    (signal) => !signal.monthBucket && !signal.yearBucket
+  );
+  const missingLanguageSignals = allSignals.filter(
+    (signal) => signal.languageMissing || !signal.language
+  );
+  const missingTagSignals = allSignals.filter(
+    (signal) => getSignalAllSlugs(signal).length === 0
+  );
+  const adultExcludedSignals = allSignals.filter(
+    (signal) => signal.adultContent && !canLoadAdultRecords
+  );
+  const highSensitivitySignals = allSignals.filter((signal) =>
+    isHighSensitivityBucket(signal.sensitivityLevelBucket)
+  );
+  const unconfirmedAiSignals = allSignals.filter((signal) => signal.hasUnconfirmedAiTags);
+  const ownerPrivateExcluded = Array.isArray(ownerRecords)
+    ? ownerRecords.filter(isOwnerPrivateExcludedRecord).length
+    : 0;
+
+  return {
+    publicReadableCount: allDreams.length,
+    statsOnlyPrivateCount: statsOnlySignals.length,
+    fullyPrivateExcludedCount: ownerPrivateExcluded,
+    fullyPrivateExcludedAvailable: Array.isArray(ownerRecords) && ownerRecords.length > 0,
+    missingDateCount: missingDateSignals.length,
+    missingLanguageCount: missingLanguageSignals.length,
+    missingTagsCount: missingTagSignals.length,
+    unconfirmedAiTagsCount: unconfirmedAiSignals.length,
+    adultContentExcludedCount: adultExcludedSignals.length,
+    highSensitivityExcludedCount: highSensitivitySignals.length,
+    signalSampleSize: allSignals.length,
+  };
+}
+
+function isOwnerPrivateExcludedRecord(record = {}) {
+  const sharingMode = normalizePrivacySharingMode(record.sharingMode || "private");
+  const contributes =
+    record.researchConsent === true && record.includedInResearchStats === true;
+
+  return sharingMode === "private" && !contributes && record.isPublic !== true;
 }
 
 function incrementCount(map, key) {
@@ -2341,6 +2642,8 @@ function CollectivePatternsPanel({ stats, copy, expanded, onToggle }) {
         </div>
       )}
 
+      <BiasCoverageReport stats={stats} copy={copy} />
+
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <PatternBarList
           title={copy.patternEmotions}
@@ -2488,6 +2791,69 @@ function CollectiveVisualModal({ stats, copy, onClose }) {
         </div>
       </section>
     </div>
+  );
+}
+
+function BiasCoverageReport({ stats, copy }) {
+  const report = stats.coverageReport || {};
+  const rows = [
+    { label: copy.publicReadableDreams, value: report.publicReadableCount || 0 },
+    { label: copy.statsOnlyDreams, value: report.statsOnlyPrivateCount || 0 },
+    {
+      label: copy.fullyPrivateExcludedDreams,
+      value: report.fullyPrivateExcludedAvailable
+        ? report.fullyPrivateExcludedCount || 0
+        : copy.ownerOnlyCoverage,
+    },
+    { label: copy.patternMissingData, value: report.missingDateCount || stats.missingDateCount || 0 },
+    { label: copy.missingLanguage, value: report.missingLanguageCount || stats.missingLanguageCount || 0 },
+    { label: copy.missingTags, value: report.missingTagsCount || stats.missingTagsCount || 0 },
+    { label: copy.unconfirmedAiTags, value: report.unconfirmedAiTagsCount || 0 },
+    { label: copy.adultExcluded, value: report.adultContentExcludedCount || 0 },
+    { label: copy.highSensitivityExcluded, value: report.highSensitivityExcludedCount || 0 },
+    { label: copy.signalSample, value: `N=${report.signalSampleSize || 0}` },
+  ];
+
+  return (
+    <section className="mt-6 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.04] p-5 sm:p-6">
+      <div className="grid gap-5 lg:grid-cols-[1.05fr_.95fr]">
+        <div>
+          <h3 className="cdo-card-heading">
+            {copy.biasCoverageTitle}
+          </h3>
+          <p className="cdo-body-copy mt-3 leading-relaxed">
+            {copy.biasCoverageText}
+          </p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {rows.map((row) => (
+              <div
+                key={row.label}
+                className="rounded-2xl border border-white/10 bg-black/25 p-3"
+              >
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100/60">
+                  {row.label}
+                </p>
+                <p className="mt-2 break-words font-mono text-lg font-bold text-zinc-100">
+                  {row.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-fuchsia-300/15 bg-black/25 p-4">
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-fuchsia-100/70">
+            {copy.possibleBiasTitle}
+          </p>
+          <ul className="mt-3 space-y-2 text-sm leading-relaxed text-zinc-300">
+            {(copy.possibleBiasItems || []).map((item) => (
+              <li key={item} className="border-l border-fuchsia-300/25 pl-3">
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
   );
 }
 

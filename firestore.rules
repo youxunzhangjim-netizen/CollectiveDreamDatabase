@@ -582,23 +582,35 @@ service cloud.firestore {
 
     function validResearchSignal(data, signalId) {
       return data.keys().hasOnly([
+          "signalVersion",
           "recordIdHash",
           "userGroupHash",
           "language",
+          "languageMissing",
           "monthBucket",
+          "yearBucket",
+          "period",
           "dreamLengthBucket",
           "tagSlugs",
+          "selectedTagSlugs",
+          "confirmedTagSlugs",
+          "aiSuggestedTagSlugs",
           "emotionTags",
           "settingTags",
+          "entityTags",
           "dreamTypeTags",
           "psychologicalObservationTags",
           "adultContent",
           "sensitivityLevelBucket",
+          "importSourceType",
+          "titleSource",
           "sharingMode",
           "tagSource",
-          "confirmedByUser"
+          "confirmedByUser",
+          "hasUnconfirmedAiTags"
         ])
         && data.keys().hasAll([
+          "signalVersion",
           "recordIdHash",
           "userGroupHash",
           "language",
@@ -606,24 +618,36 @@ service cloud.firestore {
           "adultContent",
           "sensitivityLevelBucket",
           "sharingMode",
-          "confirmedByUser"
+          "confirmedByUser",
+          "hasUnconfirmedAiTags"
         ])
+        && data.signalVersion == "2026.1"
         && data.recordIdHash == signalId
         && requiredString(data, "recordIdHash", 1, 80)
         && requiredString(data, "userGroupHash", 1, 80)
         && validLanguage(data.language)
+        && optionalBool(data, "languageMissing")
         && optionalString(data, "monthBucket", 16)
+        && optionalString(data, "yearBucket", 8)
+        && optionalString(data, "period", 32)
         && data.dreamLengthBucket in ["empty", "short", "medium", "long", "very_long"]
         && optionalList(data, "tagSlugs", 160)
+        && optionalList(data, "selectedTagSlugs", 160)
+        && optionalList(data, "confirmedTagSlugs", 160)
+        && optionalList(data, "aiSuggestedTagSlugs", 160)
         && optionalList(data, "emotionTags", 80)
         && optionalList(data, "settingTags", 80)
+        && optionalList(data, "entityTags", 80)
         && optionalList(data, "dreamTypeTags", 80)
         && optionalList(data, "psychologicalObservationTags", 80)
         && data.adultContent is bool
         && data.sensitivityLevelBucket in ["none", "low", "medium", "high", "restricted"]
+        && optionalString(data, "importSourceType", 40)
+        && optionalString(data, "titleSource", 80)
         && validSharingMode(data.sharingMode)
         && optionalString(data, "tagSource", 80)
-        && data.confirmedByUser is bool;
+        && data.confirmedByUser is bool
+        && data.hasUnconfirmedAiTags is bool;
     }
 
     function validOwnerAuditData(data) {

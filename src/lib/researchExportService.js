@@ -473,17 +473,30 @@ function buildResearchSignalsSummary(signals = []) {
 
   return {
     sampleSize: safeSignals.length,
+    signalVersions: countValues(safeSignals.map((signal) => signal.signalVersion)),
     languages: countValues(safeSignals.map((signal) => signal.language)),
     monthBuckets: countValues(safeSignals.map((signal) => signal.monthBucket)),
+    yearBuckets: countValues(safeSignals.map((signal) => signal.yearBucket)),
+    periods: countValues(safeSignals.map((signal) => signal.period)),
     dreamLengthBuckets: countValues(safeSignals.map((signal) => signal.dreamLengthBucket)),
     sensitivityBuckets: countValues(safeSignals.map((signal) => signal.sensitivityLevelBucket)),
     sharingModes: countValues(safeSignals.map((signal) => signal.sharingMode)),
+    importSourceTypes: countValues(safeSignals.map((signal) => signal.importSourceType)),
+    titleSources: countValues(safeSignals.map((signal) => signal.titleSource)),
+    tagSources: countValues(safeSignals.map((signal) => signal.tagSource)),
+    unconfirmedAiTags: countValues(
+      safeSignals.map((signal) => (signal.hasUnconfirmedAiTags ? "present" : "none"))
+    ),
     adultContent: countValues(
       safeSignals.map((signal) => (signal.adultContent ? "adult" : "non_adult"))
     ),
     tagSlugs: countValues(safeSignals.flatMap((signal) => signal.tagSlugs || [])),
+    selectedTagSlugs: countValues(safeSignals.flatMap((signal) => signal.selectedTagSlugs || [])),
+    confirmedTagSlugs: countValues(safeSignals.flatMap((signal) => signal.confirmedTagSlugs || [])),
+    aiSuggestedTagSlugs: countValues(safeSignals.flatMap((signal) => signal.aiSuggestedTagSlugs || [])),
     emotionTags: countValues(safeSignals.flatMap((signal) => signal.emotionTags || [])),
     settingTags: countValues(safeSignals.flatMap((signal) => signal.settingTags || [])),
+    entityTags: countValues(safeSignals.flatMap((signal) => signal.entityTags || [])),
     dreamTypeTags: countValues(safeSignals.flatMap((signal) => signal.dreamTypeTags || [])),
     psychologicalObservationTags: countValues(
       safeSignals.flatMap((signal) => signal.psychologicalObservationTags || [])

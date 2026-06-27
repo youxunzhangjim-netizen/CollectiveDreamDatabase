@@ -24,6 +24,11 @@ const baseRecord = {
   tags: [{ slug: "fear", category: "Emotions" }],
   adultContent: false,
   minimumViewerAge: 0,
+  researchConsent: true,
+  includedInResearchStats: true,
+  sourceType: "single_record",
+  titleSource: "user",
+  tagsSource: "user_selected",
 };
 
 assert.equal(
@@ -106,7 +111,28 @@ assert.equal(
   assert.equal("dream_text" in researchSignal, false);
   assert.equal("title" in researchSignal, false);
   assert.equal("recordId" in researchSignal, false);
+  assert.equal("ownerId" in researchSignal, false);
+  assert.equal("publicText" in researchSignal, false);
+  assert.equal(researchSignal.signalVersion, "2026.1");
+  assert.equal(researchSignal.language, "en");
+  assert.deepEqual(researchSignal.selectedTagSlugs, ["fear"]);
+  assert.deepEqual(researchSignal.emotionTags, ["fear"]);
+  assert.equal(researchSignal.importSourceType, "single_record");
+  assert.equal(researchSignal.titleSource, "user");
   assert.ok(researchSignal.recordIdHash);
+}
+
+{
+  const researchSignal = buildResearchSignalDocument(
+    {
+      ...baseRecord,
+      researchConsent: false,
+      includedInResearchStats: true,
+    },
+    DREAM_SHARING_MODES.STATS_ONLY
+  );
+
+  assert.equal(researchSignal, null);
 }
 
 {

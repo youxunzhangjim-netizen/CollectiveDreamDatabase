@@ -50,6 +50,7 @@ function mapRecordSnapshot(snapshot) {
 }
 
 export const DREAM_SHARING_MODES = PRIVACY_SHARING_MODES;
+export const RESEARCH_SIGNAL_VERSION = "2026.1";
 
 export const PRIVACY_PRESETS = {
   PERSONAL_JOURNAL: "personal_journal",
@@ -293,6 +294,10 @@ function shouldWriteResearchSignal(sharingMode) {
   return normalizedMode === DREAM_SHARING_MODES.STATS_ONLY || shouldWritePublicDream(normalizedMode);
 }
 
+function hasResearchSignalConsent(record = {}) {
+  return record.researchConsent === true && record.includedInResearchStats === true;
+}
+
 function getPublicTitle(record = {}, sharingMode) {
   if (normalizeSharingMode(sharingMode) === DREAM_SHARING_MODES.REDACTED_PUBLIC) {
     return limitString(record.publicTitle || record.redactedTitle || "", 220);
@@ -393,6 +398,74 @@ function getSensitivityLevelBucket(level) {
   return "none";
 }
 
+function uniqueStrings(values = []) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function getSelectedTagSlugs(tags = []) {
+  return uniqueStrings(tags.map((tag) => tag?.slug || tag?.id || tag));
+}
+
+function getConfirmedTagSlugs(record = {}, tags = []) {
+  const tagsReviewed = Boolean(record.tagsReviewedByUser || record.tags_reviewed_by_user);
+
+  if (tagsReviewed) return getSelectedTagSlugs(tags);
+
+  return uniqueStrings(
+    tags
+      .filter((tag) =>
+        tag?.confirmed === true ||
+        tag?.confirmedByUser === true ||
+        tag?.reviewedByUser === true ||
+        tag?.source === "user" ||
+        tag?.source === "import_confirmed"
+      )
+      .map((tag) => tag.slug)
+  );
+}
+
+function isAiTagged(tag = {}) {
+  const source = String(tag.source || tag.generatedBy || tag.provider || "").toLowerCase();
+  return tag.aiSuggested === true || source.includes("ai") || source.includes("model");
+}
+
+function isSafeConfirmedSuggestion(tag = {}, record = {}) {
+  const safe =
+    tag.safe === true ||
+    tag.markedSafe === true ||
+    tag.isSafe === true ||
+    tag.needsReview === false;
+  const confirmed =
+    tag.confirmed === true ||
+    tag.confirmedByUser === true ||
+    tag.reviewedByUser === true ||
+    Boolean(record.tagsReviewedByUser || record.tags_reviewed_by_user);
+
+  return safe && confirmed;
+}
+
+function getAiSuggestedTagSlugs(record = {}) {
+  const suggestedTags = Array.isArray(record.suggestedTags)
+    ? record.suggestedTags
+    : [];
+
+  return uniqueStrings(
+    suggestedTags
+      .filter((tag) => tag?.slug && (isSafeConfirmedSuggestion(tag, record) || isAiTagged(tag)))
+      .map((tag) => tag.slug)
+  );
+}
+
+function hasUnconfirmedAiTags(record = {}) {
+  const suggestedTags = Array.isArray(record.suggestedTags)
+    ? record.suggestedTags
+    : [];
+
+  return suggestedTags.some(
+    (tag) => tag?.slug && isAiTagged(tag) && !isSafeConfirmedSuggestion(tag, record)
+  );
+}
+
 function getContentWarnings(record = {}, sensitivityLevel = calculateSensitivityLevel(record)) {
   const warnings = new Set();
   const tags = Array.isArray(record.tags) ? record.tags : [];
@@ -451,7 +524,7 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
 
 export function buildResearchSignalDocument(record = {}, sharingMode = record.sharingMode, ownerUid = "") {
   const normalizedMode = normalizeSharingMode(sharingMode);
-  if (!shouldWriteResearchSignal(normalizedMode)) return null;
+  if (!shouldWriteResearchSignal(normalizedMode) || !hasResearchSignalConsent(record)) return null;
 
   const tags = Array.isArray(record.tags) ? record.tags : [];
   const dreamDate = record.dreamDate || record.dream_date || "";
@@ -459,25 +532,40 @@ export function buildResearchSignalDocument(record = {}, sharingMode = record.sh
   const ownerSeed = ownerUid || record.ownerId || record.creatorId || "";
   const dreamText = record.originalText || record.dream_text || record.text || record.publicText || "";
   const sensitivityLevel = calculateSensitivityLevel(record);
+  const selectedTagSlugs = getSelectedTagSlugs(tags);
+  const confirmedTagSlugs = getConfirmedTagSlugs(record, tags);
+  const aiSuggestedTagSlugs = getAiSuggestedTagSlugs(record);
+  const languageMissing = !String(record.originalLanguage || record.original_language || "").trim();
 
   return {
+    signalVersion: RESEARCH_SIGNAL_VERSION,
     recordIdHash: stableHashString(recordId),
     userGroupHash: stableHashString(ownerSeed || "anonymous"),
-    language: normalizeLanguage(record.originalLanguage || "zh"),
+    language: normalizeLanguage(record.originalLanguage || record.original_language || "zh"),
+    languageMissing,
     monthBucket: /^\d{4}-\d{2}/.test(dreamDate) ? dreamDate.slice(0, 7) : "",
+    yearBucket: /^\d{4}/.test(dreamDate) ? dreamDate.slice(0, 4) : "",
+    period: normalizeDreamPeriod(record.dreamPeriod || record.dream_period),
     dreamLengthBucket: getDreamLengthBucket(dreamText),
-    tagSlugs: tags.map((tag) => tag.slug).filter(Boolean),
+    tagSlugs: selectedTagSlugs,
+    selectedTagSlugs,
+    confirmedTagSlugs,
+    aiSuggestedTagSlugs,
     emotionTags: record.emotionTags || getTagSlugsForCategory(tags, "Emotions"),
     settingTags: record.environmentTags || getTagSlugsForCategory(tags, "Environment"),
+    entityTags: record.entityTags || getTagSlugsForCategory(tags, "Entities"),
     dreamTypeTags: record.dreamTypeTags || getTagSlugsForCategory(tags, "Dream Types"),
     psychologicalObservationTags:
       record.psychologicalObservableTags ||
       getTagSlugsForCategory(tags, "Psychological Observables"),
     adultContent: Boolean(record.adultContent),
     sensitivityLevelBucket: getSensitivityLevelBucket(sensitivityLevel),
+    importSourceType: record.sourceType || (record.importBatchId ? "diary_import" : "single_record"),
+    titleSource: record.titleSource || record.title_source || "",
     sharingMode: normalizedMode,
     tagSource: record.tagsSource || record.tags_source || "user_or_import",
     confirmedByUser: Boolean(record.tagsReviewedByUser || record.tags_reviewed_by_user),
+    hasUnconfirmedAiTags: hasUnconfirmedAiTags(record),
   };
 }
 
