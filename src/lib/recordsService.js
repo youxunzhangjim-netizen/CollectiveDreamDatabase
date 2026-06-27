@@ -514,6 +514,21 @@ export async function createBulkPrivacyJob(currentUser, job = {}) {
   return jobRef.id;
 }
 
+export async function updateBulkPrivacyJob(currentUser, jobId, updates = {}) {
+  if (!currentUser?.uid || !jobId) return;
+
+  await setDoc(
+    doc(requireFirestore(), "BulkPrivacyJobs", jobId),
+    {
+      ownerId: currentUser.uid,
+      userId: currentUser.uid,
+      ...updates,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
 export async function fetchOwnedRecords(currentUser) {
   if (!currentUser?.uid) return [];
 
