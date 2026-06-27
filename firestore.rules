@@ -352,7 +352,12 @@ service cloud.firestore {
 
     function validRecordWriteMinimum(data) {
       return requiredString(data, "ownerId", 1, 128)
-        && requiredString(data, "dream_text", 1, 120000)
+        && (
+          requiredString(data, "dream_text", 1, 120000)
+          || requiredString(data, "originalText", 1, 120000)
+          || requiredString(data, "text", 1, 120000)
+          || requiredString(data, "publicText", 1, 120000)
+        )
         && (!isAnonymousAuth()
           || !data.keys().hasAny(["recordIdentityMode"])
           || data.recordIdentityMode == "anonymous");
