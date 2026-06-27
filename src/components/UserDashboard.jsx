@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  createBulkPrivacyJob,
   deleteOwnedRecord,
   fetchCollectionRecords,
   fetchOwnedRecords,
@@ -37,6 +38,7 @@ import { suggestTagsForDream } from "../lib/dreamDiaryImportService.js";
 import {
   PRIVACY_SHARING_MODES,
   getConsentsForSharingMode,
+  isPublicPrivacySharingMode,
   normalizePrivacySettings,
   normalizePrivacySharingMode,
 } from "../lib/privacyDefaults.js";
@@ -117,6 +119,58 @@ const DASHBOARD_COPY = {
     defaultPseudonymLabel: "Default pseudonym",
     defaultPseudonymPlaceholder: "Name shown only for pseudonym sharing",
     reviewBeforePublicLabel: "Require review before public sharing",
+    presetsTitle: "One-click presets",
+    presetsDescription:
+      "Choose a complete privacy posture for future dreams, or apply it to existing observations after preview.",
+    presetPublicLabel: "Public",
+    presetPrivateLabel: "Private",
+    presetStatsLabel: "Statistics",
+    usePresetButton: "Use this preset",
+    applyPresetButton: "Apply to existing dreams",
+    previewTitle: "Preview preset changes",
+    previewDescription:
+      "Review what will change before applying this preset to your existing observations.",
+    previewAffected: "Will update",
+    previewUnchanged: "Already matching",
+    previewSkipped: "Skipped",
+    previewPublic: "Public after change",
+    previewPrivate: "Private after change",
+    previewStats: "Contributes stats",
+    previewRedactedSkip: "Skipped because a redacted public version needs public text.",
+    previewConfirm: "Confirm bulk apply",
+    previewCancel: "Cancel",
+    bulkPresetApplying: "Applying preset...",
+    bulkPresetApplied: ({ count }) => `${count} dreams updated by preset.`,
+    presetPersonalTitle: "Personal Journal Mode",
+    presetPersonalDescription:
+      "All selected dreams remain fully private. They will not appear in public reading or research statistics.",
+    presetPersonalPublic: "Nothing becomes public.",
+    presetPersonalPrivate: "Dream text, tags, dates, and metadata stay private.",
+    presetPersonalStats: "Nothing is included in collective statistics.",
+    presetResearchTitle: "Research Contributor Mode",
+    presetResearchDescription:
+      "Keep dream text private, but contribute anonymous tags and statistics to collective dream research.",
+    presetResearchPublic: "No dream text is public.",
+    presetResearchPrivate: "Original title and dream words stay private.",
+    presetResearchStats: "Anonymous tags and non-identifying signals contribute.",
+    presetAnonymousTitle: "Anonymous Archive Mode",
+    presetAnonymousDescription:
+      "Publish selected dreams anonymously so others can read them without seeing your identity.",
+    presetAnonymousPublic: "Dream text and tags become public.",
+    presetAnonymousPrivate: "Account identity and email stay hidden.",
+    presetAnonymousStats: "Public records also contribute to statistics.",
+    presetPseudonymTitle: "Pseudonym Archive Mode",
+    presetPseudonymDescription:
+      "Publish selected dreams with your chosen pseudonym. Your account identity stays hidden.",
+    presetPseudonymPublic: "Dream text, tags, and pseudonym become public.",
+    presetPseudonymPrivate: "Account identity and email stay hidden.",
+    presetPseudonymStats: "Public records also contribute to statistics.",
+    presetRedactedTitle: "Redacted Public Archive Mode",
+    presetRedactedDescription:
+      "Keep the original dream private, but publish a reviewed public version.",
+    presetRedactedPublic: "Only the reviewed publicText version becomes public.",
+    presetRedactedPrivate: "Original title and full dream words stay private.",
+    presetRedactedStats: "Tags and non-identifying signals contribute.",
     biologicalSexOptions: {
       female: "Female",
       male: "Male",
@@ -237,6 +291,51 @@ const DASHBOARD_COPY = {
     defaultPseudonymLabel: "預設筆名",
     defaultPseudonymPlaceholder: "只在筆名公開時顯示",
     reviewBeforePublicLabel: "公開前必須先審查",
+    presetsTitle: "一鍵預設模式",
+    presetsDescription: "為未來夢境選擇完整隱私姿態，或先預覽再套用到既有觀測。",
+    presetPublicLabel: "公開",
+    presetPrivateLabel: "私人",
+    presetStatsLabel: "統計",
+    usePresetButton: "使用此預設",
+    applyPresetButton: "套用到既有夢境",
+    previewTitle: "預覽預設變更",
+    previewDescription: "套用到既有觀測前，先確認會改變哪些夢境。",
+    previewAffected: "將更新",
+    previewUnchanged: "已相同",
+    previewSkipped: "略過",
+    previewPublic: "變更後公開",
+    previewPrivate: "變更後私人",
+    previewStats: "加入統計",
+    previewRedactedSkip: "因公開節錄版需要 publicText，部分夢境會略過。",
+    previewConfirm: "確認批次套用",
+    previewCancel: "取消",
+    bulkPresetApplying: "正在套用預設...",
+    bulkPresetApplied: ({ count }) => `已用預設更新 ${count} 則夢境。`,
+    presetPersonalTitle: "個人日誌模式",
+    presetPersonalDescription: "所有選取夢境保持完全私人，不會出現在公開閱讀或研究統計中。",
+    presetPersonalPublic: "沒有內容會公開。",
+    presetPersonalPrivate: "夢境文字、標籤、日期與資料都保持私人。",
+    presetPersonalStats: "不加入集體統計。",
+    presetResearchTitle: "研究貢獻模式",
+    presetResearchDescription: "夢境文字保持私人，但匿名標籤與統計會貢獻給集體夢境研究。",
+    presetResearchPublic: "夢境文字不公開。",
+    presetResearchPrivate: "原始標題與夢境文字保持私人。",
+    presetResearchStats: "匿名標籤與非識別訊號加入統計。",
+    presetAnonymousTitle: "匿名檔案模式",
+    presetAnonymousDescription: "匿名發布選取夢境，讓他人閱讀但看不到你的身份。",
+    presetAnonymousPublic: "夢境文字與標籤會公開。",
+    presetAnonymousPrivate: "帳戶身份與電子郵件保持隱藏。",
+    presetAnonymousStats: "公開紀錄也加入統計。",
+    presetPseudonymTitle: "筆名檔案模式",
+    presetPseudonymDescription: "以你選擇的筆名發布夢境，帳戶身份仍保持隱藏。",
+    presetPseudonymPublic: "夢境文字、標籤與筆名會公開。",
+    presetPseudonymPrivate: "帳戶身份與電子郵件保持隱藏。",
+    presetPseudonymStats: "公開紀錄也加入統計。",
+    presetRedactedTitle: "節錄公開檔案模式",
+    presetRedactedDescription: "原始夢境保持私人，只公開已審查的版本。",
+    presetRedactedPublic: "只有 reviewed publicText 版本會公開。",
+    presetRedactedPrivate: "原始標題與完整夢境文字保持私人。",
+    presetRedactedStats: "標籤與非識別訊號加入統計。",
     biologicalSexOptions: {
       female: "女性",
       male: "男性",
@@ -358,6 +457,58 @@ const DASHBOARD_COPY = {
     defaultPseudonymLabel: "Seudónimo predeterminado",
     defaultPseudonymPlaceholder: "Nombre mostrado solo con seudónimo",
     reviewBeforePublicLabel: "Revisar antes de publicar",
+    presetsTitle: "Presets de un clic",
+    presetsDescription:
+      "Elige una postura completa de privacidad para sueños futuros o aplícala a observaciones existentes tras previsualizar.",
+    presetPublicLabel: "Público",
+    presetPrivateLabel: "Privado",
+    presetStatsLabel: "Estadísticas",
+    usePresetButton: "Usar este preset",
+    applyPresetButton: "Aplicar a sueños existentes",
+    previewTitle: "Previsualizar cambios",
+    previewDescription:
+      "Revisa qué cambiará antes de aplicar este preset a tus observaciones existentes.",
+    previewAffected: "Se actualizarán",
+    previewUnchanged: "Ya coinciden",
+    previewSkipped: "Omitidos",
+    previewPublic: "Públicos después",
+    previewPrivate: "Privados después",
+    previewStats: "Aportan estadísticas",
+    previewRedactedSkip: "Se omiten sueños sin publicText para la versión redactada.",
+    previewConfirm: "Confirmar aplicación",
+    previewCancel: "Cancelar",
+    bulkPresetApplying: "Aplicando preset...",
+    bulkPresetApplied: ({ count }) => `${count} sueños actualizados por preset.`,
+    presetPersonalTitle: "Modo diario personal",
+    presetPersonalDescription:
+      "Todos los sueños seleccionados permanecen privados. No aparecerán en lectura pública ni estadísticas de investigación.",
+    presetPersonalPublic: "Nada se vuelve público.",
+    presetPersonalPrivate: "Texto, etiquetas, fechas y metadatos siguen privados.",
+    presetPersonalStats: "Nada se incluye en estadísticas colectivas.",
+    presetResearchTitle: "Modo contribución de investigación",
+    presetResearchDescription:
+      "Mantén privado el texto del sueño, pero aporta etiquetas y estadísticas anónimas a la investigación colectiva.",
+    presetResearchPublic: "No se publica texto del sueño.",
+    presetResearchPrivate: "Título original y palabras del sueño siguen privados.",
+    presetResearchStats: "Etiquetas anónimas y señales no identificables contribuyen.",
+    presetAnonymousTitle: "Modo archivo anónimo",
+    presetAnonymousDescription:
+      "Publica sueños seleccionados de forma anónima para que otros puedan leerlos sin ver tu identidad.",
+    presetAnonymousPublic: "Texto y etiquetas del sueño se vuelven públicos.",
+    presetAnonymousPrivate: "Identidad de cuenta y correo permanecen ocultos.",
+    presetAnonymousStats: "Los registros públicos también aportan estadísticas.",
+    presetPseudonymTitle: "Modo archivo con seudónimo",
+    presetPseudonymDescription:
+      "Publica sueños seleccionados con tu seudónimo. Tu identidad de cuenta sigue oculta.",
+    presetPseudonymPublic: "Texto, etiquetas y seudónimo se vuelven públicos.",
+    presetPseudonymPrivate: "Identidad de cuenta y correo permanecen ocultos.",
+    presetPseudonymStats: "Los registros públicos también aportan estadísticas.",
+    presetRedactedTitle: "Modo archivo público redactado",
+    presetRedactedDescription:
+      "Mantén privado el sueño original, pero publica una versión revisada.",
+    presetRedactedPublic: "Solo la versión publicText revisada se vuelve pública.",
+    presetRedactedPrivate: "Título original y texto completo siguen privados.",
+    presetRedactedStats: "Etiquetas y señales no identificables contribuyen.",
     biologicalSexOptions: {
       female: "Femenino",
       male: "Masculino",
@@ -437,6 +588,62 @@ function getPrivacyDefaultOptions(copy) {
     {
       value: PRIVACY_SHARING_MODES.REDACTED_PUBLIC,
       label: copy.privacyOptionRedacted,
+    },
+  ];
+}
+
+function getOneClickPresetCards(copy) {
+  return [
+    {
+      id: "personal_journal",
+      sharingMode: PRIVACY_SHARING_MODES.PRIVATE,
+      title: copy.presetPersonalTitle,
+      description: copy.presetPersonalDescription,
+      publicLine: copy.presetPersonalPublic,
+      privateLine: copy.presetPersonalPrivate,
+      statsLine: copy.presetPersonalStats,
+      accent: "cyan",
+    },
+    {
+      id: "research_contributor",
+      sharingMode: PRIVACY_SHARING_MODES.STATS_ONLY,
+      title: copy.presetResearchTitle,
+      description: copy.presetResearchDescription,
+      publicLine: copy.presetResearchPublic,
+      privateLine: copy.presetResearchPrivate,
+      statsLine: copy.presetResearchStats,
+      accent: "violet",
+    },
+    {
+      id: "anonymous_archive",
+      sharingMode: PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC,
+      title: copy.presetAnonymousTitle,
+      description: copy.presetAnonymousDescription,
+      publicLine: copy.presetAnonymousPublic,
+      privateLine: copy.presetAnonymousPrivate,
+      statsLine: copy.presetAnonymousStats,
+      accent: "cyan",
+    },
+    {
+      id: "pseudonym_archive",
+      sharingMode: PRIVACY_SHARING_MODES.PSEUDONYM_PUBLIC,
+      title: copy.presetPseudonymTitle,
+      description: copy.presetPseudonymDescription,
+      publicLine: copy.presetPseudonymPublic,
+      privateLine: copy.presetPseudonymPrivate,
+      statsLine: copy.presetPseudonymStats,
+      accent: "fuchsia",
+    },
+    {
+      id: "redacted_archive",
+      sharingMode: PRIVACY_SHARING_MODES.REDACTED_PUBLIC,
+      title: copy.presetRedactedTitle,
+      description: copy.presetRedactedDescription,
+      publicLine: copy.presetRedactedPublic,
+      privateLine: copy.presetRedactedPrivate,
+      statsLine: copy.presetRedactedStats,
+      accent: "violet",
+      requiresPublicText: true,
     },
   ];
 }
@@ -538,6 +745,8 @@ export default function UserDashboard({
   const [recordsError, setRecordsError] = useState("");
   const [bulkSharingMode, setBulkSharingMode] = useState("");
   const [bulkShareNotice, setBulkShareNotice] = useState("");
+  const [presetPreview, setPresetPreview] = useState(null);
+  const [presetApplying, setPresetApplying] = useState(false);
   const [exportDetail, setExportDetail] = useState(EXPORT_DETAIL_LEVELS.ANALYSIS);
   const [timeOrder, setTimeOrder] = useState("desc");
   const exportDetailOptions = [
@@ -549,6 +758,7 @@ export default function UserDashboard({
     () => getPrivacyDefaultOptions(copy),
     [copy]
   );
+  const oneClickPresets = useMemo(() => getOneClickPresetCards(copy), [copy]);
   const activeItems =
     activeTab === "observations"
       ? observations
@@ -694,6 +904,101 @@ export default function UserDashboard({
       defaultSharingMode,
       ...consents,
     }));
+  }
+
+  async function handleUsePresetDefault(preset) {
+    if (!profileDraft) return;
+
+    const defaultSharingMode = normalizePrivacySharingMode(preset.sharingMode);
+    const consents = getConsentsForSharingMode(defaultSharingMode);
+    const nextDraft = {
+      ...normalizePrivacySettings(profileDraft, user),
+      ...profileDraft,
+      defaultSharingMode,
+      ...consents,
+      requireReviewBeforePublic: isPublicPrivacySharingMode(defaultSharingMode)
+        ? true
+        : profileDraft.requireReviewBeforePublic !== false,
+    };
+
+    setProfileDraft(nextDraft);
+    setProfileSaving(true);
+    setProfileNotice("");
+
+    try {
+      await saveUserProfile(user, nextDraft);
+      setProfile(nextDraft);
+      setProfileNotice(copy.profileSaved);
+    } catch (error) {
+      setProfileNotice(error.message);
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  function handleOpenPresetPreview(preset) {
+    setPresetPreview(buildPresetPreview(preset, observations));
+  }
+
+  async function handleConfirmPresetApply() {
+    if (!presetPreview || !user?.uid || presetApplying) return;
+
+    const { preset, affectedRecords } = presetPreview;
+    setPresetApplying(true);
+    setBulkShareNotice(copy.bulkPresetApplying);
+
+    try {
+      const results = await Promise.allSettled(
+        affectedRecords.map((record) =>
+          updateOwnedRecordSharing(
+            user,
+            record.id,
+            {
+              sharingMode: preset.sharingMode,
+              publicText: record.publicText || "",
+              publicTitle: record.publicTitle || "",
+              redactionStatus: preset.requiresPublicText ? "user_confirmed" : "",
+            },
+            profile
+          ).then(() => record.id)
+        )
+      );
+      const successfulIds = new Set(
+        results
+          .filter((result) => result.status === "fulfilled")
+          .map((result) => result.value)
+      );
+      const sharingPatch = buildDashboardSharingPatch(preset.sharingMode, user, profile);
+
+      if (successfulIds.size > 0) {
+        setObservations((current) =>
+          current.map((item) =>
+            successfulIds.has(item.id)
+              ? {
+                  ...item,
+                  ...sharingPatch,
+                  redactionStatus: preset.requiresPublicText ? "user_confirmed" : "",
+                }
+              : item
+          )
+        );
+      }
+
+      await createBulkPrivacyJob(user, {
+        presetId: preset.id,
+        sharingMode: preset.sharingMode,
+        affectedRecordIds: [...successfulIds],
+        skippedRecordIds: presetPreview.skippedRecords.map((record) => record.id),
+        preview: presetPreview.summary,
+      }).catch(() => {});
+
+      setBulkShareNotice(copy.bulkPresetApplied({ count: successfulIds.size }));
+      setPresetPreview(null);
+    } catch {
+      setBulkShareNotice(copy.bulkShareFailed);
+    } finally {
+      setPresetApplying(false);
+    }
   }
 
   async function handleShareAll(sharingMode) {
@@ -938,6 +1243,33 @@ export default function UserDashboard({
                   >
                     {profileSaving ? "..." : copy.saveProfile}
                   </button>
+                </div>
+              )}
+
+              {profileDraft && (
+                <div className="mt-4 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
+                  <h2 className="cdo-card-heading">
+                    {copy.presetsTitle}
+                  </h2>
+                  <p className="cdo-muted-copy mt-2 text-xs leading-relaxed">
+                    {copy.presetsDescription}
+                  </p>
+                  <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                    {oneClickPresets.map((preset) => (
+                      <PresetCard
+                        key={preset.id}
+                        preset={preset}
+                        copy={copy}
+                        active={
+                          normalizePrivacySharingMode(profileDraft.defaultSharingMode) ===
+                          preset.sharingMode
+                        }
+                        disabled={profileSaving || presetApplying}
+                        onUse={() => handleUsePresetDefault(preset)}
+                        onApply={() => handleOpenPresetPreview(preset)}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -1246,6 +1578,16 @@ export default function UserDashboard({
         ) : (
           <EmptyState message={emptyMessage} />
         )}
+
+        {presetPreview && (
+          <PresetPreviewModal
+            preview={presetPreview}
+            copy={copy}
+            applying={presetApplying}
+            onCancel={() => setPresetPreview(null)}
+            onConfirm={handleConfirmPresetApply}
+          />
+        )}
       </div>
     </main>
   );
@@ -1335,6 +1677,55 @@ function buildDashboardSharingPatch(sharingMode, user, profile) {
   };
 }
 
+function buildPresetPreview(preset, records = []) {
+  const sharingMode = normalizePrivacySharingMode(preset.sharingMode);
+  const skippedRecords = [];
+  const unchangedRecords = [];
+  const affectedRecords = [];
+
+  records.forEach((record) => {
+    if (!record?.id) {
+      skippedRecords.push(record);
+      return;
+    }
+
+    if (preset.requiresPublicText && !String(record.publicText || "").trim()) {
+      skippedRecords.push(record);
+      return;
+    }
+
+    if (
+      normalizePrivacySharingMode(record.sharingMode) === sharingMode &&
+      (!preset.requiresPublicText || record.redactionStatus === "user_confirmed")
+    ) {
+      unchangedRecords.push(record);
+      return;
+    }
+
+    affectedRecords.push(record);
+  });
+
+  const eligibleCount = affectedRecords.length + unchangedRecords.length;
+  const publicMode = isPublicPrivacySharingMode(sharingMode);
+  const statsMode = publicMode || sharingMode === PRIVACY_SHARING_MODES.STATS_ONLY;
+
+  return {
+    preset,
+    affectedRecords,
+    skippedRecords,
+    unchangedRecords,
+    summary: {
+      total: records.length,
+      affected: affectedRecords.length,
+      unchanged: unchangedRecords.length,
+      skipped: skippedRecords.length,
+      publicCount: publicMode ? eligibleCount : 0,
+      privateCount: publicMode ? 0 : eligibleCount,
+      statsCount: statsMode ? eligibleCount : 0,
+    },
+  };
+}
+
 function normalizeRecordItem(item, index) {
   const accents = ["cyan", "fuchsia", "violet"];
   const id = item.id || item.recordId;
@@ -1403,6 +1794,10 @@ function normalizeRecordItem(item, index) {
     textEn,
     textZh,
     textEs,
+    publicTitle: item.publicTitle || item.redactedTitle || "",
+    publicText: item.publicText || item.redactedText || "",
+    publicExcerpt: item.publicExcerpt || "",
+    redactionStatus: item.redactionStatus || "",
     images,
     dreamImages: images,
     imageUrls,
@@ -1868,6 +2263,160 @@ function getEmotionFallbackLabel(emotion, language) {
   };
 
   return labels[emotion]?.[language] || labels[emotion]?.en || emotion;
+}
+
+function PresetCard({
+  preset,
+  copy,
+  active,
+  disabled,
+  onUse,
+  onApply,
+}) {
+  const accent = ACCENT_STYLES[preset.accent] || ACCENT_STYLES.cyan;
+
+  return (
+    <article
+      className={[
+        "rounded-2xl border bg-black/30 p-4 shadow-terminal transition",
+        active ? accent.border : "border-white/10",
+      ].join(" ")}
+    >
+      <div className="flex items-start gap-3">
+        <span className={["mt-1 h-2.5 w-2.5 shrink-0 rounded-full", accent.dot].join(" ")} />
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold leading-snug text-zinc-100">
+            {preset.title}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+            {preset.description}
+          </p>
+        </div>
+      </div>
+
+      <dl className="mt-4 grid gap-2">
+        <PresetFact label={copy.presetPublicLabel} value={preset.publicLine} />
+        <PresetFact label={copy.presetPrivateLabel} value={preset.privateLine} />
+        <PresetFact label={copy.presetStatsLabel} value={preset.statsLine} />
+      </dl>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onUse}
+          disabled={disabled}
+          className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {copy.usePresetButton}
+        </button>
+        <button
+          type="button"
+          onClick={onApply}
+          disabled={disabled}
+          className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-200 transition hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {copy.applyPresetButton}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function PresetFact({ label, value }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+      <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200/80">
+        {label}
+      </dt>
+      <dd className="mt-1 text-xs leading-relaxed text-zinc-300">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function PresetPreviewModal({
+  preview,
+  copy,
+  applying,
+  onCancel,
+  onConfirm,
+}) {
+  const { preset, summary } = preview;
+  const canApply = summary.affected > 0 && !applying;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 px-3 py-4 backdrop-blur-sm sm:items-center">
+      <section className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-cyan-300/20 bg-zinc-950 p-5 shadow-[0_0_60px_rgba(34,211,238,.16)] sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="cdo-kicker">{preset.title}</p>
+            <h2 className="mt-2 text-2xl font-semibold text-zinc-50">
+              {copy.previewTitle}
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+              {copy.previewDescription}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={applying}
+            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 font-mono text-xs font-bold text-zinc-300 transition hover:border-cyan-300/35 hover:text-cyan-100 disabled:opacity-50"
+          >
+            X
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <PreviewMetric label={copy.previewAffected} value={summary.affected} />
+          <PreviewMetric label={copy.previewUnchanged} value={summary.unchanged} />
+          <PreviewMetric label={copy.previewSkipped} value={summary.skipped} />
+          <PreviewMetric label={copy.previewPublic} value={summary.publicCount} />
+          <PreviewMetric label={copy.previewPrivate} value={summary.privateCount} />
+          <PreviewMetric label={copy.previewStats} value={summary.statsCount} />
+        </div>
+
+        {preset.requiresPublicText && summary.skipped > 0 && (
+          <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-relaxed text-amber-100">
+            {copy.previewRedactedSkip}
+          </p>
+        )}
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!canApply}
+            className="rounded-2xl border border-cyan-300/35 bg-cyan-300 px-5 py-4 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {applying ? copy.bulkPresetApplying : copy.previewConfirm}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={applying}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 font-mono text-xs font-bold uppercase tracking-[0.18em] text-zinc-200 transition hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {copy.previewCancel}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function PreviewMetric({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/35 p-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-semibold text-cyan-100">
+        {value}
+      </p>
+    </div>
+  );
 }
 
 function getTopMapEntry(map) {
