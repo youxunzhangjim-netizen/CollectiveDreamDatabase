@@ -182,6 +182,29 @@ assert.equal(
 
 {
   const publicMirror = buildPublicDreamDocument(
+    {
+      ...baseRecord,
+      titleZh: "原始標題",
+      dream_text_zh: "原始夢境文字",
+      titleEs: "Título aportado",
+      dream_text_es: "Texto aportado por la persona que registró el sueño.",
+      translationLanguages: ["zh", "es"],
+      translationSource: "recorder_provided",
+    },
+    {},
+    DREAM_SHARING_MODES.ANONYMOUS_PUBLIC
+  );
+
+  assert.deepEqual(publicMirror.translationLanguages, ["zh", "es"]);
+  assert.equal(publicMirror.translationSource, "recorder_provided");
+  assert.equal(publicMirror.publicTranslations.zh.title, "原始標題");
+  assert.equal(publicMirror.publicTranslations.zh.text, "原始夢境文字");
+  assert.equal(publicMirror.publicTranslations.es.title, "Título aportado");
+  assert.equal("ownerId" in publicMirror.publicTranslations.es, false);
+}
+
+{
+  const publicMirror = buildPublicDreamDocument(
     baseRecord,
     { defaultPseudonym: "Night Archivist", displayName: "Real Account Name" },
     DREAM_SHARING_MODES.PSEUDONYM_PUBLIC
@@ -210,6 +233,7 @@ assert.equal(
   assert.equal(publicMirror.publicText, "Safe public wording only.");
   assert.notEqual(publicMirror.publicText, baseRecord.originalText);
   assert.equal("dream_text" in publicMirror, false);
+  assert.equal("publicTranslations" in publicMirror, false);
 }
 
 {

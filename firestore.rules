@@ -413,7 +413,10 @@ service cloud.firestore {
           "adultContent",
           "contentWarnings",
           "originalLanguage",
-          "sharingMode"
+          "sharingMode",
+          "publicTranslations",
+          "translationLanguages",
+          "translationSource"
         ])
         && noForbiddenPublicDreamFields(data)
         && data.keys().hasAll(["publicText", "publicLanguage", "originalLanguage", "sharingMode", "publicConsent", "adultContent"])
@@ -430,10 +433,35 @@ service cloud.firestore {
         && data.publicConsent == true
         && data.adultContent is bool
         && optionalList(data, "contentWarnings", 40)
+        && validPublicTranslations(data)
+        && optionalList(data, "translationLanguages", 3)
+        && (!data.keys().hasAny(["translationSource"])
+          || data.translationSource == "recorder_provided")
         && validSharingMode(data.sharingMode)
         && isPublicSharingMode(data.sharingMode)
         && publicDreamSourceRecordAllowsMirror(data, recordId)
         && redactedPublicDreamUsesReviewedText(data, recordId);
+    }
+
+    function validPublicTranslation(value) {
+      return value is map
+        && value.keys().hasOnly(["title", "text", "excerpt"])
+        && value.keys().hasAll(["text"])
+        && requiredString(value, "text", 1, 120000)
+        && optionalString(value, "title", 220)
+        && optionalString(value, "excerpt", 800);
+    }
+
+    function validPublicTranslations(data) {
+      return !data.keys().hasAny(["publicTranslations"])
+        || (data.publicTranslations is map
+          && data.publicTranslations.keys().hasOnly(["en", "zh", "es"])
+          && (!data.publicTranslations.keys().hasAny(["en"])
+            || validPublicTranslation(data.publicTranslations.en))
+          && (!data.publicTranslations.keys().hasAny(["zh"])
+            || validPublicTranslation(data.publicTranslations.zh))
+          && (!data.publicTranslations.keys().hasAny(["es"])
+            || validPublicTranslation(data.publicTranslations.es)));
     }
 
     function validResearchSignal(data, signalId) {

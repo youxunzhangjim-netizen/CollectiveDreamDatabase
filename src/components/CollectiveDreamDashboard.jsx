@@ -1282,6 +1282,16 @@ function normalizeDreamCard(row) {
   const originalLanguage = normalizeLanguage(
     row.originalLanguage || row.original_language || row.publicLanguage || "en"
   );
+  const publicTranslations =
+    row.publicTranslations &&
+    typeof row.publicTranslations === "object" &&
+    !Array.isArray(row.publicTranslations)
+      ? row.publicTranslations
+      : {};
+  const publicTranslationLanguages = Object.keys(publicTranslations).map(normalizeLanguage);
+  const publicVersionEn = publicTranslations.en || {};
+  const publicVersionZh = publicTranslations.zh || {};
+  const publicVersionEs = publicTranslations.es || {};
   const excerpt =
     row.excerpt ||
     (row.dream_text || row.publicText ? createExcerpt(row.dream_text || row.publicText) : "");
@@ -1371,29 +1381,54 @@ function normalizeDreamCard(row) {
       row.original_excerpt ||
       getLanguageSpecificValue(row, "excerpt", originalLanguage) ||
       createExcerpt(originalText),
-    translationLanguages: normalizeTranslationLanguages(row.translationLanguages),
-    translationSource: row.translationSource || "",
+    translationLanguages: normalizeTranslationLanguages(
+      row.translationLanguages || publicTranslationLanguages
+    ),
+    translationSource:
+      row.translationSource ||
+      (publicTranslationLanguages.length > 0 ? "recorder_provided" : ""),
     title: row.title || row.publicTitle || "",
-    titleEn: row.titleEn || row.title_en || "",
+    titleEn: row.titleEn || row.title_en || publicVersionEn.title || "",
     title_en: row.title_en || row.titleEn || "",
-    titleZh: row.titleZh || row.title_zh || "",
+    titleZh: row.titleZh || row.title_zh || publicVersionZh.title || "",
     title_zh: row.title_zh || row.titleZh,
-    titleEs: row.titleEs || row.title_es || "",
+    titleEs: row.titleEs || row.title_es || publicVersionEs.title || "",
     title_es: row.title_es || row.titleEs,
     excerpt,
-    excerptEn: row.excerptEn || row.excerpt_en || "",
+    excerptEn: row.excerptEn || row.excerpt_en || publicVersionEn.excerpt || "",
     excerpt_en: row.excerpt_en || row.excerptEn || "",
-    excerptZh: row.excerptZh || row.excerpt_zh || "",
+    excerptZh: row.excerptZh || row.excerpt_zh || publicVersionZh.excerpt || "",
     excerpt_zh: row.excerpt_zh || row.excerptZh,
-    excerptEs: row.excerptEs || row.excerpt_es || "",
+    excerptEs: row.excerptEs || row.excerpt_es || publicVersionEs.excerpt || "",
     excerpt_es: row.excerpt_es || row.excerptEs,
     dream_text: row.dream_text || row.dreamText || row.text || row.originalText || row.publicText,
-    dream_text_en: row.dream_text_en || row.dreamTextEn || row.textEn || row.text_en || "",
-    textEn: row.textEn || row.dream_text_en || row.text_en || "",
-    dream_text_zh: row.dream_text_zh || row.dreamTextZh || row.textZh || row.text_zh || "",
-    textZh: row.textZh || row.dream_text_zh || row.text_zh || "",
-    dream_text_es: row.dream_text_es || row.dreamTextEs || row.textEs || row.text_es || "",
-    textEs: row.textEs || row.dream_text_es || row.text_es || "",
+    dream_text_en:
+      row.dream_text_en ||
+      row.dreamTextEn ||
+      row.textEn ||
+      row.text_en ||
+      publicVersionEn.text ||
+      "",
+    textEn:
+      row.textEn || row.dream_text_en || row.text_en || publicVersionEn.text || "",
+    dream_text_zh:
+      row.dream_text_zh ||
+      row.dreamTextZh ||
+      row.textZh ||
+      row.text_zh ||
+      publicVersionZh.text ||
+      "",
+    textZh:
+      row.textZh || row.dream_text_zh || row.text_zh || publicVersionZh.text || "",
+    dream_text_es:
+      row.dream_text_es ||
+      row.dreamTextEs ||
+      row.textEs ||
+      row.text_es ||
+      publicVersionEs.text ||
+      "",
+    textEs:
+      row.textEs || row.dream_text_es || row.text_es || publicVersionEs.text || "",
     dream_date: dreamDate,
     dreamDate,
     dreamDateStatus,

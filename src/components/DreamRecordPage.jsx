@@ -1260,15 +1260,42 @@ function normalizeDreamRecord(record) {
   const originalLanguage = normalizeLanguage(
     record?.originalLanguage || record?.original_language || record?.publicLanguage || "en"
   );
+  const publicTranslations =
+    record?.publicTranslations &&
+    typeof record.publicTranslations === "object" &&
+    !Array.isArray(record.publicTranslations)
+      ? record.publicTranslations
+      : {};
+  const publicTranslationLanguages = Object.keys(publicTranslations).map(normalizeLanguage);
+  const publicVersionEn = publicTranslations.en || {};
+  const publicVersionZh = publicTranslations.zh || {};
+  const publicVersionEs = publicTranslations.es || {};
   const title = record?.title || record?.publicTitle || "";
-  const titleEn = record?.titleEn || record?.title_en || "";
-  const titleZh = record?.titleZh || record?.title_zh || "";
-  const titleEs = record?.titleEs || record?.title_es || "";
+  const titleEn = record?.titleEn || record?.title_en || publicVersionEn.title || "";
+  const titleZh = record?.titleZh || record?.title_zh || publicVersionZh.title || "";
+  const titleEs = record?.titleEs || record?.title_es || publicVersionEs.title || "";
   const text = record?.dream_text || record?.text || record?.publicText || record?.excerpt || "";
   const textEn =
-    record?.dream_text_en || record?.textEn || record?.text_en || record?.excerpt_en || "";
-  const textZh = record?.dream_text_zh || record?.textZh || record?.excerpt_zh || record?.excerpt || "";
-  const textEs = record?.dream_text_es || record?.textEs || record?.excerpt_es || record?.excerpt || "";
+    record?.dream_text_en ||
+    record?.textEn ||
+    record?.text_en ||
+    publicVersionEn.text ||
+    record?.excerpt_en ||
+    "";
+  const textZh =
+    record?.dream_text_zh ||
+    record?.textZh ||
+    publicVersionZh.text ||
+    record?.excerpt_zh ||
+    record?.excerpt ||
+    "";
+  const textEs =
+    record?.dream_text_es ||
+    record?.textEs ||
+    publicVersionEs.text ||
+    record?.excerpt_es ||
+    record?.excerpt ||
+    "";
   const images = normalizeDreamImages(record);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(record);
@@ -1304,8 +1331,12 @@ function normalizeDreamRecord(record) {
     textEn,
     textZh,
     textEs,
-    translationLanguages: normalizeTranslationLanguages(record?.translationLanguages),
-    translationSource: record?.translationSource || "",
+    translationLanguages: normalizeTranslationLanguages(
+      record?.translationLanguages || publicTranslationLanguages
+    ),
+    translationSource:
+      record?.translationSource ||
+      (publicTranslationLanguages.length > 0 ? "recorder_provided" : ""),
     images,
     dreamImages: images,
     imageUrls,

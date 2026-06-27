@@ -557,6 +557,12 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
   const publicTitle = getPublicTitle(record, normalizedMode);
   const originalLanguage = normalizeLanguage(record.originalLanguage || "zh");
   const publicLanguage = normalizeLanguage(record.publicLanguage || originalLanguage);
+  const publicTranslations = buildPublicRecorderTranslations(
+    record,
+    normalizedMode,
+    originalLanguage
+  );
+  const translationLanguages = Object.keys(publicTranslations);
   const publicTags = sanitizePublicTags(record.tags);
   const publicDate = getPublicDateFields(record);
   const sensitivityLevel = calculateSensitivityLevel(record);
@@ -569,7 +575,7 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
         "Dream Observer"
       : "";
 
-  return {
+  const publicDream = {
     publicTitle,
     publicText,
     publicTags,
@@ -584,6 +590,49 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
     originalLanguage,
     sharingMode: normalizedMode,
   };
+
+  if (translationLanguages.length > 0) {
+    publicDream.publicTranslations = publicTranslations;
+    publicDream.translationLanguages = translationLanguages;
+    publicDream.translationSource = "recorder_provided";
+  }
+
+  return publicDream;
+}
+
+function buildPublicRecorderTranslations(record, sharingMode, originalLanguage) {
+  if (
+    normalizeSharingMode(sharingMode) === DREAM_SHARING_MODES.REDACTED_PUBLIC ||
+    record.translationSource !== "recorder_provided"
+  ) {
+    return {};
+  }
+
+  return normalizeTranslationLanguages(record.translationLanguages).reduce(
+    (translations, language) => {
+      const normalizedLanguage = normalizeLanguage(language);
+      if (normalizedLanguage === originalLanguage) return translations;
+
+      const text = limitString(
+        getLanguageSpecificValue(record, "text", normalizedLanguage),
+        120000
+      );
+      if (!text) return translations;
+
+      const title = limitString(
+        getLanguageSpecificValue(record, "title", normalizedLanguage),
+        220
+      );
+
+      translations[normalizedLanguage] = {
+        title,
+        text,
+        excerpt: createExcerpt(text),
+      };
+      return translations;
+    },
+    {}
+  );
 }
 
 export function buildResearchSignalDocument(record = {}, sharingMode = record.sharingMode, ownerUid = "") {
@@ -740,6 +789,41 @@ export async function fetchOwnedRecords(currentUser) {
 
   const snapshot = await getDocs(recordsQuery);
   return mapRecordSnapshot(snapshot);
+}
+
+export async function syncOwnedPublicTranslations(currentUser, records = [], profile = {}) {
+  if (!currentUser?.uid || !Array.isArray(records)) return;
+
+  const firestore = requireFirestore();
+  const candidates = records.filter((record) => {
+    const sharingMode = normalizeSharingMode(record?.sharingMode);
+    return (
+      record?.ownerId === currentUser.uid &&
+      sharingMode !== DREAM_SHARING_MODES.REDACTED_PUBLIC &&
+      shouldWritePublicDream(sharingMode) &&
+      record?.translationSource === "recorder_provided" &&
+      normalizeTranslationLanguages(record?.translationLanguages).length > 0
+    );
+  });
+
+  for (let index = 0; index < candidates.length; index += 10) {
+    const batch = candidates.slice(index, index + 10);
+    await Promise.allSettled(
+      batch.map((record) => {
+        const publicDream = buildPublicDreamDocument(
+          record,
+          profile,
+          record.sharingMode
+        );
+        if (!publicDream) return Promise.resolve();
+
+        return setDoc(
+          doc(firestore, "PublicDreams", record.id || record.dream_id),
+          publicDream
+        );
+      })
+    );
+  }
 }
 
 export async function fetchPublicRecords({ includeAdult = false } = {}) {
@@ -1260,6 +1344,16 @@ function normalizeRecordReference(record) {
     typeof record?.isPublic === "boolean" ? record.isPublic : visibility === "public";
   const publicTitle = record?.publicTitle || "";
   const publicText = record?.publicText || "";
+  const publicTranslations =
+    record?.publicTranslations &&
+    typeof record.publicTranslations === "object" &&
+    !Array.isArray(record.publicTranslations)
+      ? record.publicTranslations
+      : {};
+  const publicTranslationLanguages = Object.keys(publicTranslations).map(normalizeLanguage);
+  const publicVersionEn = publicTranslations.en || {};
+  const publicVersionZh = publicTranslations.zh || {};
+  const publicVersionEs = publicTranslations.es || {};
   const publicAuthorName =
     record?.pseudonym ||
     record?.anonymousLabel ||
@@ -1270,14 +1364,29 @@ function normalizeRecordReference(record) {
   return {
     recordId,
     title: record?.title || publicTitle || "",
-    titleEn: record?.titleEn || record?.title_en || "",
-    titleZh: record?.titleZh || record?.title_zh || "",
-    titleEs: record?.titleEs || record?.title_es || "",
+    titleEn: record?.titleEn || record?.title_en || publicVersionEn.title || "",
+    titleZh: record?.titleZh || record?.title_zh || publicVersionZh.title || "",
+    titleEs: record?.titleEs || record?.title_es || publicVersionEs.title || "",
     text: record?.dream_text || record?.text || publicText || record?.excerpt || "",
     textEn:
-      record?.dream_text_en || record?.textEn || record?.text_en || record?.excerpt_en || "",
-    textZh: record?.dream_text_zh || record?.textZh || record?.excerpt_zh || "",
-    textEs: record?.dream_text_es || record?.textEs || record?.excerpt_es || "",
+      record?.dream_text_en ||
+      record?.textEn ||
+      record?.text_en ||
+      publicVersionEn.text ||
+      record?.excerpt_en ||
+      "",
+    textZh:
+      record?.dream_text_zh ||
+      record?.textZh ||
+      publicVersionZh.text ||
+      record?.excerpt_zh ||
+      "",
+    textEs:
+      record?.dream_text_es ||
+      record?.textEs ||
+      publicVersionEs.text ||
+      record?.excerpt_es ||
+      "",
     originalLanguage,
     originalTitle:
       record?.originalTitle ||
@@ -1289,8 +1398,12 @@ function normalizeRecordReference(record) {
       record?.original_text ||
       publicText ||
       getLanguageSpecificValue(record, "text", originalLanguage),
-    translationLanguages: normalizeTranslationLanguages(record?.translationLanguages),
-    translationSource: record?.translationSource || "",
+    translationLanguages: normalizeTranslationLanguages(
+      record?.translationLanguages || publicTranslationLanguages
+    ),
+    translationSource:
+      record?.translationSource ||
+      (publicTranslationLanguages.length > 0 ? "recorder_provided" : ""),
     images,
     dreamImages: images,
     imageUrls,

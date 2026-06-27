@@ -7,6 +7,7 @@ import {
   removeCollectedRecord,
   removeSavedRecord,
   calculateDreamSignalCoherence,
+  syncOwnedPublicTranslations,
   updateOwnedRecordMetadata,
   updateOwnedRecordSharing,
 } from "../lib/recordsService.js";
@@ -1198,6 +1199,7 @@ export default function UserDashboard({
         setCollectionRecords(
           collectionItems.map((item, index) => normalizeRecordItem(item, index + 2))
         );
+        syncOwnedPublicTranslations(user, ownedItems, profileData).catch(() => {});
       } catch (error) {
         if (!ignore) {
           setRecordsError(error.message);
