@@ -1713,6 +1713,16 @@ export async function deleteOwnedRecord(currentUser, recordId) {
   await deleteDoc(doc(firestore, "Records", recordId));
 }
 
+function buildStagedFirestoreError(error, stage) {
+  const message = error?.message || "Firestore write failed.";
+  const stagedError = new Error(`${stage}: ${message}`);
+
+  stagedError.code = error?.code || "write-failed";
+  stagedError.originalError = error;
+
+  return stagedError;
+}
+
 export async function updateOwnedRecordSharing(
   currentUser,
   recordId,
@@ -1809,15 +1819,23 @@ export async function updateOwnedRecordSharing(
     updatedAt: serverTimestamp(),
   };
 
-  await setDoc(recordRef, sharingPatch, { merge: true });
+  try {
+    await setDoc(recordRef, sharingPatch, { merge: true });
+  } catch (error) {
+    throw buildStagedFirestoreError(error, "private record update");
+  }
 
-  await syncPrivacyMirrorDocuments({
-    firestore,
-    currentUser,
-    record: { ...existingRecord, ...sharingPatch },
-    profile: profileSettings,
-    sharingMode,
-  });
+  try {
+    await syncPrivacyMirrorDocuments({
+      firestore,
+      currentUser,
+      record: { ...existingRecord, ...sharingPatch },
+      profile: profileSettings,
+      sharingMode,
+    });
+  } catch (error) {
+    throw buildStagedFirestoreError(error, "public/statistics sync");
+  }
 }
 
 export async function updateOwnedRecordMetadata(currentUser, recordId, updates) {

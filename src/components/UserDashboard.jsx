@@ -1752,14 +1752,6 @@ export default function UserDashboard({
                         selected={selectedPreset?.id === preset.id}
                         disabled={profileSaving}
                         onSelect={() => setSelectedPresetId(preset.id)}
-                        onUse={() => handleApplyPresetChoice(preset)}
-                        onApplyAll={() => handleOpenPresetPreview(preset, { scope: "all" })}
-                        onApplySelected={() =>
-                          handleOpenPresetPreview(preset, {
-                            scope: "selected",
-                            selectedIds: [],
-                          })
-                        }
                       />
                     ))}
                   </div>
@@ -1822,16 +1814,6 @@ export default function UserDashboard({
                 applyFuture={presetApplyFuture}
                 applyExisting={presetApplyExisting}
                 onUse={() => selectedPreset && handleApplyPresetChoice(selectedPreset)}
-                onApply={() =>
-                  selectedPreset && handleOpenPresetPreview(selectedPreset, { scope: "all" })
-                }
-                onApplySelected={() =>
-                  selectedPreset &&
-                  handleOpenPresetPreview(selectedPreset, {
-                    scope: "selected",
-                    selectedIds: [],
-                  })
-                }
               />
             </div>
           </section>
@@ -2596,8 +2578,6 @@ function PrivacyPresetPreview({
   applyFuture,
   applyExisting,
   onUse,
-  onApply,
-  onApplySelected,
 }) {
   if (!preset) return null;
 
@@ -2655,29 +2635,6 @@ function PrivacyPresetPreview({
         >
           {copy.applyChoiceButton}
         </button>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-          <button
-            type="button"
-            onClick={onApply}
-            disabled={disabled}
-            className={[
-              "rounded-2xl border px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed disabled:opacity-60",
-              publicMode
-                ? "border-amber-300/30 bg-amber-300/10 text-amber-100 hover:border-amber-300/50"
-                : "border-fuchsia-300/25 bg-fuchsia-300/10 text-fuchsia-100 hover:border-fuchsia-300/45",
-            ].join(" ")}
-          >
-            {copy.applyAllDreamsButton}
-          </button>
-          <button
-            type="button"
-            onClick={onApplySelected}
-            disabled={disabled}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-200 transition hover:border-cyan-300/35 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {copy.applySelectedDreamsButton}
-          </button>
-        </div>
       </div>
     </aside>
   );
@@ -3180,11 +3137,7 @@ function PresetCard({
   copy,
   active,
   selected,
-  disabled,
   onSelect,
-  onUse,
-  onApplyAll,
-  onApplySelected,
 }) {
   const accent = ACCENT_STYLES[preset.accent] || ACCENT_STYLES.cyan;
   const publicMode = isPublicPrivacySharingMode(preset.sharingMode);
@@ -3252,48 +3205,6 @@ function PresetCard({
         )}
       </div>
 
-      <div className="mt-5 grid gap-3">
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onUse?.();
-          }}
-          disabled={disabled}
-          className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]"
-        >
-          {copy.applyFutureButton}
-        </button>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onApplyAll?.();
-            }}
-            disabled={disabled}
-            className={[
-              "rounded-xl border px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] transition disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]",
-              publicMode
-                ? "border-amber-300/25 bg-amber-300/10 text-amber-100 hover:border-amber-300/45"
-                : "border-white/10 bg-white/[0.04] text-zinc-200 hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10",
-            ].join(" ")}
-          >
-            {copy.applyAllDreamsButton}
-          </button>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onApplySelected?.();
-            }}
-            disabled={disabled}
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-200 transition hover:border-cyan-300/35 hover:bg-cyan-300/10 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]"
-          >
-            {copy.applySelectedDreamsButton}
-          </button>
-        </div>
-      </div>
     </article>
   );
 }

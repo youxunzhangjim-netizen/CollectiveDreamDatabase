@@ -111,6 +111,13 @@ service cloud.firestore {
         || data[field] is timestamp;
     }
 
+    function optionalTimestampOrString(data, field, maxSize) {
+      return !data.keys().hasAny([field])
+        || data[field] == null
+        || data[field] is timestamp
+        || (data[field] is string && data[field].size() <= maxSize);
+    }
+
     function validOptionalAge(data, field) {
       return !data.keys().hasAny([field])
         || data[field] == null
@@ -354,9 +361,12 @@ service cloud.firestore {
       return requiredString(data, "ownerId", 1, 128)
         && (
           requiredString(data, "dream_text", 1, 120000)
+          || requiredString(data, "dreamText", 1, 120000)
           || requiredString(data, "originalText", 1, 120000)
           || requiredString(data, "text", 1, 120000)
           || requiredString(data, "publicText", 1, 120000)
+          || requiredString(data, "cleanedText", 1, 120000)
+          || requiredString(data, "rawText", 1, 120000)
         )
         && (!isAnonymousAuth()
           || !data.keys().hasAny(["recordIdentityMode"])
@@ -678,7 +688,7 @@ service cloud.firestore {
         && optionalString(data, "publicDate", 16)
         && optionalString(data, "pseudonym", 120)
         && optionalString(data, "anonymousLabel", 120)
-        && optionalTimestamp(data, "publicCreatedAt")
+        && optionalTimestampOrString(data, "publicCreatedAt", 80)
         && data.publicConsent == true
         && data.adultContent is bool
         && optionalList(data, "contentWarnings", 40)
