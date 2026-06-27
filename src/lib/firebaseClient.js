@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, OAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -46,7 +46,13 @@ export const isFirebaseStorageConfigured = Boolean(
 );
 export const storage = isFirebaseStorageConfigured ? getStorage(firebaseApp) : null;
 export const googleProvider = new GoogleAuthProvider();
+export const microsoftProvider = new OAuthProvider("microsoft.com");
 
 googleProvider.setCustomParameters({
   prompt: "select_account",
+});
+
+microsoftProvider.setCustomParameters({
+  prompt: "select_account",
+  tenant: "common",
 });

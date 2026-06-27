@@ -50,6 +50,7 @@ import {
 } from "../lib/publicRedactionService.js";
 import BulkSharingModal from "./BulkSharingModal.jsx";
 import LanguageMenu from "./LanguageMenu.jsx";
+import { setAccountPassword } from "../lib/authService.js";
 
 const DASHBOARD_COPY = {
   en: {
@@ -295,6 +296,19 @@ const DASHBOARD_COPY = {
     },
     saveProfile: "Save Profile",
     profileSaved: "Profile saved",
+    accountPasswordTitle: "Account password",
+    accountPasswordDescription:
+      "Add a password so this account can use the same email without Google.",
+    accountPasswordLabel: "New password",
+    accountPasswordPlaceholder: "At least 6 characters",
+    accountPasswordSave: "Set password",
+    accountPasswordSaving: "Saving password",
+    accountPasswordSaved: "Password access is ready",
+    accountPasswordTooShort: "Use at least 6 characters.",
+    accountPasswordRecentLogin:
+      "Sign in with Google again, then return here to set the password.",
+    showAccountPassword: "Show password",
+    hideAccountPassword: "Hide password",
     joinedDate: "Joined",
     hiddenAge: "Hidden",
     originalLanguageLabel: "Original language",
@@ -567,6 +581,19 @@ const DASHBOARD_COPY = {
     },
     saveProfile: "儲存個人資料",
     profileSaved: "個人資料已儲存",
+    accountPasswordTitle: "帳戶密碼",
+    accountPasswordDescription:
+      "新增密碼後，這個帳戶也能使用相同電子郵件登入，不必只使用 Google。",
+    accountPasswordLabel: "新密碼",
+    accountPasswordPlaceholder: "至少 6 個字元",
+    accountPasswordSave: "設定密碼",
+    accountPasswordSaving: "正在儲存密碼",
+    accountPasswordSaved: "電子郵件與密碼登入已可使用",
+    accountPasswordTooShort: "請使用至少 6 個字元。",
+    accountPasswordRecentLogin:
+      "請重新使用 Google 登入，再回到這裡設定密碼。",
+    showAccountPassword: "顯示密碼",
+    hideAccountPassword: "隱藏密碼",
     joinedDate: "加入日期",
     hiddenAge: "已隱藏",
     originalLanguageLabel: "原始語言",
@@ -850,6 +877,19 @@ const DASHBOARD_COPY = {
     },
     saveProfile: "Guardar perfil",
     profileSaved: "Perfil guardado",
+    accountPasswordTitle: "Contraseña de la cuenta",
+    accountPasswordDescription:
+      "Añade una contraseña para entrar con el mismo correo sin depender de Google.",
+    accountPasswordLabel: "Nueva contraseña",
+    accountPasswordPlaceholder: "Al menos 6 caracteres",
+    accountPasswordSave: "Establecer contraseña",
+    accountPasswordSaving: "Guardando contraseña",
+    accountPasswordSaved: "El acceso con correo y contraseña está listo",
+    accountPasswordTooShort: "Usa al menos 6 caracteres.",
+    accountPasswordRecentLogin:
+      "Vuelve a entrar con Google y regresa aquí para establecer la contraseña.",
+    showAccountPassword: "Mostrar contraseña",
+    hideAccountPassword: "Ocultar contraseña",
     joinedDate: "Fecha de ingreso",
     hiddenAge: "Oculta",
     originalLanguageLabel: "Idioma original",
@@ -1073,6 +1113,10 @@ export default function UserDashboard({
   );
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileNotice, setProfileNotice] = useState("");
+  const [accountPassword, setAccountPasswordValue] = useState("");
+  const [showAccountPassword, setShowAccountPassword] = useState(false);
+  const [accountPasswordSaving, setAccountPasswordSaving] = useState(false);
+  const [accountPasswordNotice, setAccountPasswordNotice] = useState("");
   const [observations, setObservations] = useState([]);
   const [savedRecords, setSavedRecords] = useState([]);
   const [collectionRecords, setCollectionRecords] = useState([]);
@@ -1261,6 +1305,32 @@ export default function UserDashboard({
       setProfileNotice(error.message);
     } finally {
       setProfileSaving(false);
+    }
+  }
+
+  async function handleSetAccountPassword() {
+    if (accountPassword.length < 6) {
+      setAccountPasswordNotice(copy.accountPasswordTooShort);
+      return;
+    }
+
+    setAccountPasswordSaving(true);
+    setAccountPasswordNotice("");
+
+    try {
+      await setAccountPassword(user, accountPassword);
+      setAccountPasswordValue("");
+      setAccountPasswordNotice(copy.accountPasswordSaved);
+    } catch (error) {
+      setAccountPasswordNotice(
+        error?.code === "auth/requires-recent-login"
+          ? copy.accountPasswordRecentLogin
+          : error?.code === "auth/weak-password"
+            ? copy.accountPasswordTooShort
+            : error?.message || copy.accountPasswordTooShort
+      );
+    } finally {
+      setAccountPasswordSaving(false);
     }
   }
 
@@ -1633,6 +1703,16 @@ export default function UserDashboard({
           profileSaving={profileSaving}
           profileNotice={profileNotice}
           onSave={handleSaveProfile}
+          accountPassword={accountPassword}
+          showAccountPassword={showAccountPassword}
+          accountPasswordSaving={accountPasswordSaving}
+          accountPasswordNotice={accountPasswordNotice}
+          onAccountPasswordChange={setAccountPasswordValue}
+          onToggleAccountPassword={() =>
+            setShowAccountPassword((current) => !current)
+          }
+          onSetAccountPassword={handleSetAccountPassword}
+          canSetAccountPassword={Boolean(user?.email && !user?.isAnonymous)}
         />
 
         {profileDraft && (
@@ -2754,6 +2834,14 @@ function AccountDetailsSection({
   profileSaving,
   profileNotice,
   onSave,
+  accountPassword,
+  showAccountPassword,
+  accountPasswordSaving,
+  accountPasswordNotice,
+  onAccountPasswordChange,
+  onToggleAccountPassword,
+  onSetAccountPassword,
+  canSetAccountPassword,
 }) {
   if (!profileDraft) return null;
 
@@ -2911,6 +2999,63 @@ function AccountDetailsSection({
         <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em] text-cyan-100">
           {profileNotice}
         </p>
+      )}
+
+      {canSetAccountPassword && (
+      <div className="mt-6 border-t border-white/10 pt-5">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,1fr)] lg:items-end">
+          <div>
+            <h3 className="cdo-card-heading">{copy.accountPasswordTitle}</h3>
+            <p className="cdo-muted-copy mt-2 max-w-2xl">
+              {copy.accountPasswordDescription}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <label className="block min-w-0">
+              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                {copy.accountPasswordLabel}
+              </span>
+              <span className="block">
+                <input
+                  type={showAccountPassword ? "text" : "password"}
+                  value={accountPassword}
+                  onChange={(event) => onAccountPasswordChange(event.target.value)}
+                  placeholder={copy.accountPasswordPlaceholder}
+                  autoComplete="new-password"
+                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                />
+                <button
+                  type="button"
+                  onClick={onToggleAccountPassword}
+                  className="mt-2 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-cyan-100 transition hover:text-cyan-300"
+                >
+                  {showAccountPassword
+                    ? copy.hideAccountPassword
+                    : copy.showAccountPassword}
+                </button>
+              </span>
+            </label>
+
+            <button
+              type="button"
+              onClick={onSetAccountPassword}
+              disabled={accountPasswordSaving}
+              className="min-h-12 rounded-2xl border border-cyan-300/35 bg-cyan-300 px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:self-end"
+            >
+              {accountPasswordSaving
+                ? copy.accountPasswordSaving
+                : copy.accountPasswordSave}
+            </button>
+          </div>
+        </div>
+
+        {accountPasswordNotice && (
+          <p className="mt-3 text-xs leading-relaxed text-cyan-100">
+            {accountPasswordNotice}
+          </p>
+        )}
+      </div>
       )}
     </section>
   );

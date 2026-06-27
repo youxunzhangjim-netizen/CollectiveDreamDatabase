@@ -3,6 +3,7 @@ import {
   loginAnonymously,
   loginWithEmail,
   loginWithGoogle,
+  loginWithMicrosoft,
   signupWithEmail,
 } from "../lib/authService.js";
 import {
@@ -198,9 +199,11 @@ const RECORD_COPY = {
     loginButton: "Login here",
     signupButton: "Create account",
     googleButton: "Continue with Google",
+    microsoftButton: "Continue with Microsoft",
     loadingLogin: "Checking account",
     loadingSignup: "Creating account",
     loadingGoogle: "Opening Google",
+    loadingMicrosoft: "Opening Microsoft",
     linkedNotice: "Account linked. This draft will use your account privacy default.",
     emailRequired: "Enter an email address.",
     passwordRequired: "Enter a password.",
@@ -299,9 +302,11 @@ const RECORD_COPY = {
     loginButton: "在此登入",
     signupButton: "建立帳戶",
     googleButton: "使用 Google 繼續",
+    microsoftButton: "使用 Microsoft 繼續",
     loadingLogin: "正在確認帳戶",
     loadingSignup: "正在建立帳戶",
     loadingGoogle: "正在開啟 Google",
+    loadingMicrosoft: "正在開啟 Microsoft",
     linkedNotice: "帳戶已連結。這份草稿會套用你的帳戶隱私預設。",
     emailRequired: "請輸入電子郵件。",
     passwordRequired: "請輸入密碼。",
@@ -406,9 +411,11 @@ const RECORD_COPY = {
     loginButton: "Entrar aquí",
     signupButton: "Crear cuenta",
     googleButton: "Continuar con Google",
+    microsoftButton: "Continuar con Microsoft",
     loadingLogin: "Confirmando cuenta",
     loadingSignup: "Creando cuenta",
     loadingGoogle: "Abriendo Google",
+    loadingMicrosoft: "Abriendo Microsoft",
     linkedNotice: "Cuenta vinculada. Este borrador usará tu privacidad predeterminada.",
     emailRequired: "Introduce un correo.",
     passwordRequired: "Introduce una contraseña.",
@@ -653,13 +660,14 @@ export default function RecordDreamPage({
   async function runAccountAction(action) {
     setAuthError("");
     setAuthNotice("");
+    const usesEmailPassword = action === "login" || action === "signup";
 
-    if (action !== "google" && !email.trim()) {
+    if (usesEmailPassword && !email.trim()) {
       setAuthError(copy.emailRequired);
       return;
     }
 
-    if (action !== "google" && !password.trim()) {
+    if (usesEmailPassword && !password.trim()) {
       setAuthError(copy.passwordRequired);
       return;
     }
@@ -673,11 +681,13 @@ export default function RecordDreamPage({
         credential = await loginWithEmail(email, password);
       } else if (action === "signup") {
         credential = await signupWithEmail(email, password);
+      } else if (action === "microsoft") {
+        credential = await loginWithMicrosoft();
       } else {
         credential = await loginWithGoogle();
       }
 
-      if (action === "google" && !credential?.user) {
+      if ((action === "google" || action === "microsoft") && !credential?.user) {
         return;
       }
 
@@ -1338,6 +1348,18 @@ export default function RecordDreamPage({
                     {authLoading === "google" ? <LoadingSpinner /> : <GoogleMark />}
                     {authLoading === "google" ? copy.loadingGoogle : copy.googleButton}
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => runAccountAction("microsoft")}
+                    disabled={Boolean(authLoading)}
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-zinc-100 transition hover:border-blue-300/35 hover:bg-blue-300/10 disabled:cursor-not-allowed disabled:opacity-70 sm:tracking-[0.18em]"
+                  >
+                    {authLoading === "microsoft" ? <LoadingSpinner /> : <MicrosoftMark />}
+                    {authLoading === "microsoft"
+                      ? copy.loadingMicrosoft
+                      : copy.microsoftButton}
+                  </button>
                 </form>
               )}
             </section>
@@ -1608,6 +1630,17 @@ function GoogleMark() {
   return (
     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 font-mono text-xs font-bold text-zinc-950">
       G
+    </span>
+  );
+}
+
+function MicrosoftMark() {
+  return (
+    <span className="grid h-4 w-4 shrink-0 grid-cols-2 gap-px" aria-hidden="true">
+      <span className="bg-[#f25022]" />
+      <span className="bg-[#7fba00]" />
+      <span className="bg-[#00a4ef]" />
+      <span className="bg-[#ffb900]" />
     </span>
   );
 }

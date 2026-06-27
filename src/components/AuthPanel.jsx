@@ -3,6 +3,8 @@ import {
   loginAnonymously,
   loginWithEmail,
   loginWithGoogle,
+  loginWithMicrosoft,
+  requestPasswordReset,
   signupWithEmail,
 } from "../lib/authService.js";
 import {
@@ -36,10 +38,18 @@ const AUTH_COPY = {
     loginButton: "Log In",
     signupButton: "Create Profile",
     googleButton: "Continue with Google",
+    microsoftButton: "Continue with Microsoft",
     loadingLogin: "Logging in",
     loadingSignup: "Creating profile",
     loadingGoogle: "Opening Google",
+    loadingMicrosoft: "Opening Microsoft",
     loadingGuest: "Opening guest mode",
+    resetPassword: "Set or reset password",
+    resetPasswordSending: "Sending password email",
+    resetPasswordSent:
+      "Check your inbox for the password link. Google-created accounts can also set a password from Account after signing in with Google.",
+    providerPasswordHelp:
+      "First used Google? Sign in with Google once, then set an account password from Account.",
     consentText:
       "By proceeding, new account dreams keep the words private by default while contributing anonymous statistics. You can change sharing later in your account.",
     switchToSignup: "Need an account profile?",
@@ -53,7 +63,8 @@ const AUTH_COPY = {
     emailPasswordUnavailable:
       "Email and password login is not available yet. Use Google or guest mode for now.",
     invalidLogin: "The email or password does not match an active profile.",
-    emailInUse: "This email already has a profile. Return to login instead.",
+    emailInUse:
+      "This email already has a profile. Use its original sign-in method, then add a password from Account.",
     weakPassword: "Use a stronger password with at least 6 characters.",
     popupClosed: "The sign-in window was closed before access was confirmed.",
     networkError: "The account connection is offline. Try again soon.",
@@ -86,10 +97,18 @@ const AUTH_COPY = {
     loginButton: "登入帳戶",
     signupButton: "建立個人資料",
     googleButton: "使用 Google 繼續",
+    microsoftButton: "使用 Microsoft 繼續",
     loadingLogin: "正在登入帳戶",
     loadingSignup: "正在建立個人資料",
     loadingGoogle: "正在開啟 Google",
+    loadingMicrosoft: "正在開啟 Microsoft",
     loadingGuest: "正在開啟訪客通道",
+    resetPassword: "設定或重設密碼",
+    resetPasswordSending: "正在寄送密碼郵件",
+    resetPasswordSent:
+      "請查看信箱中的密碼連結。若帳戶原本使用 Google 建立，也可先用 Google 登入，再到帳戶頁設定密碼。",
+    providerPasswordHelp:
+      "原本使用 Google？請先用 Google 登入一次，再到帳戶頁設定帳戶密碼。",
     consentText:
       "繼續後，帳戶的新夢境預設會保留文字私人，並加入匿名統計。之後可在帳戶中自行更改分享方式。",
     switchToSignup: "需要建立帳戶？",
@@ -102,7 +121,8 @@ const AUTH_COPY = {
     authUnavailable: "此登入方式尚未開放，請改用其他選項。",
     emailPasswordUnavailable: "電子郵件與密碼登入目前尚未開放。請先使用 Google 或訪客模式。",
     invalidLogin: "電子郵件或密碼與現有檔案不相符。",
-    emailInUse: "此電子郵件已建立檔案，請返回登入。",
+    emailInUse:
+      "此電子郵件已有帳戶。請先使用原本的方式登入，再到帳戶頁新增密碼。",
     weakPassword: "請使用至少 6 個字元的更安全密碼。",
     popupClosed: "登入視窗在確認前已關閉。",
     networkError: "帳戶連線暫時離線，請稍後再試。",
@@ -135,10 +155,18 @@ const AUTH_COPY = {
     loginButton: "Iniciar sesión",
     signupButton: "Crear perfil",
     googleButton: "Continuar con Google",
+    microsoftButton: "Continuar con Microsoft",
     loadingLogin: "Iniciando sesión",
     loadingSignup: "Creando perfil",
     loadingGoogle: "Abriendo Google",
+    loadingMicrosoft: "Abriendo Microsoft",
     loadingGuest: "Abriendo modo invitado",
+    resetPassword: "Establecer o restablecer contraseña",
+    resetPasswordSending: "Enviando correo de contraseña",
+    resetPasswordSent:
+      "Revisa tu correo. Si la cuenta se creó con Google, también puedes entrar con Google y establecer una contraseña desde Cuenta.",
+    providerPasswordHelp:
+      "¿Empezaste con Google? Entra una vez con Google y establece una contraseña desde Cuenta.",
     consentText:
       "Al continuar, los sueños nuevos de cuenta mantienen el texto privado por defecto y aportan estadísticas anónimas. Puedes cambiarlo después en tu cuenta.",
     switchToSignup: "¿Necesitas un perfil?",
@@ -152,7 +180,8 @@ const AUTH_COPY = {
     emailPasswordUnavailable:
       "El inicio con correo y contraseña aún no está disponible. Usa Google o modo invitado por ahora.",
     invalidLogin: "El correo o la contraseña no coincide con un perfil activo.",
-    emailInUse: "Este correo ya tiene un perfil. Vuelve al inicio de sesión.",
+    emailInUse:
+      "Este correo ya tiene una cuenta. Usa primero el método original y añade una contraseña desde Cuenta.",
     weakPassword: "Usa una contraseña más fuerte de al menos 6 caracteres.",
     popupClosed: "La ventana de acceso se cerró antes de confirmar.",
     networkError: "La conexión de cuenta está desconectada. Inténtalo de nuevo pronto.",
@@ -178,6 +207,7 @@ export default function AuthPanel({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const isLogin = mode === "login";
   const primaryLabel = isLogin ? copy.loginButton : copy.signupButton;
 
@@ -217,13 +247,15 @@ export default function AuthPanel({
 
   async function runFirebaseAuth(action) {
     setError("");
+    setNotice("");
+    const usesEmailPassword = action === "login" || action === "signup";
 
-    if (action !== "google" && action !== "guest" && !email.trim()) {
+    if (usesEmailPassword && !email.trim()) {
       setError(copy.emailRequired);
       return;
     }
 
-    if (action !== "google" && action !== "guest" && !password.trim()) {
+    if (usesEmailPassword && !password.trim()) {
       setError(copy.passwordRequired);
       return;
     }
@@ -238,6 +270,8 @@ export default function AuthPanel({
             ? await signupWithEmail(email, password)
             : action === "guest"
               ? await loginAnonymously()
+              : action === "microsoft"
+                ? await loginWithMicrosoft()
               : await loginWithGoogle();
 
       if (credential?.user) {
@@ -263,8 +297,33 @@ export default function AuthPanel({
     await runFirebaseAuth("google");
   }
 
+  async function handleMicrosoftAuth() {
+    await runFirebaseAuth("microsoft");
+  }
+
   async function handleGuestAuth() {
     await runFirebaseAuth("guest");
+  }
+
+  async function handlePasswordReset() {
+    setError("");
+    setNotice("");
+
+    if (!email.trim()) {
+      setError(copy.emailRequired);
+      return;
+    }
+
+    setLoading("reset");
+    try {
+      await requestPasswordReset(email);
+      setNotice(copy.resetPasswordSent);
+    } catch (error) {
+      reportAuthError("password reset", error);
+      setError(getAuthErrorMessage(error, "reset"));
+    } finally {
+      setLoading("");
+    }
   }
 
   function handleSubmit(event) {
@@ -401,6 +460,11 @@ export default function AuthPanel({
                   {error}
                 </div>
               )}
+              {notice && (
+                <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/5 p-3 text-xs leading-relaxed text-emerald-100">
+                  {notice}
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -414,6 +478,23 @@ export default function AuthPanel({
                     ? copy.loadingSignup
                     : primaryLabel}
               </button>
+              {isLogin && (
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePasswordReset}
+                    disabled={Boolean(loading)}
+                    className="self-start font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:text-cyan-300 disabled:opacity-50"
+                  >
+                    {loading === "reset"
+                      ? copy.resetPasswordSending
+                      : copy.resetPassword}
+                  </button>
+                  <p className="text-xs leading-relaxed text-zinc-500">
+                    {copy.providerPasswordHelp}
+                  </p>
+                </div>
+              )}
               {!isLogin && (
                 <p className="text-xs leading-5 text-slate-500">
                   {copy.consentText}
@@ -428,6 +509,18 @@ export default function AuthPanel({
               >
                 {loading === "google" ? <LoadingSpinner /> : <GoogleMark />}
                 {loading === "google" ? copy.loadingGoogle : copy.googleButton}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleMicrosoftAuth}
+                disabled={Boolean(loading)}
+                className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-xs font-semibold uppercase tracking-[0.16em] text-zinc-100 transition hover:border-blue-300/35 hover:bg-blue-300/10 disabled:cursor-not-allowed disabled:opacity-70 sm:tracking-[0.2em]"
+              >
+                {loading === "microsoft" ? <LoadingSpinner /> : <MicrosoftMark />}
+                {loading === "microsoft"
+                  ? copy.loadingMicrosoft
+                  : copy.microsoftButton}
               </button>
 
               <button
@@ -524,6 +617,17 @@ function GoogleMark() {
   return (
     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 font-mono text-xs font-bold text-zinc-950">
       G
+    </span>
+  );
+}
+
+function MicrosoftMark() {
+  return (
+    <span className="grid h-4 w-4 shrink-0 grid-cols-2 gap-px" aria-hidden="true">
+      <span className="bg-[#f25022]" />
+      <span className="bg-[#7fba00]" />
+      <span className="bg-[#00a4ef]" />
+      <span className="bg-[#ffb900]" />
     </span>
   );
 }
