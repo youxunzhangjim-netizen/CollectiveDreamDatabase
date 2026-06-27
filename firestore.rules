@@ -438,6 +438,9 @@ service cloud.firestore {
         && optionalBool(data, "skipHighSensitivityForBulkPublic")
         && optionalNumber(data, "sensitivityAutoSkipThreshold", 1, 4)
         && optionalString(data, "privacyDefaultsUpdatedBy", 128)
+        && optionalTimestampOrString(data, "privacyDefaultsUpdatedAt", 80)
+        && optionalTimestampOrString(data, "createdAt", 80)
+        && optionalTimestampOrString(data, "updatedAt", 80)
         && optionalBool(data, "privacyOnboardingCompleted")
         && (!data.keys().hasAny(["privacyOnboardingChoice"])
           || validPrivacyOnboardingChoice(data.privacyOnboardingChoice))
@@ -610,6 +613,72 @@ service cloud.firestore {
           || data.publicReviewStatus in ["", "pending_review", "approved", "rejected"])
         && (!data.keys().hasAny(["redactionStatus"])
           || data.redactionStatus in ["", "none", "draft", "ai_suggested", "user_confirmed"]);
+    }
+
+    function validOwnerPrivacyPatchUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "visibility",
+          "isPublic",
+          "sharingMode",
+          "requestedSharingMode",
+          "includedInResearchStats",
+          "researchConsent",
+          "publicConsent",
+          "publicReviewStatus",
+          "reviewRequiredBeforePublic",
+          "recordIdentityMode",
+          "attributionMode",
+          "creatorDisplayName",
+          "creatorEmail",
+          "publicRecorderId",
+          "publicTitle",
+          "publicText",
+          "publicExcerpt",
+          "redactionStatus",
+          "sensitivityLevel",
+          "sharingUpdatedAt",
+          "updatedAt",
+          "adultContent",
+          "minimumViewerAge",
+          "dream_text",
+          "dreamText",
+          "originalText",
+          "text",
+          "excerpt",
+          "originalExcerpt",
+          "title",
+          "originalTitle"
+        ])
+        && validRecordSharingConsistency(request.resource.data)
+        && validRecordConsent(request.resource.data)
+        && validAdultMetadata(request.resource.data)
+        && optionalString(request.resource.data, "creatorDisplayName", 120)
+        && optionalString(request.resource.data, "creatorEmail", 254)
+        && optionalString(request.resource.data, "publicRecorderId", 128)
+        && optionalString(request.resource.data, "publicTitle", 220)
+        && optionalString(request.resource.data, "publicText", 120000)
+        && optionalString(request.resource.data, "publicExcerpt", 520)
+        && optionalString(request.resource.data, "dream_text", 120000)
+        && optionalString(request.resource.data, "dreamText", 120000)
+        && optionalString(request.resource.data, "originalText", 120000)
+        && optionalString(request.resource.data, "text", 120000)
+        && optionalString(request.resource.data, "excerpt", 520)
+        && optionalString(request.resource.data, "originalExcerpt", 520)
+        && optionalString(request.resource.data, "title", 220)
+        && optionalString(request.resource.data, "originalTitle", 220)
+        && optionalNumber(request.resource.data, "sensitivityLevel", 0, 10)
+        && optionalTimestampOrString(request.resource.data, "sharingUpdatedAt", 80)
+        && optionalTimestampOrString(request.resource.data, "updatedAt", 80)
+        && (!request.resource.data.keys().hasAny(["requestedSharingMode"])
+          || validSharingMode(request.resource.data.requestedSharingMode))
+        && (!request.resource.data.keys().hasAny(["publicReviewStatus"])
+          || request.resource.data.publicReviewStatus in ["", "pending_review", "approved", "rejected"])
+        && (!request.resource.data.keys().hasAny(["redactionStatus"])
+          || request.resource.data.redactionStatus in ["", "none", "draft", "ai_suggested", "user_confirmed"])
+        && (!request.resource.data.keys().hasAny(["recordIdentityMode"])
+          || request.resource.data.recordIdentityMode in ["account", "anonymous", "pseudonym"])
+        && (!request.resource.data.keys().hasAny(["attributionMode"])
+          || request.resource.data.attributionMode in ["account", "anonymous", "pseudonym"]);
     }
 
     function noForbiddenPublicDreamFields(data) {
@@ -822,7 +891,8 @@ service cloud.firestore {
       allow update: if isOwner(resource.data.ownerId)
         && request.resource.data.ownerId == resource.data.ownerId
         && anonymousLockUnchanged()
-        && validRecordPrivacyWrite(request.resource.data);
+        && (validRecordPrivacyWrite(request.resource.data)
+          || validOwnerPrivacyPatchUpdate());
 
       allow delete: if isOwner(resource.data.ownerId);
     }
