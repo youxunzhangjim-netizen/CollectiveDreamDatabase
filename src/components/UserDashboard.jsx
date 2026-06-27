@@ -108,9 +108,21 @@ const DASHBOARD_COPY = {
     biologicalSexPlaceholder: "Prefer not to say",
     showBiologicalSexLabel: "Show biological sex publicly",
     preferredLanguageLabel: "Preferred Language",
-    privacyDefaultsTitle: "Default privacy for new dreams",
+    privacyCenterTitle: "Privacy & Research Contribution",
+    privacyCenterSubtitle:
+      "Choose how your dreams live in the platform. You can keep them private, contribute anonymous statistics, or share selected dreams with the world.",
+    privacyDefaultsTitle: "Default for new dreams",
     privacyDefaultsDescription:
-      "Choose how future dreams should be saved. You can still change any dream later.",
+      "Set this once. Future dreams and diary imports will follow this choice automatically, unless you override it.",
+    bulkSettingTitle: "Apply to existing dreams",
+    bulkSettingDescription:
+      "Update many dreams at once. You can filter by date, import batch, language, tags, sensitivity, or adult-content status.",
+    safetyWarning:
+      "Some dreams may contain private people, places, relationships, sexuality, trauma, shame, or identity clues. Review sensitive dreams before making them public.",
+    statsOnlyReassurance:
+      "Stats-only dreams do not publish the dream text. They only contribute non-identifying signals such as tags, language, dream type, length, emotion, and time bucket.",
+    notDiagnosisReminder:
+      "Dream tags and statistics are for self-reflection and research. They are not medical, psychological, or psychiatric diagnosis.",
     privacyOptionPrivate: "Keep new dreams private",
     privacyOptionStats: "Keep text private, contribute anonymous statistics",
     privacyOptionAnonymous: "Share anonymously after review",
@@ -119,25 +131,24 @@ const DASHBOARD_COPY = {
     defaultPseudonymLabel: "Default pseudonym",
     defaultPseudonymPlaceholder: "Name shown only for pseudonym sharing",
     reviewBeforePublicLabel: "Require review before public sharing",
-    presetsTitle: "One-click presets",
-    presetsDescription:
-      "Choose a complete privacy posture for future dreams, or apply it to existing observations after preview.",
+    presetsTitle: "One-click modes",
+    presetsDescription: "A quick helper. Pick the posture that feels right, then adjust details later.",
     presetPublicLabel: "Public",
     presetPrivateLabel: "Private",
     presetStatsLabel: "Statistics",
     usePresetButton: "Use this preset",
     applyPresetButton: "Apply to existing dreams",
-    previewTitle: "Preview preset changes",
+    previewTitle: "Review before applying",
     previewDescription:
       "Review what will change before applying this preset to your existing observations.",
     previewAffected: "Will update",
     previewUnchanged: "Already matching",
-    previewSkipped: "Skipped",
+    previewSkipped: "Skipped for safety",
     previewPublic: "Public after change",
     previewPrivate: "Private after change",
     previewStats: "Contributes stats",
     previewRedactedSkip: "Skipped because redacted public sharing needs a public version.",
-    previewConfirm: "Confirm bulk apply",
+    previewConfirm: "Apply this setting",
     previewCancel: "Cancel",
     bulkPresetApplying: "Applying preset...",
     bulkPresetApplied: ({ count }) => `${count} dreams updated by preset.`,
@@ -145,6 +156,12 @@ const DASHBOARD_COPY = {
     bulkModalDescription:
       "Filter your private records, preview safety skips, then apply the selected preset.",
     bulkFiltersTitle: "Filters",
+    bulkStepPreset: "Step 1: Choose preset",
+    bulkStepDreams: "Step 2: Choose which dreams",
+    bulkStepSafety: "Step 3: Review safety warnings",
+    bulkStepConfirm: "Step 4: Confirm",
+    bulkBack: "Back",
+    bulkNext: "Next",
     bulkScopeLabel: "Dream set",
     bulkScopeAll: "All dreams",
     bulkScopePrivate: "All private dreams",
@@ -188,7 +205,7 @@ const DASHBOARD_COPY = {
     bulkStatsOnlyWarning:
       "Adult or highly private dreams may contribute only anonymous non-text signals in stats-only mode.",
     bulkProgress: "Applying",
-    bulkUndo: "Undo this bulk change",
+    bulkUndo: "Undo last bulk change",
     bulkUndoing: "Undoing",
     bulkUndoComplete: "Bulk change undone",
     bulkSuccessTitle: "Bulk change complete",
@@ -200,33 +217,33 @@ const DASHBOARD_COPY = {
     modeAnonymous: "Anonymous public",
     modePseudonym: "Pseudonym public",
     modeRedacted: "Redacted public",
-    presetPersonalTitle: "Personal Journal Mode",
+    presetPersonalTitle: "Personal Journal",
     presetPersonalDescription:
-      "All selected dreams remain fully private. They will not appear in public reading or research statistics.",
+      "Keep everything private. These dreams will not appear in public reading or research statistics.",
     presetPersonalPublic: "Nothing becomes public.",
     presetPersonalPrivate: "Dream text, tags, dates, and metadata stay private.",
     presetPersonalStats: "Nothing is included in collective statistics.",
-    presetResearchTitle: "Research Contributor Mode",
+    presetResearchTitle: "Research Contributor",
     presetResearchDescription:
       "Keep dream text private, but contribute anonymous tags and statistics to collective dream research.",
     presetResearchPublic: "No dream text is public.",
     presetResearchPrivate: "Original title and dream words stay private.",
     presetResearchStats: "Anonymous tags and non-identifying signals contribute.",
-    presetAnonymousTitle: "Anonymous Archive Mode",
+    presetAnonymousTitle: "Anonymous Archive",
     presetAnonymousDescription:
-      "Publish selected dreams anonymously so others can read them without seeing your identity.",
+      "Let others read these dreams without showing your identity.",
     presetAnonymousPublic: "Dream text and tags become public.",
     presetAnonymousPrivate: "Account identity and email stay hidden.",
     presetAnonymousStats: "Public records also contribute to statistics.",
-    presetPseudonymTitle: "Pseudonym Archive Mode",
+    presetPseudonymTitle: "Pseudonym Archive",
     presetPseudonymDescription:
-      "Publish selected dreams with your chosen pseudonym. Your account identity stays hidden.",
+      "Let others read these dreams under your chosen pseudonym.",
     presetPseudonymPublic: "Dream text, tags, and pseudonym become public.",
     presetPseudonymPrivate: "Account identity and email stay hidden.",
     presetPseudonymStats: "Public records also contribute to statistics.",
-    presetRedactedTitle: "Redacted Public Archive Mode",
+    presetRedactedTitle: "Redacted Public Archive",
     presetRedactedDescription:
-      "Keep the original dream private, but publish a reviewed public version.",
+      "Keep the original private and publish only a reviewed public version.",
     presetRedactedPublic: "Only the reviewed public version becomes visible.",
     presetRedactedPrivate: "Original title and full dream words stay private.",
     presetRedactedStats: "Tags and non-identifying signals contribute.",
@@ -340,8 +357,21 @@ const DASHBOARD_COPY = {
     biologicalSexPlaceholder: "不透露",
     showBiologicalSexLabel: "公開顯示生理性別",
     preferredLanguageLabel: "偏好語言",
-    privacyDefaultsTitle: "新夢境的預設隱私",
-    privacyDefaultsDescription: "選擇未來夢境的儲存方式。之後仍可逐則修改。",
+    privacyCenterTitle: "隱私與研究貢獻",
+    privacyCenterSubtitle:
+      "選擇你的夢如何存在於平台：保持私人、貢獻匿名統計，或把選定的夢分享給世界。",
+    privacyDefaultsTitle: "新夢境預設",
+    privacyDefaultsDescription:
+      "設定一次。未來夢境與日記匯入會自動依照此選擇，除非你另外覆寫。",
+    bulkSettingTitle: "套用到既有夢境",
+    bulkSettingDescription:
+      "一次更新多則夢。可依日期、匯入批次、語言、標籤、敏感度或成人內容狀態篩選。",
+    safetyWarning:
+      "有些夢可能包含私人人物、地點、關係、性、創傷、羞恥或身份線索。公開前請先檢查敏感夢境。",
+    statsOnlyReassurance:
+      "僅供統計的夢不會公開夢境文字，只貢獻非識別訊號，例如標籤、語言、夢境類型、長度、情緒與時間區段。",
+    notDiagnosisReminder:
+      "夢境標籤與統計用於自我反思與研究，不是醫療、心理或精神科診斷。",
     privacyOptionPrivate: "新夢境保持私人",
     privacyOptionStats: "文字私人，匿名加入統計",
     privacyOptionAnonymous: "審查後匿名公開",
@@ -350,29 +380,35 @@ const DASHBOARD_COPY = {
     defaultPseudonymLabel: "預設筆名",
     defaultPseudonymPlaceholder: "只在筆名公開時顯示",
     reviewBeforePublicLabel: "公開前必須先審查",
-    presetsTitle: "一鍵預設模式",
-    presetsDescription: "為未來夢境選擇完整隱私姿態，或先預覽再套用到既有觀測。",
+    presetsTitle: "一鍵模式",
+    presetsDescription: "快速輔助選擇。先選一種姿態，之後仍可調整細節。",
     presetPublicLabel: "公開",
     presetPrivateLabel: "私人",
     presetStatsLabel: "統計",
     usePresetButton: "使用此預設",
     applyPresetButton: "套用到既有夢境",
-    previewTitle: "預覽預設變更",
+    previewTitle: "套用前檢查",
     previewDescription: "套用到既有觀測前，先確認會改變哪些夢境。",
     previewAffected: "將更新",
     previewUnchanged: "已相同",
-    previewSkipped: "略過",
+    previewSkipped: "因安全略過",
     previewPublic: "變更後公開",
     previewPrivate: "變更後私人",
     previewStats: "加入統計",
     previewRedactedSkip: "因節錄公開需要公開版本，部分夢境會略過。",
-    previewConfirm: "確認批次套用",
+    previewConfirm: "套用此設定",
     previewCancel: "取消",
     bulkPresetApplying: "正在套用預設...",
     bulkPresetApplied: ({ count }) => `已用預設更新 ${count} 則夢境。`,
     bulkModalTitle: "批次分享控制",
     bulkModalDescription: "篩選你的私人紀錄，預覽安全略過項目，再套用選取的預設。",
     bulkFiltersTitle: "篩選",
+    bulkStepPreset: "步驟 1：選擇模式",
+    bulkStepDreams: "步驟 2：選擇夢境",
+    bulkStepSafety: "步驟 3：檢查安全提醒",
+    bulkStepConfirm: "步驟 4：確認",
+    bulkBack: "返回",
+    bulkNext: "下一步",
     bulkScopeLabel: "夢境範圍",
     bulkScopeAll: "所有夢境",
     bulkScopePrivate: "所有私人夢境",
@@ -415,7 +451,7 @@ const DASHBOARD_COPY = {
     bulkNewBreakdown: "套用後",
     bulkStatsOnlyWarning: "成人或高度私人夢境在只統計模式下只會貢獻匿名非文字訊號。",
     bulkProgress: "套用中",
-    bulkUndo: "復原這次批次變更",
+    bulkUndo: "復原上次批次變更",
     bulkUndoing: "復原中",
     bulkUndoComplete: "批次變更已復原",
     bulkSuccessTitle: "批次變更完成",
@@ -426,28 +462,28 @@ const DASHBOARD_COPY = {
     modeAnonymous: "匿名公開",
     modePseudonym: "筆名公開",
     modeRedacted: "節錄公開",
-    presetPersonalTitle: "個人日誌模式",
-    presetPersonalDescription: "所有選取夢境保持完全私人，不會出現在公開閱讀或研究統計中。",
+    presetPersonalTitle: "個人日誌",
+    presetPersonalDescription: "保持完全私人。這些夢不會出現在公開閱讀或研究統計中。",
     presetPersonalPublic: "沒有內容會公開。",
     presetPersonalPrivate: "夢境文字、標籤、日期與資料都保持私人。",
     presetPersonalStats: "不加入集體統計。",
-    presetResearchTitle: "研究貢獻模式",
+    presetResearchTitle: "研究貢獻者",
     presetResearchDescription: "夢境文字保持私人，但匿名標籤與統計會貢獻給集體夢境研究。",
     presetResearchPublic: "夢境文字不公開。",
     presetResearchPrivate: "原始標題與夢境文字保持私人。",
     presetResearchStats: "匿名標籤與非識別訊號加入統計。",
-    presetAnonymousTitle: "匿名檔案模式",
-    presetAnonymousDescription: "匿名發布選取夢境，讓他人閱讀但看不到你的身份。",
+    presetAnonymousTitle: "匿名檔案",
+    presetAnonymousDescription: "讓他人閱讀這些夢，但不顯示你的身份。",
     presetAnonymousPublic: "夢境文字與標籤會公開。",
     presetAnonymousPrivate: "帳戶身份與電子郵件保持隱藏。",
     presetAnonymousStats: "公開紀錄也加入統計。",
-    presetPseudonymTitle: "筆名檔案模式",
-    presetPseudonymDescription: "以你選擇的筆名發布夢境，帳戶身份仍保持隱藏。",
+    presetPseudonymTitle: "筆名檔案",
+    presetPseudonymDescription: "讓他人以你選擇的筆名閱讀這些夢。",
     presetPseudonymPublic: "夢境文字、標籤與筆名會公開。",
     presetPseudonymPrivate: "帳戶身份與電子郵件保持隱藏。",
     presetPseudonymStats: "公開紀錄也加入統計。",
-    presetRedactedTitle: "節錄公開檔案模式",
-    presetRedactedDescription: "原始夢境保持私人，只公開已審查的版本。",
+    presetRedactedTitle: "節錄公開檔案",
+    presetRedactedDescription: "原始夢保持私人，只發布審閱後的公開版本。",
     presetRedactedPublic: "只有審閱後的公開版本會公開。",
     presetRedactedPrivate: "原始標題與完整夢境文字保持私人。",
     presetRedactedStats: "標籤與非識別訊號加入統計。",
@@ -561,9 +597,21 @@ const DASHBOARD_COPY = {
     biologicalSexPlaceholder: "Prefiero no decirlo",
     showBiologicalSexLabel: "Mostrar sexo biológico públicamente",
     preferredLanguageLabel: "Idioma preferido",
-    privacyDefaultsTitle: "Privacidad predeterminada para nuevos sueños",
+    privacyCenterTitle: "Privacidad y contribución a la investigación",
+    privacyCenterSubtitle:
+      "Elige cómo viven tus sueños en la plataforma. Puedes mantenerlos privados, contribuir estadísticas anónimas o compartir sueños seleccionados con el mundo.",
+    privacyDefaultsTitle: "Predeterminado para nuevos sueños",
     privacyDefaultsDescription:
-      "Elige cómo se guardarán los sueños futuros. Puedes cambiar cualquier sueño después.",
+      "Configúralo una vez. Los sueños futuros y las importaciones de diario seguirán esta elección automáticamente, salvo que la cambies.",
+    bulkSettingTitle: "Aplicar a sueños existentes",
+    bulkSettingDescription:
+      "Actualiza muchos sueños a la vez. Puedes filtrar por fecha, lote de importación, idioma, etiquetas, sensibilidad o estado de contenido adulto.",
+    safetyWarning:
+      "Algunos sueños pueden contener personas, lugares, relaciones, sexualidad, trauma, vergüenza o pistas de identidad. Revisa los sueños sensibles antes de hacerlos públicos.",
+    statsOnlyReassurance:
+      "Los sueños solo estadísticos no publican el texto. Solo aportan señales no identificables como etiquetas, idioma, tipo, longitud, emoción y periodo temporal.",
+    notDiagnosisReminder:
+      "Las etiquetas y estadísticas de sueños son para autorreflexión e investigación. No son diagnóstico médico, psicológico ni psiquiátrico.",
     privacyOptionPrivate: "Mantener nuevos sueños privados",
     privacyOptionStats: "Texto privado, estadísticas anónimas",
     privacyOptionAnonymous: "Compartir anónimo tras revisión",
@@ -572,25 +620,24 @@ const DASHBOARD_COPY = {
     defaultPseudonymLabel: "Seudónimo predeterminado",
     defaultPseudonymPlaceholder: "Nombre mostrado solo con seudónimo",
     reviewBeforePublicLabel: "Revisar antes de publicar",
-    presetsTitle: "Presets de un clic",
-    presetsDescription:
-      "Elige una postura completa de privacidad para sueños futuros o aplícala a observaciones existentes tras previsualizar.",
+    presetsTitle: "Modos de un clic",
+    presetsDescription: "Una ayuda rápida. Elige una postura y ajusta detalles después.",
     presetPublicLabel: "Público",
     presetPrivateLabel: "Privado",
     presetStatsLabel: "Estadísticas",
     usePresetButton: "Usar este preset",
     applyPresetButton: "Aplicar a sueños existentes",
-    previewTitle: "Previsualizar cambios",
+    previewTitle: "Revisar antes de aplicar",
     previewDescription:
       "Revisa qué cambiará antes de aplicar este preset a tus observaciones existentes.",
     previewAffected: "Se actualizarán",
     previewUnchanged: "Ya coinciden",
-    previewSkipped: "Omitidos",
+    previewSkipped: "Omitidos por seguridad",
     previewPublic: "Públicos después",
     previewPrivate: "Privados después",
     previewStats: "Aportan estadísticas",
     previewRedactedSkip: "Se omiten sueños sin una versión pública para la versión redactada.",
-    previewConfirm: "Confirmar aplicación",
+    previewConfirm: "Aplicar este ajuste",
     previewCancel: "Cancelar",
     bulkPresetApplying: "Aplicando preset...",
     bulkPresetApplied: ({ count }) => `${count} sueños actualizados por preset.`,
@@ -598,6 +645,12 @@ const DASHBOARD_COPY = {
     bulkModalDescription:
       "Filtra tus registros privados, revisa omisiones de seguridad y aplica el preset seleccionado.",
     bulkFiltersTitle: "Filtros",
+    bulkStepPreset: "Paso 1: Elige modo",
+    bulkStepDreams: "Paso 2: Elige sueños",
+    bulkStepSafety: "Paso 3: Revisa advertencias",
+    bulkStepConfirm: "Paso 4: Confirma",
+    bulkBack: "Atrás",
+    bulkNext: "Siguiente",
     bulkScopeLabel: "Conjunto",
     bulkScopeAll: "Todos los sueños",
     bulkScopePrivate: "Todos los privados",
@@ -641,7 +694,7 @@ const DASHBOARD_COPY = {
     bulkStatsOnlyWarning:
       "Los sueños adultos o muy privados solo aportan señales anónimas sin texto en modo de estadísticas.",
     bulkProgress: "Aplicando",
-    bulkUndo: "Deshacer este cambio masivo",
+    bulkUndo: "Deshacer último cambio masivo",
     bulkUndoing: "Deshaciendo",
     bulkUndoComplete: "Cambio masivo deshecho",
     bulkSuccessTitle: "Cambio masivo completo",
@@ -653,33 +706,33 @@ const DASHBOARD_COPY = {
     modeAnonymous: "Público anónimo",
     modePseudonym: "Público con seudónimo",
     modeRedacted: "Público redactado",
-    presetPersonalTitle: "Modo diario personal",
+    presetPersonalTitle: "Diario personal",
     presetPersonalDescription:
-      "Todos los sueños seleccionados permanecen privados. No aparecerán en lectura pública ni estadísticas de investigación.",
+      "Mantén todo privado. Estos sueños no aparecerán en lectura pública ni estadísticas de investigación.",
     presetPersonalPublic: "Nada se vuelve público.",
     presetPersonalPrivate: "Texto, etiquetas, fechas y metadatos siguen privados.",
     presetPersonalStats: "Nada se incluye en estadísticas colectivas.",
-    presetResearchTitle: "Modo contribución de investigación",
+    presetResearchTitle: "Contribuidor de investigación",
     presetResearchDescription:
       "Mantén privado el texto del sueño, pero aporta etiquetas y estadísticas anónimas a la investigación colectiva.",
     presetResearchPublic: "No se publica texto del sueño.",
     presetResearchPrivate: "Título original y palabras del sueño siguen privados.",
     presetResearchStats: "Etiquetas anónimas y señales no identificables contribuyen.",
-    presetAnonymousTitle: "Modo archivo anónimo",
+    presetAnonymousTitle: "Archivo anónimo",
     presetAnonymousDescription:
-      "Publica sueños seleccionados de forma anónima para que otros puedan leerlos sin ver tu identidad.",
+      "Permite que otros lean estos sueños sin mostrar tu identidad.",
     presetAnonymousPublic: "Texto y etiquetas del sueño se vuelven públicos.",
     presetAnonymousPrivate: "Identidad de cuenta y correo permanecen ocultos.",
     presetAnonymousStats: "Los registros públicos también aportan estadísticas.",
-    presetPseudonymTitle: "Modo archivo con seudónimo",
+    presetPseudonymTitle: "Archivo con seudónimo",
     presetPseudonymDescription:
-      "Publica sueños seleccionados con tu seudónimo. Tu identidad de cuenta sigue oculta.",
+      "Permite que otros lean estos sueños bajo tu seudónimo elegido.",
     presetPseudonymPublic: "Texto, etiquetas y seudónimo se vuelven públicos.",
     presetPseudonymPrivate: "Identidad de cuenta y correo permanecen ocultos.",
     presetPseudonymStats: "Los registros públicos también aportan estadísticas.",
-    presetRedactedTitle: "Modo archivo público redactado",
+    presetRedactedTitle: "Archivo público redactado",
     presetRedactedDescription:
-      "Mantén privado el sueño original, pero publica una versión revisada.",
+      "Mantén el original privado y publica solo una versión pública revisada.",
     presetRedactedPublic: "Solo la versión pública revisada se vuelve visible.",
     presetRedactedPrivate: "Título original y texto completo siguen privados.",
     presetRedactedStats: "Etiquetas y señales no identificables contribuyen.",
@@ -920,6 +973,7 @@ export default function UserDashboard({
   const [bulkSharingMode, setBulkSharingMode] = useState("");
   const [bulkShareNotice, setBulkShareNotice] = useState("");
   const [bulkPreset, setBulkPreset] = useState(null);
+  const [selectedPresetId, setSelectedPresetId] = useState("research_contributor");
   const [exportDetail, setExportDetail] = useState(EXPORT_DETAIL_LEVELS.ANALYSIS);
   const [timeOrder, setTimeOrder] = useState("desc");
   const exportDetailOptions = [
@@ -932,6 +986,15 @@ export default function UserDashboard({
     [copy]
   );
   const oneClickPresets = useMemo(() => getOneClickPresetCards(copy), [copy]);
+  const selectedPreset = useMemo(() => {
+    const currentMode = normalizePrivacySharingMode(profileDraft?.defaultSharingMode);
+
+    return (
+      oneClickPresets.find((preset) => preset.id === selectedPresetId) ||
+      oneClickPresets.find((preset) => preset.sharingMode === currentMode) ||
+      oneClickPresets[0]
+    );
+  }, [oneClickPresets, profileDraft?.defaultSharingMode, selectedPresetId]);
   const activeItems =
     activeTab === "observations"
       ? observations
@@ -1070,6 +1133,13 @@ export default function UserDashboard({
   function handlePrivacyDefaultModeChange(nextMode) {
     const defaultSharingMode = normalizePrivacySharingMode(nextMode);
     const consents = getConsentsForSharingMode(defaultSharingMode);
+    const matchingPreset = oneClickPresets.find(
+      (preset) => preset.sharingMode === defaultSharingMode
+    );
+
+    if (matchingPreset) {
+      setSelectedPresetId(matchingPreset.id);
+    }
 
     setProfileDraft((current) => ({
       ...normalizePrivacySettings(current || {}, user),
@@ -1081,6 +1151,8 @@ export default function UserDashboard({
 
   async function handleUsePresetDefault(preset) {
     if (!profileDraft) return;
+
+    setSelectedPresetId(preset.id);
 
     const defaultSharingMode = normalizePrivacySharingMode(preset.sharingMode);
     const consents = getConsentsForSharingMode(defaultSharingMode);
@@ -1110,6 +1182,7 @@ export default function UserDashboard({
   }
 
   function handleOpenPresetPreview(preset) {
+    setSelectedPresetId(preset.id);
     setBulkPreset(preset);
   }
 
@@ -1244,8 +1317,9 @@ export default function UserDashboard({
         </header>
 
         <section className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/75 shadow-terminal backdrop-blur">
-          <div className="grid gap-0 xl:grid-cols-[minmax(20rem,.72fr)_minmax(0,1.28fr)]">
-            <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-7 xl:p-8">
+          <div className="p-5 sm:p-7 lg:p-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center">
               <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_34px_rgba(34,211,238,.16)]">
                 <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_58%)]" />
                 <span className="relative font-mono text-xl font-bold text-cyan-100">
@@ -1290,8 +1364,7 @@ export default function UserDashboard({
               </div>
             </div>
 
-            <div className="border-t border-white/10 bg-black/30 p-5 xl:border-l xl:border-t-0 xl:p-7">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-2xl xl:grid-cols-4">
                 <StatusBlock label={copy.observationCount} value={String(observations.length)} />
                 <StatusBlock label={copy.savedCount} value={String(savedRecords.length)} />
                 <StatusBlock label={copy.collectionsTab} value={String(collectionRecords.length)} />
@@ -1300,15 +1373,40 @@ export default function UserDashboard({
                   value={getLanguageName(displayUser.preferredLanguage || language, language)}
                 />
               </div>
+            </div>
+          </div>
+        </section>
 
-              {profileDraft && (
-                <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-5">
-                  <h2 className="cdo-card-heading">
+        {profileDraft && (
+          <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/65 p-5 shadow-[0_0_36px_rgba(34,211,238,.08)] backdrop-blur sm:p-7">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="cdo-kicker">{copy.privacyCenterTitle}</p>
+                <p className="cdo-body-copy mt-3 max-w-4xl">
+                  {copy.privacyCenterSubtitle}
+                </p>
+              </div>
+              <p className="rounded-2xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs leading-relaxed text-amber-100 lg:max-w-md">
+                {copy.safetyWarning}
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,.4fr)]">
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-5 sm:p-6">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h2 className="cdo-card-heading">
                     {copy.privacyDefaultsTitle}
-                  </h2>
-                  <p className="cdo-muted-copy mt-2 text-xs leading-relaxed">
-                    {copy.privacyDefaultsDescription}
-                  </p>
+                      </h2>
+                      <p className="cdo-muted-copy mt-2 text-xs leading-relaxed">
+                        {copy.privacyDefaultsDescription}
+                      </p>
+                    </div>
+                    <p className="max-w-sm rounded-xl border border-cyan-300/15 bg-black/25 p-3 text-xs leading-relaxed text-cyan-100">
+                      {copy.statsOnlyReassurance}
+                    </p>
+                  </div>
                   <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
                     {privacyDefaultOptions.map((option) => {
                       const active =
@@ -1321,7 +1419,7 @@ export default function UserDashboard({
                           type="button"
                           onClick={() => handlePrivacyDefaultModeChange(option.value)}
                           className={[
-                            "min-h-12 rounded-xl border px-3 py-2.5 text-left font-mono text-[10px] font-bold uppercase leading-relaxed tracking-[0.08em] transition sm:tracking-[0.11em]",
+                            "min-h-12 rounded-xl border px-3 py-3 text-left font-mono text-[10px] font-bold uppercase leading-relaxed tracking-[0.08em] transition sm:tracking-[0.11em]",
                             active
                               ? "border-cyan-300/45 bg-cyan-300 text-zinc-950 shadow-[0_0_24px_rgba(34,211,238,.18)]"
                               : "border-white/10 bg-black/25 text-zinc-300 hover:border-cyan-300/35 hover:text-cyan-100",
@@ -1375,16 +1473,21 @@ export default function UserDashboard({
                     {profileSaving ? "..." : copy.saveProfile}
                   </button>
                 </div>
-              )}
 
-              {profileDraft && (
-                <div className="mt-5 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-5">
-                  <h2 className="cdo-card-heading">
-                    {copy.presetsTitle}
-                  </h2>
-                  <p className="cdo-muted-copy mt-2 text-xs leading-relaxed">
-                    {copy.presetsDescription}
-                  </p>
+                <div className="rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-5 sm:p-6">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <h2 className="cdo-card-heading">
+                        {copy.presetsTitle}
+                      </h2>
+                      <p className="cdo-muted-copy mt-2 text-xs leading-relaxed">
+                        {copy.presetsDescription}
+                      </p>
+                    </div>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+                      {copy.notDiagnosisReminder}
+                    </p>
+                  </div>
                   <div className="mt-4 grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
                     {oneClickPresets.map((preset) => (
                       <PresetCard
@@ -1395,59 +1498,76 @@ export default function UserDashboard({
                           normalizePrivacySharingMode(profileDraft.defaultSharingMode) ===
                           preset.sharingMode
                         }
+                        selected={selectedPreset?.id === preset.id}
                         disabled={profileSaving}
+                        onSelect={() => setSelectedPresetId(preset.id)}
                         onUse={() => handleUsePresetDefault(preset)}
                         onApply={() => handleOpenPresetPreview(preset)}
                       />
                     ))}
                   </div>
                 </div>
-              )}
 
-              <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-5">
-                <h2 className="cdo-card-heading mb-3">
-                  {copy.exportScopeLabel}
-                </h2>
-                <div className="grid gap-2 md:grid-cols-3">
-                  {exportDetailOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setExportDetail(option.value)}
-                      className={[
-                        "min-w-0 rounded-xl border px-3 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.1em] transition sm:tracking-[0.12em]",
-                        exportDetail === option.value
-                          ? "border-cyan-300/35 bg-cyan-300/10 text-cyan-100"
-                          : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-fuchsia-300/30 hover:text-fuchsia-100",
-                      ].join(" ")}
-                    >
-                      <span className="block truncate">{option.label}</span>
-                    </button>
-                  ))}
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-5 sm:p-6">
+                  <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,.55fr)]">
+                    <div>
+                      <h2 className="cdo-card-heading">
+                        {copy.bulkSettingTitle}
+                      </h2>
+                      <p className="cdo-muted-copy mt-2 text-xs leading-relaxed">
+                        {copy.bulkSettingDescription}
+                      </p>
+                      <div className="mt-4 grid gap-2 md:grid-cols-3">
+                        {exportDetailOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setExportDetail(option.value)}
+                            className={[
+                              "min-w-0 rounded-xl border px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.1em] transition sm:tracking-[0.12em]",
+                              exportDetail === option.value
+                                ? "border-cyan-300/35 bg-cyan-300/10 text-cyan-100"
+                                : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-fuchsia-300/30 hover:text-fuchsia-100",
+                            ].join(" ")}
+                          >
+                            <span className="block truncate">{option.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3">
+                      <button
+                        type="button"
+                        onClick={() => exportPersonalDreamsCsv(observations, { language, detailLevel: exportDetail })}
+                        disabled={observations.length === 0}
+                        className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-cyan-100 transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50 sm:tracking-[0.18em]"
+                      >
+                        {copy.exportCsvButton}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => exportPersonalDreamsJson(observations, { language, detailLevel: exportDetail })}
+                        disabled={observations.length === 0}
+                        className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-fuchsia-100 transition hover:border-fuchsia-300/45 disabled:cursor-not-allowed disabled:opacity-50 sm:tracking-[0.18em]"
+                      >
+                        {copy.exportJsonButton}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="cdo-mobile-stack-actions mt-4 grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => exportPersonalDreamsCsv(observations, { language, detailLevel: exportDetail })}
-                  disabled={observations.length === 0}
-                  className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-cyan-100 transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50 sm:tracking-[0.18em]"
-                >
-                  {copy.exportCsvButton}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => exportPersonalDreamsJson(observations, { language, detailLevel: exportDetail })}
-                  disabled={observations.length === 0}
-                  className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-fuchsia-100 transition hover:border-fuchsia-300/45 disabled:cursor-not-allowed disabled:opacity-50 sm:tracking-[0.18em]"
-                >
-                  {copy.exportJsonButton}
-                </button>
-              </div>
+              <PrivacyPresetPreview
+                preset={selectedPreset}
+                copy={copy}
+                disabled={profileSaving}
+                onUse={() => selectedPreset && handleUsePresetDefault(selectedPreset)}
+                onApply={() => selectedPreset && handleOpenPresetPreview(selectedPreset)}
+              />
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {profileDraft && (
           <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/60 p-5 backdrop-blur sm:p-7">
@@ -2361,34 +2481,30 @@ function getEmotionFallbackLabel(emotion, language) {
   return labels[emotion]?.[language] || labels[emotion]?.en || emotion;
 }
 
-function PresetCard({
-  preset,
-  copy,
-  active,
-  disabled,
-  onUse,
-  onApply,
-}) {
+function PrivacyPresetPreview({ preset, copy, disabled, onUse, onApply }) {
+  if (!preset) return null;
+
   const accent = ACCENT_STYLES[preset.accent] || ACCENT_STYLES.cyan;
+  const publicMode = isPublicPrivacySharingMode(preset.sharingMode);
+  const statsMode =
+    normalizePrivacySharingMode(preset.sharingMode) === PRIVACY_SHARING_MODES.STATS_ONLY;
 
   return (
-    <article
+    <aside
       className={[
-        "rounded-2xl border bg-black/30 p-4 shadow-terminal transition sm:p-5",
-        active ? accent.border : "border-white/10",
+        "rounded-2xl border bg-black/35 p-5 shadow-terminal sm:p-6 xl:sticky xl:top-6 xl:self-start",
+        accent.border,
       ].join(" ")}
     >
-      <div className="flex items-start gap-3">
-        <span className={["mt-1 h-2.5 w-2.5 shrink-0 rounded-full", accent.dot].join(" ")} />
-        <div className="min-w-0">
-          <h3 className="text-lg font-semibold leading-snug text-zinc-100">
-            {preset.title}
-          </h3>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-300">
-            {preset.description}
-          </p>
-        </div>
-      </div>
+      <p className="cdo-kicker">
+        {copy.previewTitle}
+      </p>
+      <h3 className="mt-3 text-xl font-semibold leading-snug text-zinc-50">
+        {preset.title}
+      </h3>
+      <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+        {preset.description}
+      </p>
 
       <dl className="mt-5 grid gap-3">
         <PresetFact label={copy.presetPublicLabel} value={preset.publicLine} />
@@ -2396,12 +2512,25 @@ function PresetCard({
         <PresetFact label={copy.presetStatsLabel} value={preset.statsLine} />
       </dl>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <p
+        className={[
+          "mt-5 rounded-2xl border p-3 text-xs leading-relaxed",
+          publicMode
+            ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+            : statsMode
+              ? "border-cyan-300/20 bg-cyan-300/10 text-cyan-100"
+              : "border-white/10 bg-white/[0.04] text-zinc-300",
+        ].join(" ")}
+      >
+        {statsMode ? copy.statsOnlyReassurance : copy.safetyWarning}
+      </p>
+
+      <div className="mt-5 grid gap-3">
         <button
           type="button"
           onClick={onUse}
           disabled={disabled}
-          className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]"
+          className="rounded-2xl border border-cyan-300/35 bg-cyan-300 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {copy.usePresetButton}
         </button>
@@ -2409,7 +2538,116 @@ function PresetCard({
           type="button"
           onClick={onApply}
           disabled={disabled}
-          className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-200 transition hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10 disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]"
+          className={[
+            "rounded-2xl border px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed disabled:opacity-60",
+            publicMode
+              ? "border-amber-300/30 bg-amber-300/10 text-amber-100 hover:border-amber-300/50"
+              : "border-fuchsia-300/25 bg-fuchsia-300/10 text-fuchsia-100 hover:border-fuchsia-300/45",
+          ].join(" ")}
+        >
+          {copy.applyPresetButton}
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function PresetCard({
+  preset,
+  copy,
+  active,
+  selected,
+  disabled,
+  onSelect,
+  onUse,
+  onApply,
+}) {
+  const accent = ACCENT_STYLES[preset.accent] || ACCENT_STYLES.cyan;
+  const publicMode = isPublicPrivacySharingMode(preset.sharingMode);
+  const statsMode =
+    normalizePrivacySharingMode(preset.sharingMode) === PRIVACY_SHARING_MODES.STATS_ONLY;
+
+  function handleKeyDown(event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelect?.();
+    }
+  }
+
+  return (
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={handleKeyDown}
+      className={[
+        "cursor-pointer rounded-2xl border bg-black/30 p-4 shadow-terminal transition sm:p-5",
+        selected ? `${accent.border} ring-1 ring-cyan-300/25` : active ? accent.border : "border-white/10",
+        selected ? accent.glow : "",
+      ].join(" ")}
+    >
+      <div className="flex items-start gap-3">
+        <span className={["mt-1 h-2.5 w-2.5 shrink-0 rounded-full", accent.dot].join(" ")} />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold leading-snug text-zinc-100">
+            {preset.title}
+            </h3>
+            {active && (
+              <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-cyan-100">
+                {copy.activeStatus}
+              </span>
+            )}
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+            {preset.description}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <span
+          className={[
+            "rounded-full border px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.1em]",
+            publicMode
+              ? "border-amber-300/30 bg-amber-300/10 text-amber-100"
+              : "border-cyan-300/20 bg-cyan-300/10 text-cyan-100",
+          ].join(" ")}
+        >
+          {publicMode ? copy.presetPublicLabel : copy.presetPrivateLabel}
+        </span>
+        {statsMode && (
+          <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.1em] text-emerald-100">
+            {copy.presetStatsLabel}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onUse?.();
+          }}
+          disabled={disabled}
+          className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]"
+        >
+          {copy.usePresetButton}
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onApply?.();
+          }}
+          disabled={disabled}
+          className={[
+            "rounded-xl border px-3 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] transition disabled:cursor-not-allowed disabled:opacity-60 sm:tracking-[0.14em]",
+            publicMode
+              ? "border-amber-300/25 bg-amber-300/10 text-amber-100 hover:border-amber-300/45"
+              : "border-white/10 bg-white/[0.04] text-zinc-200 hover:border-fuchsia-300/35 hover:bg-fuchsia-300/10",
+          ].join(" ")}
         >
           {copy.applyPresetButton}
         </button>

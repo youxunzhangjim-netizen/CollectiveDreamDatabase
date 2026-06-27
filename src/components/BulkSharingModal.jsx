@@ -52,6 +52,7 @@ export default function BulkSharingModal({
   const [successfulIds, setSuccessfulIds] = useState([]);
   const [failedIds, setFailedIds] = useState([]);
   const [previousStates, setPreviousStates] = useState([]);
+  const [mobileStep, setMobileStep] = useState(1);
 
   const importBatches = useMemo(() => getImportBatchOptions(records), [records]);
   const tagOptions = useMemo(() => getTagOptions(records, language), [records, language]);
@@ -65,9 +66,31 @@ export default function BulkSharingModal({
   const applying = phase === "applying";
   const undoing = phase === "undoing";
   const canApply = preview.affectedRecords.length > 0 && !applying && !undoing;
+  const mobileSteps = [
+    copy.bulkStepPreset || "Step 1",
+    copy.bulkStepDreams || "Step 2",
+    copy.bulkStepSafety || "Step 3",
+    copy.bulkStepConfirm || "Step 4",
+  ];
+  const confirmClassName = [
+    "rounded-2xl border px-4 py-4 font-mono text-xs font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed disabled:opacity-50",
+    publicTarget
+      ? "border-amber-300/35 bg-amber-300 text-zinc-950 hover:bg-amber-200"
+      : statsOnlyTarget
+        ? "border-emerald-300/35 bg-emerald-300 text-zinc-950 hover:bg-emerald-200"
+        : "border-cyan-300/35 bg-cyan-300 text-zinc-950 hover:bg-cyan-200",
+  ].join(" ");
 
   function updateFilter(patch) {
     setFilters((current) => ({ ...current, ...patch }));
+  }
+
+  function goNext() {
+    setMobileStep((current) => Math.min(4, current + 1));
+  }
+
+  function goBack() {
+    setMobileStep((current) => Math.max(1, current - 1));
   }
 
   async function handleApply() {
@@ -193,8 +216,8 @@ export default function BulkSharingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 px-3 py-4 backdrop-blur-sm sm:items-center">
-      <section className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-cyan-300/20 bg-zinc-950 p-4 shadow-[0_0_60px_rgba(34,211,238,.16)] sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 px-3 py-0 backdrop-blur-sm sm:items-center sm:py-4">
+      <section className="max-h-[96vh] w-full max-w-5xl overflow-y-auto rounded-t-3xl border border-cyan-300/20 bg-zinc-950 p-4 pb-0 shadow-[0_0_60px_rgba(34,211,238,.16)] sm:max-h-[92vh] sm:rounded-3xl sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="cdo-kicker">{preset.title}</p>
@@ -215,10 +238,70 @@ export default function BulkSharingModal({
           </button>
         </div>
 
+        <div className="mt-4 lg:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={goBack}
+              disabled={mobileStep === 1 || applying || undoing}
+              className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {copy.bulkBack || "Back"}
+            </button>
+            <p className="min-w-0 text-right font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100">
+              {mobileSteps[mobileStep - 1]}
+            </p>
+          </div>
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {mobileSteps.map((step, index) => (
+              <span
+                key={step}
+                className={[
+                  "h-1.5 rounded-full",
+                  index + 1 <= mobileStep ? "bg-cyan-300" : "bg-white/10",
+                ].join(" ")}
+              />
+            ))}
+          </div>
+        </div>
+
         <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,.95fr)_minmax(0,1.05fr)]">
-          <section className="rounded-2xl border border-white/10 bg-black/25 p-4">
+          <section
+            className={[
+              "rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4 lg:hidden",
+              mobileStep === 1 ? "block" : "hidden",
+            ].join(" ")}
+          >
+            <h3 className="cdo-card-heading">{preset.title}</h3>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+              {preset.description}
+            </p>
+            <div className="mt-4 grid gap-2">
+              <PreviewMetric label={copy.presetPublicLabel} value={publicTarget ? copy.previewPublic : copy.previewPrivate} />
+              <PreviewMetric label={copy.presetStatsLabel} value={statsOnlyTarget || publicTarget ? copy.previewStats : copy.bulkNone} />
+            </div>
+            <button
+              type="button"
+              onClick={goNext}
+              className="mt-5 w-full rounded-2xl border border-cyan-300/35 bg-cyan-300 px-4 py-4 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-cyan-200"
+            >
+              {copy.bulkNext || "Next"}
+            </button>
+          </section>
+
+          <section
+            className={[
+              "rounded-2xl border border-white/10 bg-black/25 p-4",
+              mobileStep === 2 ? "block" : "hidden",
+              "lg:block",
+            ].join(" ")}
+          >
             <h3 className="cdo-card-heading">{copy.bulkFiltersTitle}</h3>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <details open className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
+              <summary className="cursor-pointer font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100">
+                {copy.bulkScopeLabel}
+              </summary>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Field label={copy.bulkScopeLabel}>
                 <select
                   value={filters.scope}
@@ -326,77 +409,131 @@ export default function BulkSharingModal({
                   <option value="missing">{copy.bulkPublicTextMissing}</option>
                 </select>
               </Field>
-            </div>
-
-            <Field label={copy.bulkSpecificTags} className="mt-3">
-              <input
-                value={filters.tagQuery}
-                onChange={(event) => updateFilter({ tagQuery: event.target.value })}
-                placeholder={copy.bulkSpecificTagsPlaceholder}
-                className={inputClassName}
-                list="bulk-sharing-tags"
-              />
-              <datalist id="bulk-sharing-tags">
-                {tagOptions.map((tag) => (
-                  <option key={tag.slug} value={tag.slug}>
-                    {tag.label}
-                  </option>
-                ))}
-              </datalist>
-            </Field>
-
-            <div className="mt-4 grid gap-2">
-              <Checkbox
-                checked={filters.adultFalseOnly}
-                onChange={(checked) => updateFilter({ adultFalseOnly: checked })}
-                label={copy.bulkAdultFalseOnly}
-              />
-              <Checkbox
-                checked={filters.confirmedTagsOnly}
-                onChange={(checked) => updateFilter({ confirmedTagsOnly: checked })}
-                label={copy.bulkConfirmedTagsOnly}
-              />
-              {publicTarget && (
-                <>
-                  <Checkbox
-                    checked={filters.includeAdultContent}
-                    onChange={(checked) => updateFilter({ includeAdultContent: checked })}
-                    label={copy.bulkIncludeAdult}
-                  />
-                  <Checkbox
-                    checked={filters.includeHighSensitivity}
-                    onChange={(checked) => updateFilter({ includeHighSensitivity: checked })}
-                    label={copy.bulkIncludeHighSensitivity}
-                  />
-                </>
-              )}
-            </div>
-
-            {filters.scope === "selected" && (
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3">
-                <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400">
-                  {copy.bulkSelectedDreams}
-                </h4>
-                <div className="mt-3 max-h-52 overflow-y-auto pr-1">
-                  {records.map((record) => (
-                    <Checkbox
-                      key={record.id}
-                      checked={filters.selectedIds.includes(record.id)}
-                      onChange={(checked) => {
-                        const selected = new Set(filters.selectedIds);
-                        if (checked) selected.add(record.id);
-                        else selected.delete(record.id);
-                        updateFilter({ selectedIds: [...selected] });
-                      }}
-                      label={getRecordTitle(record, copy)}
-                    />
-                  ))}
-                </div>
               </div>
-            )}
+            </details>
+
+            <details open className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+              <summary className="cursor-pointer font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100">
+                {copy.bulkSpecificTags}
+              </summary>
+
+              <Field label={copy.bulkSpecificTags} className="mt-4">
+                <input
+                  value={filters.tagQuery}
+                  onChange={(event) => updateFilter({ tagQuery: event.target.value })}
+                  placeholder={copy.bulkSpecificTagsPlaceholder}
+                  className={inputClassName}
+                  list="bulk-sharing-tags"
+                />
+                <datalist id="bulk-sharing-tags">
+                  {tagOptions.map((tag) => (
+                    <option key={tag.slug} value={tag.slug}>
+                      {tag.label}
+                    </option>
+                  ))}
+                </datalist>
+              </Field>
+
+              <div className="mt-4 grid gap-2">
+                <Checkbox
+                  checked={filters.adultFalseOnly}
+                  onChange={(checked) => updateFilter({ adultFalseOnly: checked })}
+                  label={copy.bulkAdultFalseOnly}
+                />
+                <Checkbox
+                  checked={filters.confirmedTagsOnly}
+                  onChange={(checked) => updateFilter({ confirmedTagsOnly: checked })}
+                  label={copy.bulkConfirmedTagsOnly}
+                />
+                {publicTarget && (
+                  <>
+                    <Checkbox
+                      checked={filters.includeAdultContent}
+                      onChange={(checked) => updateFilter({ includeAdultContent: checked })}
+                      label={copy.bulkIncludeAdult}
+                    />
+                    <Checkbox
+                      checked={filters.includeHighSensitivity}
+                      onChange={(checked) => updateFilter({ includeHighSensitivity: checked })}
+                      label={copy.bulkIncludeHighSensitivity}
+                    />
+                  </>
+                )}
+              </div>
+
+              {filters.scope === "selected" && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3">
+                  <h4 className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-400">
+                    {copy.bulkSelectedDreams}
+                  </h4>
+                  <div className="mt-3 max-h-52 overflow-y-auto pr-1">
+                    {records.map((record) => (
+                      <Checkbox
+                        key={record.id}
+                        checked={filters.selectedIds.includes(record.id)}
+                        onChange={(checked) => {
+                          const selected = new Set(filters.selectedIds);
+                          if (checked) selected.add(record.id);
+                          else selected.delete(record.id);
+                          updateFilter({ selectedIds: [...selected] });
+                        }}
+                        label={getRecordTitle(record, copy)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </details>
+
+            <button
+              type="button"
+              onClick={goNext}
+              className="mt-4 w-full rounded-2xl border border-cyan-300/35 bg-cyan-300 px-4 py-4 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-cyan-200 lg:hidden"
+            >
+              {copy.bulkNext || "Next"}
+            </button>
           </section>
 
-          <section className="rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
+          <section
+            className={[
+              "rounded-2xl border p-4 lg:hidden",
+              mobileStep === 3 ? "block" : "hidden",
+              publicTarget
+                ? "border-amber-300/25 bg-amber-300/10"
+                : "border-cyan-300/20 bg-cyan-300/5",
+            ].join(" ")}
+          >
+            <h3 className="cdo-card-heading">{copy.bulkStepSafety}</h3>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+              {copy.safetyWarning}
+            </p>
+            <p className="mt-3 rounded-2xl border border-cyan-300/15 bg-black/25 p-3 text-sm leading-relaxed text-cyan-100">
+              {copy.statsOnlyReassurance}
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-zinc-400">
+              {copy.notDiagnosisReminder}
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <PreviewMetric label={copy.previewAffected} value={preview.summary.affected} />
+              <PreviewMetric label={copy.previewSkipped} value={preview.summary.skipped} />
+              <PreviewMetric label={copy.bulkSkippedMissingPublicText} value={preview.skippedMissingPublicTextCount} />
+            </div>
+            <button
+              type="button"
+              onClick={goNext}
+              className="mt-5 w-full rounded-2xl border border-cyan-300/35 bg-cyan-300 px-4 py-4 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-cyan-200"
+            >
+              {copy.bulkNext || "Next"}
+            </button>
+          </section>
+
+          <section
+            className={[
+              "rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4",
+              mobileStep === 4 ? "block" : "hidden",
+              "lg:block",
+            ].join(" ")}
+          >
             <h3 className="cdo-card-heading">{copy.bulkPreviewTitle}</h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-300">
               {copy.bulkPreviewDescription}
@@ -461,12 +598,12 @@ export default function BulkSharingModal({
               </div>
             )}
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="sticky bottom-0 -mx-4 mt-5 grid gap-3 border-t border-white/10 bg-zinc-950/95 p-4 backdrop-blur sm:grid-cols-3 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
               <button
                 type="button"
                 onClick={handleApply}
                 disabled={!canApply}
-                className="rounded-2xl border border-cyan-300/35 bg-cyan-300 px-4 py-4 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"
+                className={[confirmClassName, "sm:col-span-2"].join(" ")}
               >
                 {applying ? copy.bulkProgress : copy.previewConfirm}
               </button>
