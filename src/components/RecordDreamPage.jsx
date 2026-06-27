@@ -126,11 +126,10 @@ const RECORD_COPY = {
     account: "Account",
     guest: "Guest",
     accountLinked: "Linked account",
-    guestMode: "Anonymous record",
-    kicker: "Private-first Dream Capture",
+    guestMode: "Anonymous public record",
+    kicker: "Fast Dream Capture",
     title: "Record the dream before it fades.",
-    subtitle:
-      "Start with the words. Every new dream is saved privately first. After saving, you can keep it private, share it anonymously, share with a pseudonym, or contribute only to aggregated statistics.",
+    subtitle: "Start with the words. Guests publish anonymously by default so the dream can be read and counted in collective patterns. You can still log in or create an account before publishing, and the draft will attach to that account instead.",
     dreamTextLabel: "Dream words",
     dreamTextPlaceholder:
       "Write fragments, scenes, feelings, places, dialogue, colors, sounds... exact order is not required.",
@@ -167,13 +166,11 @@ const RECORD_COPY = {
     recordAsAccount: "Use pseudonym",
     recordAsAnonymous: "Stay anonymous",
     submitAccount: "Save Private Dream",
-    submitAnonymous: "Save Private Dream",
-    submitting: "Saving private record",
-    consentText:
-      "By saving, you keep copyright and create a private dream record first. Nothing becomes public until you choose a sharing mode after saving.",
-    privacyFirstTitle: "Private-first by default",
-    privacyFirstText:
-      "After this dream is saved, open the record to choose: keep private, share anonymously, share with a pseudonym, or contribute only to aggregated statistics.",
+    submitAnonymous: "Publish Anonymous Dream",
+    submitting: "Publishing record",
+    consentText: "By proceeding, you keep copyright of your words and grant this observatory permission to store, analyze, and publicly display this record according to the selected identity.",
+    privacyFirstTitle: "Guest public, account private by default",
+    privacyFirstText: "Guests publish anonymously and contribute to collective statistics. If you log in before publishing, the dream uses your account privacy defaults and can be edited later from your account.",
     diagnosisReminderTitle: "Not a diagnosis",
     diagnosisReminderText:
       "Dream tags, statistics, and reflections are for self-exploration and research patterns only. They are not medical, psychological, or psychiatric diagnosis.",
@@ -189,11 +186,9 @@ const RECORD_COPY = {
       "One record field needs adjustment before saving.",
     accountEditable:
       "Saved records stay private first and can be edited, deleted, unpublished, or shared later from your account.",
-    anonymousLocked:
-      "Guest records are also private first. Keep this browser session if you want to edit, delete, or share them later.",
+    anonymousLocked: "Guest records publish anonymously and contribute to statistics. To edit or delete later, keep this browser session or log in before publishing.",
     authTitle: "Optional account link",
-    authText:
-      "You can login or create an account without leaving this draft. After login, saving will attach the private dream to that account.",
+    authText: "You can log in or create an account without leaving this draft. After login, publishing will attach this dream to that account automatically.",
     loginTab: "Login",
     signupTab: "Sign up",
     email: "Email",
@@ -239,11 +234,10 @@ const RECORD_COPY = {
     account: "帳戶",
     guest: "訪客",
     accountLinked: "已連結帳戶",
-    guestMode: "匿名記錄",
-    kicker: "隱私優先夢境記錄",
+    guestMode: "匿名公開記錄",
+    kicker: "快速夢境記錄",
     title: "先把夢寫下來，趁它還沒消散。",
-    subtitle:
-      "先寫文字。每一則新夢境都會先儲存為私人紀錄。儲存後，你可以選擇保留私人、匿名分享、以暱稱分享，或只加入整體統計。",
+    subtitle: "先寫下文字。訪客會預設匿名公開，讓夢境可被閱讀並加入集體模式統計。你仍然可以在發布前登入或建立帳戶，草稿會自動連到該帳戶。",
     dreamTextLabel: "夢境文字",
     dreamTextPlaceholder:
       "寫下片段、場景、感覺、地點、對話、顏色、聲音……不需要一開始就整理成完整順序。",
@@ -278,13 +272,11 @@ const RECORD_COPY = {
     recordAsAccount: "使用暱稱",
     recordAsAnonymous: "保持匿名",
     submitAccount: "儲存私人夢境",
-    submitAnonymous: "儲存私人夢境",
-    submitting: "正在儲存私人紀錄",
-    consentText:
-      "儲存後，你仍保留文字著作權，並先建立私人夢境紀錄。除非你之後選擇分享模式，否則不會公開顯示。",
-    privacyFirstTitle: "預設私人保存",
-    privacyFirstText:
-      "儲存這則夢境後，打開紀錄即可選擇：保留私人、匿名分享、以暱稱分享，或只加入整體統計。",
+    submitAnonymous: "匿名發布夢境",
+    submitting: "正在發布紀錄",
+    consentText: "繼續後，你保留文字著作權，並同意觀測站依照所選身分儲存、分析並公開顯示這份紀錄。",
+    privacyFirstTitle: "訪客匿名公開，帳戶預設保護隱私",
+    privacyFirstText: "訪客會匿名發布並加入集體統計。若你在發布前登入，這則夢會使用帳戶的隱私預設，之後也能在帳戶中修改。",
     diagnosisReminderTitle: "這不是診斷",
     diagnosisReminderText:
       "夢境標籤、統計與反思只用於自我探索與研究模式觀察，並不是醫療、心理或精神科診斷。",
@@ -295,10 +287,9 @@ const RECORD_COPY = {
     publishUnavailable: "資料庫目前無法連線。請稍後再試。",
     publishInvalidData: "有一個紀錄欄位需要調整後才能儲存。",
     accountEditable: "儲存後的紀錄會先保持私人，之後可以在帳戶中修改、刪除、取消公開或選擇分享。",
-    anonymousLocked: "訪客紀錄也會先保持私人；如果之後要修改、刪除或分享，請保留這個瀏覽器工作階段。",
+    anonymousLocked: "訪客紀錄會匿名公開並加入統計。若之後想修改或刪除，請保留這個瀏覽器工作階段，或在發布前登入。",
     authTitle: "選用帳戶連結",
-    authText:
-      "你可以在不離開草稿的情況下登入或建立帳戶。登入後，儲存會自動連到該帳戶。",
+    authText: "你可以在不離開草稿的情況下登入或建立帳戶。登入後，發布會自動連到該帳戶。",
     loginTab: "登入",
     signupTab: "註冊",
     email: "電子郵件",
@@ -343,11 +334,10 @@ const RECORD_COPY = {
     account: "Cuenta",
     guest: "Invitado",
     accountLinked: "Cuenta vinculada",
-    guestMode: "Registro anónimo",
-    kicker: "Registro privado por defecto",
+    guestMode: "Registro público anónimo",
+    kicker: "Registro rápido de sueños",
     title: "Registra el sueño antes de que se desvanezca.",
-    subtitle:
-      "Empieza con las palabras. Cada sueño nuevo se guarda primero en privado. Después puedes mantenerlo privado, compartirlo de forma anónima, compartirlo con seudónimo o contribuir solo a estadísticas agregadas.",
+    subtitle: "Empieza con las palabras. Los invitados publican de forma anónima por defecto para que el sueño pueda leerse y contarse en patrones colectivos. Aún puedes iniciar sesión o crear una cuenta antes de publicar, y el borrador se conectará a esa cuenta.",
     dreamTextLabel: "Palabras del sueño",
     dreamTextPlaceholder:
       "Escribe fragmentos, escenas, sensaciones, lugares, diálogos, colores, sonidos... no hace falta ordenarlo todo al inicio.",
@@ -384,13 +374,11 @@ const RECORD_COPY = {
     recordAsAccount: "Usar seudónimo",
     recordAsAnonymous: "Seguir anónimo",
     submitAccount: "Guardar sueño privado",
-    submitAnonymous: "Guardar sueño privado",
-    submitting: "Guardando registro privado",
-    consentText:
-      "Al guardar, conservas tus derechos de autor y creas primero un registro privado. Nada se hace público hasta que elijas un modo de compartir después.",
-    privacyFirstTitle: "Privado por defecto",
-    privacyFirstText:
-      "Después de guardar este sueño, abre el registro para elegir: mantenerlo privado, compartirlo de forma anónima, compartirlo con seudónimo o contribuir solo a estadísticas agregadas.",
+    submitAnonymous: "Publicar sueño anónimo",
+    submitting: "Publicando registro",
+    consentText: "Al continuar, conservas los derechos de autor de tus palabras y permites que este observatorio almacene, analice y muestre públicamente este registro según la identidad seleccionada.",
+    privacyFirstTitle: "Invitado público; cuenta privada por defecto",
+    privacyFirstText: "Los invitados publican de forma anónima y contribuyen a estadísticas colectivas. Si inicias sesión antes de publicar, el sueño usará los valores de privacidad de tu cuenta y podrás editarlo después desde la cuenta.",
     diagnosisReminderTitle: "No es un diagnóstico",
     diagnosisReminderText:
       "Las etiquetas, estadísticas y reflexiones sirven para autoexploración y patrones de investigación. No son diagnósticos médicos, psicológicos ni psiquiátricos.",
@@ -406,11 +394,9 @@ const RECORD_COPY = {
       "Un campo del registro necesita ajuste antes de guardar.",
     accountEditable:
       "Los registros guardados permanecen privados primero y luego se pueden editar, eliminar, retirar o compartir desde tu cuenta.",
-    anonymousLocked:
-      "Los registros de invitado también se guardan en privado primero. Conserva esta sesión del navegador si quieres editarlos, eliminarlos o compartirlos después.",
+    anonymousLocked: "Los registros de invitado se publican de forma anónima y contribuyen a estadísticas. Para editar o eliminar después, conserva esta sesión del navegador o inicia sesión antes de publicar.",
     authTitle: "Vincular cuenta opcional",
-    authText:
-      "Puedes iniciar sesión o crear cuenta sin salir del borrador. Después, el guardado se conectará a esa cuenta.",
+    authText: "Puedes iniciar sesión o crear una cuenta sin salir del borrador. Después de iniciar sesión, la publicación se conectará automáticamente a esa cuenta.",
     loginTab: "Entrar",
     signupTab: "Crear",
     email: "Correo",

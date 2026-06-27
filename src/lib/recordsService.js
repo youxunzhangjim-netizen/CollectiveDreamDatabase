@@ -209,6 +209,10 @@ export function resolveNewRecordPrivacyState({
     draft.sharingMode && draft.sharingMode !== ACCOUNT_DEFAULT_SHARING_MODE
       ? normalizeSharingMode(draft.sharingMode)
       : "";
+  const anonymousDefaultSharingMode =
+    !accountBacked && sourceType !== "diary_import"
+      ? DREAM_SHARING_MODES.ANONYMOUS_PUBLIC
+      : DREAM_SHARING_MODES.PRIVATE;
   const usesProfileDefault =
     !explicitSharingMode &&
     accountBacked &&
@@ -217,7 +221,7 @@ export function resolveNewRecordPrivacyState({
     explicitSharingMode ||
       (usesProfileDefault
         ? profileSettings.defaultSharingMode
-        : DREAM_SHARING_MODES.PRIVATE)
+        : anonymousDefaultSharingMode)
   );
   const requiresPublicReview =
     accountBacked &&
@@ -305,6 +309,108 @@ function getPublicText(record = {}, sharingMode) {
   return limitString(record.originalText || record.dream_text || record.text || "", 120000);
 }
 
+function stableHashString(value = "") {
+  const input = String(value || "");
+  let hash = 2166136261;
+
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return `h${(hash >>> 0).toString(36)}`;
+}
+
+function sanitizePublicTags(tags = []) {
+  if (!Array.isArray(tags)) return [];
+
+  return tags
+    .map((tag) => {
+      if (!tag) return null;
+      if (typeof tag === "string") {
+        return { slug: tag, category: "Custom", labelEn: tag };
+      }
+
+      const slug = tag.slug || tag.id || tag.name || "";
+      if (!slug) return null;
+
+      return {
+        slug,
+        category: tag.category || "Custom",
+        labelEn: tag.labelEn || tag.nameEn || tag.label || tag.name || slug,
+        labelZh: tag.labelZh || tag.nameZh || tag.name_zh || "",
+        labelEs: tag.labelEs || tag.nameEs || tag.name_es || "",
+      };
+    })
+    .filter(Boolean);
+}
+
+function getTagSlugsForCategory(tags = [], category) {
+  return tags
+    .filter((tag) => tag.category === category)
+    .map((tag) => tag.slug)
+    .filter(Boolean);
+}
+
+function getPublicDateFields(record = {}) {
+  const dreamDate = record.dreamDate || record.dream_date || "";
+  const dreamDateStatus = record.dreamDateStatus || record.dream_date_status || "unknown";
+  const dateBucket = /^\d{4}-\d{2}/.test(dreamDate) ? dreamDate.slice(0, 7) : "";
+
+  if (dreamDateStatus === "known" && /^\d{4}-\d{2}-\d{2}$/.test(dreamDate)) {
+    return {
+      publicDate: dreamDate,
+      dateBucket,
+    };
+  }
+
+  return {
+    publicDate: "",
+    dateBucket,
+  };
+}
+
+function getDreamLengthBucket(text = "") {
+  const trimmed = String(text || "").trim();
+  const wordCount = trimmed
+    ? trimmed.split(/\s+/).filter(Boolean).length
+    : 0;
+  const length = wordCount > 1 ? wordCount : trimmed.length;
+
+  if (length <= 0) return "empty";
+  if (length <= 50) return "short";
+  if (length <= 200) return "medium";
+  if (length <= 800) return "long";
+  return "very_long";
+}
+
+function getSensitivityLevelBucket(level) {
+  const numericLevel = Number(level || 0);
+  if (numericLevel >= 4) return "restricted";
+  if (numericLevel >= 3) return "high";
+  if (numericLevel >= 2) return "medium";
+  if (numericLevel >= 1) return "low";
+  return "none";
+}
+
+function getContentWarnings(record = {}, sensitivityLevel = calculateSensitivityLevel(record)) {
+  const warnings = new Set();
+  const tags = Array.isArray(record.tags) ? record.tags : [];
+  const tagSlugs = tags.map((tag) => tag.slug).filter(Boolean);
+
+  if (record.adultContent || Number(record.minimumViewerAge || 0) >= 18) {
+    warnings.add("adult-content");
+  }
+
+  ["violence", "death", "blood", "body-horror", "self-harm"].forEach((slug) => {
+    if (tagSlugs.includes(slug)) warnings.add(slug);
+  });
+
+  if (sensitivityLevel >= 3) warnings.add("high-sensitivity");
+
+  return [...warnings];
+}
+
 export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode = record.sharingMode) {
   const normalizedMode = normalizeSharingMode(sharingMode);
   if (!shouldWritePublicDream(normalizedMode)) return null;
@@ -313,6 +419,11 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
   if (!publicText) return null;
 
   const publicTitle = getPublicTitle(record, normalizedMode);
+  const originalLanguage = normalizeLanguage(record.originalLanguage || "zh");
+  const publicLanguage = normalizeLanguage(record.publicLanguage || originalLanguage);
+  const publicTags = sanitizePublicTags(record.tags);
+  const publicDate = getPublicDateFields(record);
+  const sensitivityLevel = calculateSensitivityLevel(record);
   const pseudonym =
     normalizedMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC
       ? profile.defaultPseudonym ||
@@ -321,122 +432,52 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
         record.creatorDisplayName ||
         "Dream Observer"
       : "";
-  const publicRecorderId =
-    normalizedMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC
-      ? profile.publicRecorderId || record.publicRecorderId || record.pseudoId || buildPseudoId(record.id || record.dream_id)
-      : "";
 
   return {
-    id: record.id || record.dream_id,
-    recordId: record.id || record.dream_id,
-    recorderId: publicRecorderId,
-    publicRecorderId,
-    originalLanguage: normalizeLanguage(record.originalLanguage || "zh"),
-    originalTitle: publicTitle,
-    originalText: publicText,
-    originalExcerpt: createExcerpt(publicText),
-    title: publicTitle,
-    dream_text: publicText,
-    excerpt: createExcerpt(publicText),
     publicTitle,
     publicText,
-    publicExcerpt: createExcerpt(publicText),
-    sharingMode: normalizedMode,
-    visibility: "public",
-    isPublic: true,
-    publicConsent: true,
-    researchConsent: true,
-    includedInResearchStats: true,
-    recordIdentityMode:
-      normalizedMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC ? "pseudonym" : "anonymous",
-    attributionMode:
-      normalizedMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC ? "pseudonym" : "anonymous",
-    publicAuthorName: pseudonym,
-    creatorDisplayName: pseudonym,
-    creatorEmail: "",
-    authorName: pseudonym,
-    pseudoId: record.pseudoId || record.pseudo_id || buildPseudoId(record.id || record.dream_id),
-    dreamDate: record.dreamDate || record.dream_date || "",
-    dream_date: record.dreamDate || record.dream_date || "",
-    dreamDateStatus: record.dreamDateStatus || record.dream_date_status || "unknown",
-    dream_date_status: record.dreamDateStatus || record.dream_date_status || "unknown",
-    dreamTime: record.dreamTime || record.dream_time || "",
-    dream_time: record.dreamTime || record.dream_time || "",
-    dreamPeriod: record.dreamPeriod || record.dream_period || "",
-    dream_period: record.dreamPeriod || record.dream_period || "",
-    dreamSequence: record.dreamSequence || record.dream_sequence || 1,
-    dream_sequence: record.dreamSequence || record.dream_sequence || 1,
-    tags: Array.isArray(record.tags) ? record.tags : [],
-    environmentTags: record.environmentTags || [],
-    entityTags: record.entityTags || [],
-    anomalyTags: record.anomalyTags || [],
-    emotionTags: record.emotionTags || [],
-    styleTags: record.styleTags || [],
-    eraTags: record.eraTags || [],
-    weatherTags: record.weatherTags || [],
-    dreamTypeTags: record.dreamTypeTags || [],
-    perspectiveTags: record.perspectiveTags || [],
-    psychologicalObservableTags: record.psychologicalObservableTags || [],
-    dreamAnalysisTags: record.dreamAnalysisTags || [],
-    customTags: record.customTags || [],
+    publicTags,
+    publicLanguage,
+    ...publicDate,
+    pseudonym,
+    anonymousLabel: pseudonym ? "" : "Anonymous Observer",
+    publicCreatedAt: record.publicCreatedAt || record.createdAt || serverTimestamp(),
     adultContent: Boolean(record.adultContent),
-    minimumViewerAge: Number(record.minimumViewerAge || 0),
-    sensitivityLevel: calculateSensitivityLevel(record),
-    redactionStatus:
-      normalizedMode === DREAM_SHARING_MODES.REDACTED_PUBLIC
-        ? record.redactionStatus || "user_confirmed"
-        : "",
-    sourceType: record.sourceType || "",
-    importBatchId: record.importBatchId || "",
-    signal_coherence: Number(record.signal_coherence || 0),
-    createdAt: record.createdAt || serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    contentWarnings: getContentWarnings(record, sensitivityLevel),
+    originalLanguage,
+    sharingMode: normalizedMode,
   };
 }
 
-export function buildResearchSignalDocument(record = {}, sharingMode = record.sharingMode) {
+export function buildResearchSignalDocument(record = {}, sharingMode = record.sharingMode, ownerUid = "") {
   const normalizedMode = normalizeSharingMode(sharingMode);
   if (!shouldWriteResearchSignal(normalizedMode)) return null;
 
   const tags = Array.isArray(record.tags) ? record.tags : [];
   const dreamDate = record.dreamDate || record.dream_date || "";
+  const recordId = record.id || record.dream_id || "";
+  const ownerSeed = ownerUid || record.ownerId || record.creatorId || "";
+  const dreamText = record.originalText || record.dream_text || record.text || record.publicText || "";
+  const sensitivityLevel = calculateSensitivityLevel(record);
 
   return {
-    id: record.id || record.dream_id,
-    recordId: record.id || record.dream_id,
-    sharingMode: normalizedMode,
-    researchConsent: true,
-    publicConsent: shouldWritePublicDream(normalizedMode),
-    originalLanguage: normalizeLanguage(record.originalLanguage || "zh"),
-    dreamMonth: /^\d{4}-\d{2}/.test(dreamDate) ? dreamDate.slice(0, 7) : "",
-    dreamDateStatus: record.dreamDateStatus || record.dream_date_status || "unknown",
-    dreamPeriod: record.dreamPeriod || record.dream_period || "",
-    dreamSequence: record.dreamSequence || record.dream_sequence || 1,
-    ageAtDream:
-      Number.isFinite(Number(record.ageAtDream)) && Number(record.ageAtDream) > 0
-        ? Number(record.ageAtDream)
-        : "",
-    adultContent: Boolean(record.adultContent),
-    minimumViewerAge: Number(record.minimumViewerAge || 0),
-    sensitivityLevel: calculateSensitivityLevel(record),
+    recordIdHash: stableHashString(recordId),
+    userGroupHash: stableHashString(ownerSeed || "anonymous"),
+    language: normalizeLanguage(record.originalLanguage || "zh"),
+    monthBucket: /^\d{4}-\d{2}/.test(dreamDate) ? dreamDate.slice(0, 7) : "",
+    dreamLengthBucket: getDreamLengthBucket(dreamText),
     tagSlugs: tags.map((tag) => tag.slug).filter(Boolean),
-    tagCategories: [...new Set(tags.map((tag) => tag.category).filter(Boolean))],
-    environmentTags: record.environmentTags || [],
-    entityTags: record.entityTags || [],
-    anomalyTags: record.anomalyTags || [],
-    emotionTags: record.emotionTags || [],
-    styleTags: record.styleTags || [],
-    eraTags: record.eraTags || [],
-    weatherTags: record.weatherTags || [],
-    dreamTypeTags: record.dreamTypeTags || [],
-    perspectiveTags: record.perspectiveTags || [],
-    psychologicalObservableTags: record.psychologicalObservableTags || [],
-    dreamAnalysisTags: record.dreamAnalysisTags || [],
-    signal_coherence: Number(record.signal_coherence || 0),
-    sourceType: record.sourceType || "",
-    importBatchId: record.importBatchId || "",
-    createdAt: record.createdAt || serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    emotionTags: record.emotionTags || getTagSlugsForCategory(tags, "Emotions"),
+    settingTags: record.environmentTags || getTagSlugsForCategory(tags, "Environment"),
+    dreamTypeTags: record.dreamTypeTags || getTagSlugsForCategory(tags, "Dream Types"),
+    psychologicalObservationTags:
+      record.psychologicalObservableTags ||
+      getTagSlugsForCategory(tags, "Psychological Observables"),
+    adultContent: Boolean(record.adultContent),
+    sensitivityLevelBucket: getSensitivityLevelBucket(sensitivityLevel),
+    sharingMode: normalizedMode,
+    tagSource: record.tagsSource || record.tags_source || "user_or_import",
+    confirmedByUser: Boolean(record.tagsReviewedByUser || record.tags_reviewed_by_user),
   };
 }
 
@@ -451,21 +492,27 @@ async function syncPrivacyMirrorDocuments({
 
   const recordId = record.id || record.dream_id;
   const normalizedMode = normalizeSharingMode(sharingMode || record.sharingMode);
+  const signalId = stableHashString(recordId);
   const publicRef = doc(firestore, "PublicDreams", recordId);
-  const signalRef = doc(firestore, "ResearchSignals", recordId);
+  const signalRef = doc(firestore, "ResearchSignals", signalId);
+  const legacySignalRef = doc(firestore, "ResearchSignals", recordId);
   const publicDream = buildPublicDreamDocument(record, profile, normalizedMode);
-  const researchSignal = buildResearchSignalDocument(record, normalizedMode);
+  const researchSignal = buildResearchSignalDocument(record, normalizedMode, currentUser?.uid);
 
   if (publicDream) {
-    await setDoc(publicRef, publicDream, { merge: true });
+    await setDoc(publicRef, publicDream);
   } else {
     await deleteDoc(publicRef).catch(() => {});
   }
 
   if (researchSignal) {
-    await setDoc(signalRef, researchSignal, { merge: true });
+    await setDoc(signalRef, researchSignal);
+    if (signalId !== recordId) {
+      await deleteDoc(legacySignalRef).catch(() => {});
+    }
   } else {
     await deleteDoc(signalRef).catch(() => {});
+    await deleteDoc(legacySignalRef).catch(() => {});
   }
 
   if (currentUser?.uid) {
@@ -545,48 +592,32 @@ export async function fetchPublicRecords({ includeAdult = false } = {}) {
   const firestore = requireFirestore();
   const publicDreamsCollection = collection(firestore, "PublicDreams");
   const publicDreamsQuery = includeAdult
-    ? query(publicDreamsCollection, where("isPublic", "==", true))
+    ? query(publicDreamsCollection)
     : query(
         publicDreamsCollection,
-        where("isPublic", "==", true),
-        where("adultContent", "==", false),
-        where("minimumViewerAge", "==", 0)
+        where("adultContent", "==", false)
       );
   const publicDreamsSnapshot = await getDocs(publicDreamsQuery);
   const publicDreams = mapRecordSnapshot(publicDreamsSnapshot);
 
-  const recordsCollection = collection(firestore, "Records");
-  const legacyPublicRecordsQuery = includeAdult
-    ? query(recordsCollection, where("isPublic", "==", true))
-    : query(
-        recordsCollection,
-        where("isPublic", "==", true),
-        where("adultContent", "==", false),
-        where("minimumViewerAge", "==", 0)
-      );
-  const legacySnapshot = await getDocs(legacyPublicRecordsQuery).catch(() => ({
-    docs: [],
-  }));
-  const publicIds = new Set(publicDreams.map((record) => record.recordId || record.id));
-  const legacyRecords = mapRecordSnapshot(legacySnapshot)
-    .filter((record) => {
-      const recordId = record.id || record.dream_id;
-      const sharingMode = normalizeSharingMode(record.sharingMode);
-
-      return (
-        !publicIds.has(recordId) &&
-        sharingMode !== DREAM_SHARING_MODES.REDACTED_PUBLIC &&
-        sharingMode !== DREAM_SHARING_MODES.STATS_ONLY
-      );
-    })
-    .map((record) => ({
-      ...record,
-      publicMirrorMissing: true,
-    }));
-
-  return [...publicDreams, ...legacyRecords].sort(
-    (a, b) => getTimestampMillis(b.createdAt) - getTimestampMillis(a.createdAt)
+  return publicDreams.sort(
+    (a, b) =>
+      getTimestampMillis(b.publicCreatedAt || b.createdAt) -
+      getTimestampMillis(a.publicCreatedAt || a.createdAt)
   );
+}
+
+export async function fetchResearchSignals({ includeAdult = false } = {}) {
+  const signalsCollection = collection(requireFirestore(), "ResearchSignals");
+  const signalsQuery = includeAdult
+    ? query(signalsCollection)
+    : query(signalsCollection, where("adultContent", "==", false));
+  const snapshot = await getDocs(signalsQuery);
+
+  return snapshot.docs.map((signalDoc) => ({
+    signalId: signalDoc.id,
+    ...signalDoc.data(),
+  }));
 }
 
 export async function createDreamRecord(currentUser, draft, profile = null) {
@@ -1006,13 +1037,23 @@ export async function unfollowRecorderForUser(currentUser, recorderId) {
 export async function fetchRecordById(recordId) {
   if (!recordId) return null;
 
-  const recordSnapshot = await getDoc(doc(requireFirestore(), "Records", recordId));
+  const firestore = requireFirestore();
+  const recordSnapshot = await getDoc(doc(firestore, "Records", recordId)).catch(() => null);
 
-  if (!recordSnapshot.exists()) return null;
+  if (recordSnapshot?.exists()) {
+    return {
+      id: recordSnapshot.id,
+      ...recordSnapshot.data(),
+    };
+  }
+
+  const publicSnapshot = await getDoc(doc(firestore, "PublicDreams", recordId)).catch(() => null);
+
+  if (!publicSnapshot?.exists()) return null;
 
   return {
-    id: recordSnapshot.id,
-    ...recordSnapshot.data(),
+    id: publicSnapshot.id,
+    ...publicSnapshot.data(),
   };
 }
 
@@ -1024,11 +1065,18 @@ function normalizeRecordReference(record) {
   }
 
   const originalLanguage = normalizeLanguage(
-    record?.originalLanguage || record?.original_language || "en"
+    record?.originalLanguage || record?.original_language || record?.publicLanguage || "en"
   );
+  const sharingMode = normalizeSharingMode(record?.sharingMode);
+  const publicTags = Array.isArray(record?.publicTags) ? record.publicTags : [];
+  const recordTags = Array.isArray(record?.tags) ? record.tags : publicTags;
   const recordIdentityMode =
-    record?.recordIdentityMode === "account" || record?.attributionMode === "account"
-      ? "account"
+    sharingMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC ||
+    record?.recordIdentityMode === "pseudonym" ||
+    record?.attributionMode === "pseudonym"
+      ? "pseudonym"
+      : record?.recordIdentityMode === "account" || record?.attributionMode === "account"
+        ? "account"
       : "anonymous";
   const adultContent = Boolean(
     record?.adultContent ||
@@ -1039,20 +1087,35 @@ function normalizeRecordReference(record) {
   const images = normalizeDreamImages(record);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(record);
-  const dreamDateStatus = getDreamDateStatus(record);
-  const dreamDate = getVisibleDreamDate(record);
+  const publicDate = record?.publicDate || "";
+  const bucketDate = record?.dateBucket || "";
+  const dreamDateStatus = publicDate
+    ? DREAM_DATE_STATUS.KNOWN
+    : bucketDate
+      ? DREAM_DATE_STATUS.KNOWN
+      : getDreamDateStatus(record);
+  const dreamDate = publicDate || bucketDate || getVisibleDreamDate(record);
   const visibility =
-    record?.visibility || (record?.isPublic === false ? "private" : "public");
+    record?.visibility ||
+    (isPublicPrivacySharingMode(sharingMode) ? "public" : record?.isPublic === false ? "private" : "public");
   const isPublic =
     typeof record?.isPublic === "boolean" ? record.isPublic : visibility === "public";
+  const publicTitle = record?.publicTitle || "";
+  const publicText = record?.publicText || "";
+  const publicAuthorName =
+    record?.pseudonym ||
+    record?.anonymousLabel ||
+    record?.authorName ||
+    record?.creatorDisplayName ||
+    "";
 
   return {
     recordId,
-    title: record?.title || "",
+    title: record?.title || publicTitle || "",
     titleEn: record?.titleEn || record?.title_en || "",
     titleZh: record?.titleZh || record?.title_zh || "",
     titleEs: record?.titleEs || record?.title_es || "",
-    text: record?.dream_text || record?.text || record?.excerpt || "",
+    text: record?.dream_text || record?.text || publicText || record?.excerpt || "",
     textEn:
       record?.dream_text_en || record?.textEn || record?.text_en || record?.excerpt_en || "",
     textZh: record?.dream_text_zh || record?.textZh || record?.excerpt_zh || "",
@@ -1061,10 +1124,12 @@ function normalizeRecordReference(record) {
     originalTitle:
       record?.originalTitle ||
       record?.original_title ||
+      publicTitle ||
       getLanguageSpecificValue(record, "title", originalLanguage),
     originalText:
       record?.originalText ||
       record?.original_text ||
+      publicText ||
       getLanguageSpecificValue(record, "text", originalLanguage),
     translationLanguages: normalizeTranslationLanguages(record?.translationLanguages),
     translationSource: record?.translationSource || "",
@@ -1093,14 +1158,13 @@ function normalizeRecordReference(record) {
         normalizeDreamTime(record?.dreamTime || record?.dream_time)
       ),
     creatorId: record?.ownerId || record?.creatorId || "",
-    authorName: record?.authorName || record?.creatorDisplayName || "",
+    authorName: publicAuthorName,
     recordIdentityMode,
     creatorDisplayName:
-      recordIdentityMode === "account"
-        ? record?.creatorDisplayName || record?.displayName || ""
+      recordIdentityMode === "account" || recordIdentityMode === "pseudonym"
+        ? record?.creatorDisplayName || record?.displayName || record?.pseudonym || ""
         : "",
-    creatorEmail:
-      recordIdentityMode === "account" ? record?.creatorEmail || "" : "",
+    creatorEmail: recordIdentityMode === "account" ? record?.creatorEmail || "" : "",
     pseudoId: record?.pseudo_id || record?.pseudoId || "",
     visibility,
     isPublic,
@@ -1122,30 +1186,41 @@ function normalizeRecordReference(record) {
       record?.minimumViewerAge ||
       record?.minimum_viewer_age ||
       (adultContent ? 18 : 0),
-    tags: Array.isArray(record?.tags) ? record.tags : [],
-    environmentTags: Array.isArray(record?.environmentTags) ? record.environmentTags : [],
-    entityTags: Array.isArray(record?.entityTags) ? record.entityTags : [],
+    tags: recordTags,
+    publicTags,
+    environmentTags: Array.isArray(record?.environmentTags)
+      ? record.environmentTags
+      : getTagSlugsForCategory(recordTags, "Environment"),
+    entityTags: Array.isArray(record?.entityTags)
+      ? record.entityTags
+      : getTagSlugsForCategory(recordTags, "Entities"),
     anomalyTags: Array.isArray(record?.anomalyTags)
       ? record.anomalyTags
       : Array.isArray(record?.anomaly_tag_slugs)
         ? record.anomaly_tag_slugs
-        : [],
-    emotionTags: Array.isArray(record?.emotionTags) ? record.emotionTags : [],
+        : getTagSlugsForCategory(recordTags, "Anomalies"),
+    emotionTags: Array.isArray(record?.emotionTags)
+      ? record.emotionTags
+      : getTagSlugsForCategory(recordTags, "Emotions"),
     styleTags: Array.isArray(record?.styleTags) ? record.styleTags : [],
     eraTags: Array.isArray(record?.eraTags) ? record.eraTags : [],
-    weatherTags: Array.isArray(record?.weatherTags) ? record.weatherTags : [],
-    dreamTypeTags: Array.isArray(record?.dreamTypeTags) ? record.dreamTypeTags : [],
+    weatherTags: Array.isArray(record?.weatherTags)
+      ? record.weatherTags
+      : getTagSlugsForCategory(recordTags, "Weather"),
+    dreamTypeTags: Array.isArray(record?.dreamTypeTags)
+      ? record.dreamTypeTags
+      : getTagSlugsForCategory(recordTags, "Dream Types"),
     perspectiveTags: Array.isArray(record?.perspectiveTags)
       ? record.perspectiveTags
       : [],
     psychologicalObservableTags: Array.isArray(record?.psychologicalObservableTags)
       ? record.psychologicalObservableTags
-      : [],
+      : getTagSlugsForCategory(recordTags, "Psychological Observables"),
     dreamAnalysisTags: Array.isArray(record?.dreamAnalysisTags)
       ? record.dreamAnalysisTags
-      : [],
+      : getTagSlugsForCategory(recordTags, "Dream Analysis"),
     customTags: Array.isArray(record?.customTags) ? record.customTags : [],
-    sourceType: record?.sourceType || (record?.importBatchId ? "diary_import" : "single_record"),
+    sourceType: record?.sourceType || (record?.importBatchId ? "diary_import" : ""),
     importBatchId: record?.importBatchId || "",
     importDraftId: record?.importDraftId || "",
     sourceFileName: record?.sourceFileName || "",
@@ -1164,6 +1239,12 @@ function normalizeRecordReference(record) {
     parserVersion: record?.parserVersion || "",
     autoTaggerVersion: record?.autoTaggerVersion || "",
     importedAt: record?.importedAt || "",
+    publicTitle,
+    publicText,
+    publicLanguage: record?.publicLanguage || originalLanguage,
+    dateBucket: record?.dateBucket || "",
+    publicCreatedAt: record?.publicCreatedAt || "",
+    contentWarnings: Array.isArray(record?.contentWarnings) ? record.contentWarnings : [],
   };
 }
 
@@ -1464,9 +1545,11 @@ export async function deleteOwnedRecord(currentUser, recordId) {
   if (!currentUser?.uid || !recordId) return;
 
   const firestore = requireFirestore();
+  const signalId = stableHashString(recordId);
 
   await Promise.allSettled([
     deleteDoc(doc(firestore, "PublicDreams", recordId)),
+    deleteDoc(doc(firestore, "ResearchSignals", signalId)),
     deleteDoc(doc(firestore, "ResearchSignals", recordId)),
   ]);
   await deleteDoc(doc(firestore, "Records", recordId));

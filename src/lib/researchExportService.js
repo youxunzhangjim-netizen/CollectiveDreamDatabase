@@ -217,6 +217,9 @@ export function downloadResearchCodebook(language = "en") {
 function buildResearchRecordsPayload(records = [], options = {}) {
   const language = normalizeLanguage(options.language || "en");
   const detailLevel = normalizeExportDetailLevel(options.detailLevel || options.exportDetail);
+  const researchSignals = Array.isArray(options.researchSignals)
+    ? options.researchSignals
+    : [];
   const exportableRecords = records
     .filter((record) => record && isResearchReadable(record))
     .map((record, index) => sanitizeRecordForResearch(record, index, language, detailLevel));
@@ -228,6 +231,7 @@ function buildResearchRecordsPayload(records = [], options = {}) {
       options: { ...options, language, detailLevel },
     }),
     filters: sanitizeFilters(options.filters || {}),
+    researchSignalsSummary: buildResearchSignalsSummary(researchSignals),
     records: exportableRecords,
   };
 }
@@ -285,7 +289,7 @@ function isPublicResearchExportable(record) {
 
 function sanitizeRecordForResearch(record, index, language, detailLevel = EXPORT_DETAIL_LEVELS.ANALYSIS) {
   const dreamText = getRecordText(record);
-  const tags = normalizeTags(record.tags);
+  const tags = normalizeTags(record.tags || record.publicTags);
   const tagSlugs = tags.map((tag) => tag.slug).filter(Boolean);
   const tagLabels = tags.map((tag) => getTagLabel(tag, language)).filter(Boolean);
   const dateStatus = getRecordDateStatus(record);
@@ -353,7 +357,7 @@ function sanitizeRecordForResearch(record, index, language, detailLevel = EXPORT
 
 function sanitizeRecordForPersonalExport(record, index, language, detailLevel = EXPORT_DETAIL_LEVELS.ANALYSIS) {
   const dreamText = getRecordText(record);
-  const tags = normalizeTags(record.tags);
+  const tags = normalizeTags(record.tags || record.publicTags);
   const dateStatus = getRecordDateStatus(record);
   const baseRecord = {
     export_row: index + 1,
@@ -464,10 +468,41 @@ function normalizeTags(tags = []) {
     .filter((tag) => tag?.slug);
 }
 
+function buildResearchSignalsSummary(signals = []) {
+  const safeSignals = signals.filter(Boolean);
+
+  return {
+    sampleSize: safeSignals.length,
+    languages: countValues(safeSignals.map((signal) => signal.language)),
+    monthBuckets: countValues(safeSignals.map((signal) => signal.monthBucket)),
+    dreamLengthBuckets: countValues(safeSignals.map((signal) => signal.dreamLengthBucket)),
+    sensitivityBuckets: countValues(safeSignals.map((signal) => signal.sensitivityLevelBucket)),
+    sharingModes: countValues(safeSignals.map((signal) => signal.sharingMode)),
+    adultContent: countValues(
+      safeSignals.map((signal) => (signal.adultContent ? "adult" : "non_adult"))
+    ),
+    tagSlugs: countValues(safeSignals.flatMap((signal) => signal.tagSlugs || [])),
+    emotionTags: countValues(safeSignals.flatMap((signal) => signal.emotionTags || [])),
+    settingTags: countValues(safeSignals.flatMap((signal) => signal.settingTags || [])),
+    dreamTypeTags: countValues(safeSignals.flatMap((signal) => signal.dreamTypeTags || [])),
+    psychologicalObservationTags: countValues(
+      safeSignals.flatMap((signal) => signal.psychologicalObservationTags || [])
+    ),
+  };
+}
+
+function countValues(values = []) {
+  return values
+    .filter((value) => value !== "" && value != null)
+    .reduce((counts, value) => {
+      const key = String(value);
+      counts[key] = (counts[key] || 0) + 1;
+      return counts;
+    }, {});
+}
+
 function isResearchReadable(record) {
-  if (record.visibility === "private") return false;
-  if (record.isPublic === false && record.visibility !== "public") return false;
-  return true;
+  return isPublicResearchExportable(record);
 }
 
 function getRecordTitle(record) {
@@ -475,6 +510,7 @@ function getRecordTitle(record) {
   return (
     record.originalTitle ||
     record.original_title ||
+    record.publicTitle ||
     getLocalizedValue(record, "title", originalLanguage) ||
     record.title ||
     record.titleEn ||
@@ -494,6 +530,7 @@ function getRecordText(record) {
   return String(
     record.originalText ||
       record.original_text ||
+      record.publicText ||
       getLocalizedValue(record, "text", originalLanguage) ||
       record.dreamText ||
       record.dream_text ||

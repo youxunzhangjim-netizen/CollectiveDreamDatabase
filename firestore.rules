@@ -94,6 +94,12 @@ service cloud.firestore {
         || data[field] is map;
     }
 
+    function optionalTimestamp(data, field) {
+      return !data.keys().hasAny([field])
+        || data[field] == null
+        || data[field] is timestamp;
+    }
+
     function validOptionalAge(data, field) {
       return !data.keys().hasAny([field])
         || data[field] == null
@@ -112,7 +118,9 @@ service cloud.firestore {
     }
 
     function isPublicRecord(data) {
-      return data.isPublic == true || data.visibility == "public";
+      return data.isPublic == true
+        || data.visibility == "public"
+        || (data.keys().hasAny(["sharingMode"]) && isPublicSharingMode(data.sharingMode));
     }
 
     function recordRequiresAdult(data) {
@@ -540,63 +548,82 @@ service cloud.firestore {
     }
 
     function validPublicDreamMirror(data, recordId) {
-      return data.keys().hasAll(["recordId", "dream_text", "sharingMode", "visibility", "isPublic"])
-        && data.recordId == recordId
-        && requiredString(data, "dream_text", 1, 120000)
-        && optionalString(data, "title", 220)
-        && optionalString(data, "originalTitle", 220)
-        && optionalString(data, "originalText", 120000)
+      return data.keys().hasOnly([
+          "publicTitle",
+          "publicText",
+          "publicTags",
+          "publicLanguage",
+          "dateBucket",
+          "publicDate",
+          "pseudonym",
+          "anonymousLabel",
+          "publicCreatedAt",
+          "adultContent",
+          "contentWarnings",
+          "originalLanguage",
+          "sharingMode"
+        ])
+        && data.keys().hasAll(["publicText", "publicLanguage", "originalLanguage", "sharingMode", "adultContent"])
+        && requiredString(data, "publicText", 1, 120000)
         && optionalString(data, "publicTitle", 220)
-        && optionalString(data, "publicText", 120000)
-        && optionalString(data, "excerpt", 520)
-        && optionalString(data, "publicExcerpt", 520)
+        && optionalList(data, "publicTags", 160)
+        && validLanguage(data.publicLanguage)
+        && validLanguage(data.originalLanguage)
+        && optionalString(data, "dateBucket", 16)
+        && optionalString(data, "publicDate", 16)
+        && optionalString(data, "pseudonym", 120)
+        && optionalString(data, "anonymousLabel", 120)
+        && optionalTimestamp(data, "publicCreatedAt")
+        && data.adultContent is bool
+        && optionalList(data, "contentWarnings", 40)
         && validSharingMode(data.sharingMode)
-        && isPublicSharingMode(data.sharingMode)
-        && data.visibility == "public"
-        && data.isPublic == true
-        && data.publicConsent == true
-        && data.researchConsent == true
-        && (!data.keys().hasAny(["ownerId", "creatorId", "creatorEmail", "email"]))
-        && optionalString(data, "recorderId", 128)
-        && optionalString(data, "publicRecorderId", 128)
-        && optionalString(data, "creatorDisplayName", 120)
-        && optionalString(data, "authorName", 120)
-        && optionalList(data, "tags", 160)
-        && validRecordTaxonomy(data)
-        && validAdultMetadata(data)
-        && optionalNumber(data, "sensitivityLevel", 0, 4);
+        && isPublicSharingMode(data.sharingMode);
     }
 
-    function validResearchSignal(data, recordId) {
-      return data.keys().hasAll(["recordId", "sharingMode", "researchConsent"])
-        && data.recordId == recordId
-        && validSharingMode(data.sharingMode)
-        && data.researchConsent == true
-        && (!data.keys().hasAny([
-          "ownerId",
-          "creatorId",
-          "email",
-          "creatorEmail",
-          "title",
-          "originalTitle",
-          "dream_text",
-          "originalText",
-          "text",
-          "excerpt",
-          "publicText"
-        ]))
-        && validOptionalLanguageField(data, "originalLanguage")
-        && optionalString(data, "dreamMonth", 16)
-        && validOptionalDreamDateStatusField(data, "dreamDateStatus")
-        && optionalString(data, "dreamPeriod", 32)
-        && optionalNumber(data, "dreamSequence", 1, 12)
-        && validOptionalAge(data, "ageAtDream")
-        && optionalNumber(data, "sensitivityLevel", 0, 4)
-        && optionalNumber(data, "signal_coherence", 0, 100)
+    function validResearchSignal(data, signalId) {
+      return data.keys().hasOnly([
+          "recordIdHash",
+          "userGroupHash",
+          "language",
+          "monthBucket",
+          "dreamLengthBucket",
+          "tagSlugs",
+          "emotionTags",
+          "settingTags",
+          "dreamTypeTags",
+          "psychologicalObservationTags",
+          "adultContent",
+          "sensitivityLevelBucket",
+          "sharingMode",
+          "tagSource",
+          "confirmedByUser"
+        ])
+        && data.keys().hasAll([
+          "recordIdHash",
+          "userGroupHash",
+          "language",
+          "dreamLengthBucket",
+          "adultContent",
+          "sensitivityLevelBucket",
+          "sharingMode",
+          "confirmedByUser"
+        ])
+        && data.recordIdHash == signalId
+        && requiredString(data, "recordIdHash", 1, 80)
+        && requiredString(data, "userGroupHash", 1, 80)
+        && validLanguage(data.language)
+        && optionalString(data, "monthBucket", 16)
+        && data.dreamLengthBucket in ["empty", "short", "medium", "long", "very_long"]
         && optionalList(data, "tagSlugs", 160)
-        && optionalList(data, "tagCategories", 40)
-        && validRecordTaxonomy(data)
-        && validAdultMetadata(data);
+        && optionalList(data, "emotionTags", 80)
+        && optionalList(data, "settingTags", 80)
+        && optionalList(data, "dreamTypeTags", 80)
+        && optionalList(data, "psychologicalObservationTags", 80)
+        && data.adultContent is bool
+        && data.sensitivityLevelBucket in ["none", "low", "medium", "high", "restricted"]
+        && validSharingMode(data.sharingMode)
+        && optionalString(data, "tagSource", 80)
+        && data.confirmedByUser is bool;
     }
 
     function validOwnerAuditData(data) {
@@ -614,13 +641,13 @@ service cloud.firestore {
       allow delete: if ownsRecordDocument(recordId);
     }
 
-    match /ResearchSignals/{recordId} {
+    match /ResearchSignals/{signalId} {
       allow read: if true;
 
-      allow create, update: if ownsRecordDocument(recordId)
-        && validResearchSignal(request.resource.data, recordId);
+      allow create, update: if isSignedIn()
+        && validResearchSignal(request.resource.data, signalId);
 
-      allow delete: if ownsRecordDocument(recordId);
+      allow delete: if isSignedIn();
     }
 
     match /ConsentEvents/{eventId} {
@@ -635,8 +662,7 @@ service cloud.firestore {
     }
 
     match /Records/{recordId} {
-      allow get, list: if canReadPublicRecord(resource.data)
-        || isOwner(resource.data.ownerId);
+      allow get, list: if isOwner(resource.data.ownerId);
 
       allow create: if isOwner(request.resource.data.ownerId)
         && validRecordWriteMinimum(request.resource.data);

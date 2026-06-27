@@ -19,6 +19,7 @@ import {
   collectRecordForUser,
   fetchFollowingRecorders,
   fetchPublicRecords,
+  fetchResearchSignals,
   followRecorderForUser,
   calculateDreamSignalCoherence,
   saveRecordForUser,
@@ -702,6 +703,7 @@ export default function CollectiveDreamDashboard({
   const [loadError, setLoadError] = useState(null);
   const [viewerProfile, setViewerProfile] = useState(null);
   const [followingRecorders, setFollowingRecorders] = useState([]);
+  const [researchSignals, setResearchSignals] = useState([]);
   const [adultConfirmations, setAdultConfirmations] = useState({});
   const copy = UI_COPY[language] || UI_COPY.zh;
   const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
@@ -722,11 +724,15 @@ export default function CollectiveDreamDashboard({
 
       const loadErrors = [];
       let firestoreDreams = [];
+      let safeResearchSignals = [];
       let sharedTags = [];
 
       try {
-        [firestoreDreams, sharedTags] = await Promise.all([
+        [firestoreDreams, safeResearchSignals, sharedTags] = await Promise.all([
           fetchPublicRecords({
+            includeAdult: canLoadAdultRecords,
+          }),
+          fetchResearchSignals({
             includeAdult: canLoadAdultRecords,
           }),
           fetchSharedCustomTags(),
@@ -743,11 +749,13 @@ export default function CollectiveDreamDashboard({
         setLoadState(loadErrors.length > 0 ? "fallback" : EMPTY_LOAD_STATE);
         setLoadError(loadErrors[0] || null);
         setDreams([]);
+        setResearchSignals(safeResearchSignals);
         setTags(mergeTagSets(DEFAULT_TAGS, sharedTags));
         return;
       }
 
       setDreams(liveDreams);
+      setResearchSignals(safeResearchSignals);
       setTags(
         mergeTagSets(
           DEFAULT_TAGS,
@@ -1097,6 +1105,7 @@ export default function CollectiveDreamDashboard({
           records={filteredDreams}
           patternStats={collectivePatternStats}
           tags={tags}
+          researchSignals={researchSignals}
           language={language}
           expanded={expandedPanels.research}
           onToggle={() => togglePanel("research")}
@@ -1160,26 +1169,32 @@ export default function CollectiveDreamDashboard({
 }
 
 function normalizeDreamCard(row) {
-  const rowTags = Array.isArray(row.tags) ? row.tags : [];
+  const rowTags = Array.isArray(row.tags)
+    ? row.tags
+    : Array.isArray(row.publicTags)
+      ? row.publicTags
+      : [];
   const adultContent =
     Boolean(row.adultContent || row.adult_content || row.isAdult || row.is_adult) ||
     rowTags.some((tag) => tag.slug === "adult-content" || tag.slug === "adult_content");
   const tags = adultContent ? ensureAdultTag(rowTags) : rowTags;
   const originalLanguage = normalizeLanguage(
-    row.originalLanguage || row.original_language || "en"
+    row.originalLanguage || row.original_language || row.publicLanguage || "en"
   );
   const excerpt =
     row.excerpt ||
-    (row.dream_text ? createExcerpt(row.dream_text) : "");
+    (row.dream_text || row.publicText ? createExcerpt(row.dream_text || row.publicText) : "");
   const originalTitle =
     row.originalTitle ||
     row.original_title ||
+    row.publicTitle ||
     getLanguageSpecificValue(row, "title", originalLanguage) ||
     row.title ||
     "";
   const originalText =
     row.originalText ||
     row.original_text ||
+    row.publicText ||
     getLanguageSpecificValue(row, "dream_text", originalLanguage) ||
     row.dream_text ||
     row.text ||
@@ -1187,8 +1202,8 @@ function normalizeDreamCard(row) {
   const images = normalizeDreamImages(row);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(row);
-  const dreamDate = getVisibleDreamDate(row);
-  const dreamDateStatus = getDreamDateStatus(row);
+  const dreamDate = row.publicDate || row.dateBucket || getVisibleDreamDate(row);
+  const dreamDateStatus = row.publicDate || row.dateBucket ? "known" : getDreamDateStatus(row);
   const anomalyTags = Array.isArray(row.anomalyTags)
     ? row.anomalyTags
     : row.anomaly_tag_slugs ||
@@ -1209,17 +1224,24 @@ function normalizeDreamCard(row) {
     id: row.id || row.dream_id,
     ownerId: row.ownerId || row.creatorId || "",
     creatorId: row.creatorId || row.ownerId || "",
-    authorName: row.authorName || row.creatorDisplayName || row.displayName || "",
+    authorName:
+      row.authorName ||
+      row.creatorDisplayName ||
+      row.pseudonym ||
+      row.anonymousLabel ||
+      row.displayName ||
+      "",
     anonymousLocked: Boolean(row.anonymousLocked),
     recordIdentityMode:
+      row.pseudonym ||
       row.recordIdentityMode === "pseudonym" ||
       row.attributionMode === "pseudonym" ||
       row.recordIdentityMode === "account" ||
       row.attributionMode === "account"
         ? "pseudonym"
         : "anonymous",
-    creatorDisplayName: row.creatorDisplayName || "",
-    creatorEmail: row.creatorEmail || "",
+    creatorDisplayName: row.creatorDisplayName || row.pseudonym || "",
+    creatorEmail: "",
     creatorCountry: row.creatorCountry || row.creatorCountryRegion || "",
     visibility: row.visibility || (row.isPublic === false ? "private" : "public"),
     isPublic: typeof row.isPublic === "boolean" ? row.isPublic : row.visibility === "public",
@@ -1250,7 +1272,7 @@ function normalizeDreamCard(row) {
       createExcerpt(originalText),
     translationLanguages: normalizeTranslationLanguages(row.translationLanguages),
     translationSource: row.translationSource || "",
-    title: row.title || "",
+    title: row.title || row.publicTitle || "",
     titleEn: row.titleEn || row.title_en || "",
     title_en: row.title_en || row.titleEn || "",
     titleZh: row.titleZh || row.title_zh || "",
@@ -1264,7 +1286,7 @@ function normalizeDreamCard(row) {
     excerpt_zh: row.excerpt_zh || row.excerptZh,
     excerptEs: row.excerptEs || row.excerpt_es || "",
     excerpt_es: row.excerpt_es || row.excerptEs,
-    dream_text: row.dream_text || row.dreamText || row.text || row.originalText,
+    dream_text: row.dream_text || row.dreamText || row.text || row.originalText || row.publicText,
     dream_text_en: row.dream_text_en || row.dreamTextEn || row.textEn || row.text_en || "",
     textEn: row.textEn || row.dream_text_en || row.text_en || "",
     dream_text_zh: row.dream_text_zh || row.dreamTextZh || row.textZh || row.text_zh || "",
@@ -1290,14 +1312,22 @@ function normalizeDreamCard(row) {
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,
-    environmentTags: Array.isArray(row.environmentTags) ? row.environmentTags : [],
-    entityTags: Array.isArray(row.entityTags) ? row.entityTags : [],
+    environmentTags: Array.isArray(row.environmentTags)
+      ? row.environmentTags
+      : getTagSlugsForCategory(rowTags, "Environment"),
+    entityTags: Array.isArray(row.entityTags)
+      ? row.entityTags
+      : getTagSlugsForCategory(rowTags, "Entities"),
     anomalyTags,
-    emotionTags: Array.isArray(row.emotionTags) ? row.emotionTags : [],
-    dreamTypeTags: Array.isArray(row.dreamTypeTags) ? row.dreamTypeTags : [],
-    pseudo_id: row.pseudo_id || row.pseudoId || "",
-    pseudoId: row.pseudoId || row.pseudo_id || "",
-    createdAt: row.createdAt || row.created_at || "",
+    emotionTags: Array.isArray(row.emotionTags)
+      ? row.emotionTags
+      : getTagSlugsForCategory(rowTags, "Emotions"),
+    dreamTypeTags: Array.isArray(row.dreamTypeTags)
+      ? row.dreamTypeTags
+      : getTagSlugsForCategory(rowTags, "Dream Types"),
+    pseudo_id: row.pseudo_id || row.pseudoId || row.id || "",
+    pseudoId: row.pseudoId || row.pseudo_id || row.id || "",
+    createdAt: row.publicCreatedAt || row.createdAt || row.created_at || "",
     updatedAt: row.updatedAt || row.updated_at || "",
     sharingUpdatedAt: row.sharingUpdatedAt || row.sharing_updated_at || "",
     signal_coherence: signalCoherence,
@@ -1311,6 +1341,13 @@ function ensureAdultTag(tags) {
 
   const adultTag = RECORD_TAGS["adult-content"];
   return adultTag ? [...tags, adultTag] : tags;
+}
+
+function getTagSlugsForCategory(tags = [], category) {
+  return tags
+    .filter((tag) => tag?.category === category)
+    .map((tag) => tag.slug)
+    .filter(Boolean);
 }
 
 function isAdultDream(dream) {
@@ -2103,6 +2140,7 @@ function ResearchPanel({
   records = [],
   patternStats,
   tags = [],
+  researchSignals = [],
   language,
   exportFilters,
   expanded,
@@ -2191,8 +2229,8 @@ function ResearchPanel({
         </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <ExportButton disabled={records.length === 0} onClick={() => exportResearchRecordsCsv(records, { language, filters: exportFilters, detailLevel: exportDetail })}>{copy.exportCsv}</ExportButton>
-          <ExportButton disabled={records.length === 0} onClick={() => exportResearchRecordsJson(records, { language, filters: exportFilters, detailLevel: exportDetail })}>{copy.exportJson}</ExportButton>
+          <ExportButton disabled={records.length === 0} onClick={() => exportResearchRecordsCsv(records, { language, filters: exportFilters, detailLevel: exportDetail, researchSignals })}>{copy.exportCsv}</ExportButton>
+          <ExportButton disabled={records.length === 0} onClick={() => exportResearchRecordsJson(records, { language, filters: exportFilters, detailLevel: exportDetail, researchSignals })}>{copy.exportJson}</ExportButton>
           <ExportButton disabled={!patternStats} onClick={() => exportPatternSummaryJson(patternStats, { language, filters: exportFilters })}>{copy.exportPatterns}</ExportButton>
           <ExportButton onClick={() => exportTagCodebookCsv(tags, { language, filters: exportFilters })}>{copy.exportCodebook}</ExportButton>
           <ExportButton onClick={() => exportMethodologyMarkdown({ stats: patternStats, filters: exportFilters, language, detailLevel: exportDetail })}>{copy.exportMethodology}</ExportButton>

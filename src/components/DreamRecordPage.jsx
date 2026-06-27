@@ -1258,13 +1258,13 @@ function SharingControlPanel({
 
 function normalizeDreamRecord(record) {
   const originalLanguage = normalizeLanguage(
-    record?.originalLanguage || record?.original_language || "en"
+    record?.originalLanguage || record?.original_language || record?.publicLanguage || "en"
   );
-  const title = record?.title || "";
+  const title = record?.title || record?.publicTitle || "";
   const titleEn = record?.titleEn || record?.title_en || "";
   const titleZh = record?.titleZh || record?.title_zh || "";
   const titleEs = record?.titleEs || record?.title_es || "";
-  const text = record?.dream_text || record?.text || record?.excerpt || "";
+  const text = record?.dream_text || record?.text || record?.publicText || record?.excerpt || "";
   const textEn =
     record?.dream_text_en || record?.textEn || record?.text_en || record?.excerpt_en || "";
   const textZh = record?.dream_text_zh || record?.textZh || record?.excerpt_zh || record?.excerpt || "";
@@ -1272,8 +1272,8 @@ function normalizeDreamRecord(record) {
   const images = normalizeDreamImages(record);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(record);
-  const dreamDate = getVisibleDreamDate(record);
-  const dreamDateStatus = getDreamDateStatus(record);
+  const dreamDate = record?.publicDate || record?.dateBucket || getVisibleDreamDate(record);
+  const dreamDateStatus = record?.publicDate || record?.dateBucket ? "known" : getDreamDateStatus(record);
 
   return {
     id: record?.id || record?.dream_id || record?.recordId || "",
@@ -1281,6 +1281,7 @@ function normalizeDreamRecord(record) {
     originalTitle:
       record?.originalTitle ||
       record?.original_title ||
+      record?.publicTitle ||
       getLanguageSpecificRecordValue(
         { title, titleEn, titleZh, titleEs },
         "title",
@@ -1289,6 +1290,7 @@ function normalizeDreamRecord(record) {
     originalText:
       record?.originalText ||
       record?.original_text ||
+      record?.publicText ||
       getLanguageSpecificRecordValue(
         { text, textEn, textZh, textEs },
         "text",
@@ -1325,12 +1327,20 @@ function normalizeDreamRecord(record) {
     ownerId: record?.ownerId || record?.creatorId || "",
     anonymousLocked: Boolean(record?.anonymousLocked),
     recordIdentityMode:
+      record?.pseudonym ||
+      record?.recordIdentityMode === "pseudonym" ||
+      record?.attributionMode === "pseudonym" ||
       record?.recordIdentityMode === "account" || record?.attributionMode === "account"
         ? "account"
         : "anonymous",
-    creatorDisplayName: record?.creatorDisplayName || "",
-    authorName: record?.authorName || record?.creatorDisplayName || "",
-    creatorEmail: record?.creatorEmail || "",
+    creatorDisplayName: record?.creatorDisplayName || record?.pseudonym || "",
+    authorName:
+      record?.authorName ||
+      record?.creatorDisplayName ||
+      record?.pseudonym ||
+      record?.anonymousLabel ||
+      "",
+    creatorEmail: record?.recordIdentityMode === "account" ? record?.creatorEmail || "" : "",
     pseudoId: record?.pseudo_id || record?.pseudoId || record?.creatorId || "",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
     isPublic: typeof record?.isPublic === "boolean" ? record.isPublic : record?.visibility === "public",
@@ -1338,7 +1348,11 @@ function normalizeDreamRecord(record) {
     includedInResearchStats: Boolean(
       record?.includedInResearchStats || record?.researchConsent
     ),
-    tags: Array.isArray(record?.tags) ? record.tags : [],
+    tags: Array.isArray(record?.tags)
+      ? record.tags
+      : Array.isArray(record?.publicTags)
+        ? record.publicTags
+        : [],
     environmentTags: Array.isArray(record?.environmentTags) ? record.environmentTags : [],
     entityTags: Array.isArray(record?.entityTags) ? record.entityTags : [],
     anomalyTags: Array.isArray(record?.anomalyTags)

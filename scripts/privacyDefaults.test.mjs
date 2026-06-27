@@ -12,6 +12,7 @@ import {
 } from "../src/lib/recordsService.js";
 
 const user = { uid: "user-1", isAnonymous: false, displayName: "Recorder" };
+const anonymousUser = { uid: "guest-1", isAnonymous: true, displayName: "" };
 const baseRecord = {
   id: "dream-1",
   ownerId: "user-1",
@@ -30,6 +31,21 @@ assert.equal(
   DREAM_SHARING_MODES.REDACTED_PUBLIC,
   "normalizes stray typo characters around redacted_public"
 );
+
+{
+  const state = resolveNewRecordPrivacyState({
+    currentUser: anonymousUser,
+    draft: {
+      sourceType: "single_record",
+    },
+  });
+
+  assert.equal(state.sharingMode, DREAM_SHARING_MODES.ANONYMOUS_PUBLIC);
+  assert.equal(state.visibility, "public");
+  assert.equal(state.isPublic, true);
+  assert.equal(state.researchConsent, true);
+  assert.equal(state.publicConsent, true);
+}
 
 {
   const profile = normalizePrivacySettings({
@@ -89,6 +105,8 @@ assert.equal(
   assert.equal(publicMirror, null);
   assert.equal("dream_text" in researchSignal, false);
   assert.equal("title" in researchSignal, false);
+  assert.equal("recordId" in researchSignal, false);
+  assert.ok(researchSignal.recordIdHash);
 }
 
 {
@@ -99,8 +117,12 @@ assert.equal(
   );
 
   assert.ok(publicMirror);
-  assert.equal(publicMirror.creatorEmail, "");
-  assert.equal(publicMirror.creatorDisplayName, "");
+  assert.equal(publicMirror.publicText, baseRecord.originalText);
+  assert.equal(publicMirror.anonymousLabel, "Anonymous Observer");
+  assert.equal("creatorEmail" in publicMirror, false);
+  assert.equal("creatorDisplayName" in publicMirror, false);
+  assert.equal("dream_text" in publicMirror, false);
+  assert.equal("originalText" in publicMirror, false);
   assert.equal("ownerId" in publicMirror, false);
 }
 
@@ -111,9 +133,10 @@ assert.equal(
     DREAM_SHARING_MODES.PSEUDONYM_PUBLIC
   );
 
-  assert.equal(publicMirror.creatorDisplayName, "Night Archivist");
-  assert.equal(publicMirror.authorName, "Night Archivist");
-  assert.equal(publicMirror.creatorEmail, "");
+  assert.equal(publicMirror.pseudonym, "Night Archivist");
+  assert.equal(publicMirror.anonymousLabel, "");
+  assert.equal("creatorEmail" in publicMirror, false);
+  assert.equal("creatorDisplayName" in publicMirror, false);
   assert.equal("ownerId" in publicMirror, false);
 }
 
@@ -128,9 +151,10 @@ assert.equal(
     DREAM_SHARING_MODES.REDACTED_PUBLIC
   );
 
-  assert.equal(publicMirror.title, "Safe title");
-  assert.equal(publicMirror.dream_text, "Safe public wording only.");
-  assert.notEqual(publicMirror.dream_text, baseRecord.originalText);
+  assert.equal(publicMirror.publicTitle, "Safe title");
+  assert.equal(publicMirror.publicText, "Safe public wording only.");
+  assert.notEqual(publicMirror.publicText, baseRecord.originalText);
+  assert.equal("dream_text" in publicMirror, false);
 }
 
 {
