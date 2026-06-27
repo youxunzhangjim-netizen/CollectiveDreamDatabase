@@ -25,12 +25,11 @@ const DEFAULT_FILTERS = {
   period: "",
   language: "",
   adultFalseOnly: false,
-  sensitivityThreshold: 5,
+  sensitivityThreshold: "all",
   confirmedTagsOnly: false,
   publicText: "any",
   tagQuery: "",
   includeAdultContent: false,
-  includeHighSensitivity: false,
 };
 
 const PERIODS = ["morning", "afternoon", "evening", "night"];
@@ -48,6 +47,7 @@ export default function BulkSharingModal({
 }) {
   const [filters, setFilters] = useState(() => ({
     ...DEFAULT_FILTERS,
+    sensitivityThreshold: isPublicPrivacySharingMode(preset.sharingMode) ? 3 : "all",
     ...(initialFilters || {}),
     selectedIds: Array.isArray(initialFilters?.selectedIds)
       ? initialFilters.selectedIds
@@ -392,22 +392,26 @@ export default function BulkSharingModal({
                 </select>
               </Field>
 
-              <Field label={copy.bulkSensitivityBelow}>
-                <input
-                  type="number"
-                  min="1"
-                  max="5"
+              <Field label={copy.bulkSensitivityRange || copy.bulkSensitivityBelow}>
+                <select
                   value={filters.sensitivityThreshold}
                   onChange={(event) =>
                     updateFilter({
-                      sensitivityThreshold: Math.max(
-                        1,
-                        Math.min(5, Number(event.target.value || 5))
-                      ),
+                      sensitivityThreshold:
+                        event.target.value === "all"
+                          ? "all"
+                          : Number(event.target.value),
                     })
                   }
                   className={inputClassName}
-                />
+                >
+                  <option value="all">{copy.bulkSensitivityAll}</option>
+                  {[1, 2, 3, 4].map((threshold) => (
+                    <option key={threshold} value={threshold}>
+                      {copy.bulkSensitivityBelow} {threshold}
+                    </option>
+                  ))}
+                </select>
               </Field>
 
               <Field label={copy.bulkPublicTextLabel}>
@@ -486,11 +490,6 @@ export default function BulkSharingModal({
                       checked={filters.includeAdultContent}
                       onChange={(checked) => updateFilter({ includeAdultContent: checked })}
                       label={copy.bulkIncludeAdult}
-                    />
-                    <Checkbox
-                      checked={filters.includeHighSensitivity}
-                      onChange={(checked) => updateFilter({ includeHighSensitivity: checked })}
-                      label={copy.bulkIncludeHighSensitivity}
                     />
                   </>
                 )}
@@ -752,6 +751,12 @@ function buildBulkSharingPreview(records, preset, filters) {
     const sensitivityLevel = getSensitivityLevel(record);
     const missingPublicText = !String(record.publicText || "").trim();
 
+    if (!matchesSensitivityRange(sensitivityLevel, filters.sensitivityThreshold)) {
+      skippedHighSensitivityCount += 1;
+      skippedRecords.push(record);
+      return;
+    }
+
     if (preset.requiresPublicText && missingPublicText) {
       skippedMissingPublicTextCount += 1;
       skippedRecords.push(record);
@@ -760,12 +765,6 @@ function buildBulkSharingPreview(records, preset, filters) {
 
     if (publicTarget && adult && !filters.includeAdultContent) {
       skippedAdultCount += 1;
-      skippedRecords.push(record);
-      return;
-    }
-
-    if (publicTarget && sensitivityLevel >= 3 && !filters.includeHighSensitivity) {
-      skippedHighSensitivityCount += 1;
       skippedRecords.push(record);
       return;
     }
@@ -845,10 +844,6 @@ function matchesUserFilters(record, filters) {
 
   if (filters.adultFalseOnly && isAdultRecord(record)) return false;
 
-  if (getSensitivityLevel(record) >= Number(filters.sensitivityThreshold || 5)) {
-    return false;
-  }
-
   if (filters.confirmedTagsOnly && !record.tagsReviewedByUser) return false;
 
   if (filters.publicText === "available" && !String(record.publicText || "").trim()) {
@@ -870,6 +865,13 @@ function matchesUserFilters(record, filters) {
   }
 
   return true;
+}
+
+function matchesSensitivityRange(sensitivityLevel, threshold) {
+  if (threshold === "all" || threshold === "" || threshold == null) return true;
+
+  const numericThreshold = Number(threshold);
+  return !Number.isFinite(numericThreshold) || sensitivityLevel < numericThreshold;
 }
 
 function buildSharingUpdate(preset, record) {
