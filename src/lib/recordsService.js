@@ -321,6 +321,49 @@ function getPublicText(record = {}, sharingMode) {
   return limitString(record.originalText || record.dream_text || record.text || "", 120000);
 }
 
+function getPrivateDreamText(record = {}) {
+  return limitString(
+    record.dream_text ||
+      record.originalText ||
+      record.dreamText ||
+      record.text ||
+      record.publicText ||
+      "",
+    120000
+  );
+}
+
+function buildLegacyRecordRepairPatch(record = {}) {
+  const dreamText = getPrivateDreamText(record);
+  const title = limitString(
+    record.originalTitle || record.title || record.publicTitle || "",
+    220
+  );
+  const excerpt = dreamText ? createExcerpt(dreamText) : "";
+  const adultContent = Boolean(record.adultContent);
+  const minimumViewerAge = adultContent
+    ? Math.max(18, Number(record.minimumViewerAge || 18))
+    : 0;
+  const patch = {
+    adultContent,
+    minimumViewerAge,
+  };
+
+  if (dreamText) {
+    if (!String(record.dream_text || "").trim()) patch.dream_text = dreamText;
+    if (!String(record.originalText || "").trim()) patch.originalText = dreamText;
+    if (!String(record.excerpt || "").trim()) patch.excerpt = excerpt;
+    if (!String(record.originalExcerpt || "").trim()) patch.originalExcerpt = excerpt;
+  }
+
+  if (title) {
+    if (!String(record.title || "").trim()) patch.title = title;
+    if (!String(record.originalTitle || "").trim()) patch.originalTitle = title;
+  }
+
+  return patch;
+}
+
 function stableHashString(value = "") {
   const input = String(value || "");
   let hash = 2166136261;
@@ -708,14 +751,12 @@ export async function fetchPublicRecords({ includeAdult = false } = {}) {
     DREAM_SHARING_MODES.REDACTED_PUBLIC,
   ];
   const publicDreamsQuery = includeAdult
-    ? query(publicDreamsCollection, where("sharingMode", "in", publicModes))
-    : query(
-        publicDreamsCollection,
-        where("sharingMode", "in", publicModes),
-        where("adultContent", "==", false)
-      );
+    ? query(publicDreamsCollection)
+    : query(publicDreamsCollection, where("adultContent", "==", false));
   const publicDreamsSnapshot = await getDocs(publicDreamsQuery);
-  const publicDreams = mapRecordSnapshot(publicDreamsSnapshot);
+  const publicDreams = mapRecordSnapshot(publicDreamsSnapshot).filter((record) =>
+    publicModes.includes(normalizeSharingMode(record.sharingMode))
+  );
 
   return publicDreams.sort(
     (a, b) =>
@@ -1726,7 +1767,18 @@ export async function updateOwnedRecordSharing(
   const publicTitle = "publicTitle" in updates
     ? limitString(updates.publicTitle || "", 220)
     : existingRecord.publicTitle || "";
+  const legacyRepairPatch = buildLegacyRecordRepairPatch(existingRecord);
+  const repairedDreamText =
+    legacyRepairPatch.dream_text || existingRecord.dream_text || "";
+
+  if (!String(repairedDreamText || "").trim()) {
+    throw new Error(
+      "This older record has no private dream text field to authorize the sharing change."
+    );
+  }
+
   const sharingPatch = {
+    ...legacyRepairPatch,
     visibility,
     isPublic,
     sharingMode,

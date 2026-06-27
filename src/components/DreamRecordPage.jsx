@@ -165,7 +165,7 @@ const DETAIL_COPY = {
       "Dream words stay private unless you choose a public mode. Choose exactly how this record may leave your personal archive.",
     keepPrivate: "Keep private",
     shareAnonymously: "Share anonymously",
-    shareWithPseudonym: "Share with pseudonym",
+    shareWithPseudonym: "Share with username",
     shareRedacted: "Share redacted version",
     contributeStatsOnly: "Stats only",
     unpublishRecord: "Unpublish",
@@ -174,7 +174,7 @@ const DETAIL_COPY = {
     deletedRecord: "Dream deleted",
     sharingSaved: "Sharing choice saved",
     accountNeededForPseudonym:
-      "Use a non-guest account before sharing with a pseudonym.",
+      "Use a non-guest account before sharing with a username.",
     notDiagnosisTitle: "Not a diagnosis",
     notDiagnosisText:
       "Dream tags, statistics, and AI reflections are for self-exploration and research patterns only. They are not medical, psychological, or psychiatric diagnosis.",
@@ -256,7 +256,7 @@ const DETAIL_COPY = {
     sharingHelp: "夢境文字會保持私人，除非你選擇公開模式。請選擇這則紀錄可以如何離開你的個人檔案庫。",
     keepPrivate: "保持私人",
     shareAnonymously: "匿名分享",
-    shareWithPseudonym: "以暱稱分享",
+    shareWithPseudonym: "以用戶名分享",
     shareRedacted: "公開節錄版",
     contributeStatsOnly: "只加入統計",
     unpublishRecord: "取消公開",
@@ -264,7 +264,7 @@ const DETAIL_COPY = {
     deleteConfirm: "確定要永久刪除此夢境嗎？",
     deletedRecord: "夢境已刪除",
     sharingSaved: "分享選擇已儲存",
-    accountNeededForPseudonym: "請先使用非訪客帳戶，才能以暱稱分享。",
+    accountNeededForPseudonym: "請先使用非訪客帳戶，才能以用戶名分享。",
     notDiagnosisTitle: "這不是診斷",
     notDiagnosisText:
       "夢境標籤、統計與 AI 反思只用於自我探索與研究模式觀察，並不是醫療、心理或精神科診斷。",
@@ -345,7 +345,7 @@ const DETAIL_COPY = {
       "Las palabras del sueño siguen privadas salvo que elijas un modo público. Elige exactamente cómo puede salir este registro de tu archivo personal.",
     keepPrivate: "Mantener privado",
     shareAnonymously: "Compartir anónimo",
-    shareWithPseudonym: "Compartir con seudónimo",
+    shareWithPseudonym: "Compartir con nombre de usuario",
     shareRedacted: "Compartir versión redactada",
     contributeStatsOnly: "Solo estadísticas",
     unpublishRecord: "Retirar publicación",
@@ -354,7 +354,7 @@ const DETAIL_COPY = {
     deletedRecord: "Sueño eliminado",
     sharingSaved: "Opción de compartir guardada",
     accountNeededForPseudonym:
-      "Usa una cuenta no invitada antes de compartir con seudónimo.",
+      "Usa una cuenta no invitada antes de compartir con nombre de usuario.",
     notDiagnosisTitle: "No es un diagnóstico",
     notDiagnosisText:
       "Las etiquetas, estadísticas y reflexiones de IA sirven para autoexploración y patrones de investigación. No son diagnósticos médicos, psicológicos ni psiquiátricos.",

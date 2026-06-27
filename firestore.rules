@@ -128,12 +128,6 @@ service cloud.firestore {
         || validDreamDateStatus(data[field]);
     }
 
-    function isPublicRecord(data) {
-      return data.isPublic == true
-        || data.visibility == "public"
-        || (data.keys().hasAny(["sharingMode"]) && isPublicSharingMode(data.sharingMode));
-    }
-
     function recordRequiresAdult(data) {
       return (data.keys().hasAny(["adultContent"]) && data.adultContent == true)
         || (data.keys().hasAny(["minimumViewerAge"]) && data.minimumViewerAge >= 18);
@@ -144,9 +138,8 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.age >= 18;
     }
 
-    function canReadPublicRecord(data) {
-      return isPublicRecord(data)
-        && (!recordRequiresAdult(data) || isAgeVerifiedAdult());
+    function canReadPublicDreamMirror(data) {
+      return !recordRequiresAdult(data) || isAgeVerifiedAdult();
     }
 
     function validAdultMetadata(data) {
@@ -773,7 +766,7 @@ service cloud.firestore {
     }
 
     match /PublicDreams/{recordId} {
-      allow get, list: if canReadPublicRecord(resource.data);
+      allow get, list: if canReadPublicDreamMirror(resource.data);
 
       allow create, update: if validPublicDreamMirror(request.resource.data, recordId)
         && (isTrustedServer() || ownsRecordDocument(recordId));
