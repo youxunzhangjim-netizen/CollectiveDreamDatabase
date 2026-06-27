@@ -58,6 +58,7 @@ export default function BulkSharingModal({
   const [jobId, setJobId] = useState("");
   const [successfulIds, setSuccessfulIds] = useState([]);
   const [failedIds, setFailedIds] = useState([]);
+  const [failedReasons, setFailedReasons] = useState([]);
   const [previousStates, setPreviousStates] = useState([]);
   const [mobileStep, setMobileStep] = useState(1);
 
@@ -107,6 +108,7 @@ export default function BulkSharingModal({
     setProgress({ done: 0, total: preview.affectedRecords.length });
     setFailedIds([]);
     setSuccessfulIds([]);
+    setFailedReasons([]);
 
     const previous = preview.affectedRecords.map(capturePreviousSharingState);
     setPreviousStates(previous);
@@ -126,6 +128,7 @@ export default function BulkSharingModal({
 
     const ok = [];
     const failed = [];
+    const reasons = [];
 
     for (const record of preview.affectedRecords) {
       try {
@@ -136,8 +139,9 @@ export default function BulkSharingModal({
           profile
         );
         ok.push(record.id);
-      } catch {
+      } catch (error) {
         failed.push(record.id);
+        reasons.push(formatBulkApplyError(record, error));
       } finally {
         setProgress((current) => ({
           done: Math.min(current.done + 1, current.total),
@@ -148,6 +152,7 @@ export default function BulkSharingModal({
 
     setSuccessfulIds(ok);
     setFailedIds(failed);
+    setFailedReasons(reasons);
 
     if (nextJobId) {
       await updateBulkPrivacyJob(currentUser, nextJobId, {
@@ -609,6 +614,18 @@ export default function BulkSharingModal({
                     failed: failedIds.length,
                   })}
                 </p>
+                {failedReasons.length > 0 && (
+                  <div className="mt-3 max-h-40 overflow-y-auto rounded-xl border border-red-300/20 bg-red-400/5 p-3">
+                    {failedReasons.slice(0, 5).map((reason) => (
+                      <p
+                        key={reason}
+                        className="font-mono text-[10px] leading-relaxed text-red-100"
+                      >
+                        {reason}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -862,6 +879,14 @@ function buildSharingUpdate(preset, record) {
     publicTitle: record.publicTitle || "",
     redactionStatus: preset.requiresPublicText ? "user_confirmed" : "",
   };
+}
+
+function formatBulkApplyError(record, error) {
+  const title = getRecordTitle(record, { unknownDate: "Untitled dream" });
+  const code = error?.code || "write-failed";
+  const message = error?.message || "Unknown write error";
+
+  return `${title}: ${code} / ${message}`;
 }
 
 function buildAppliedRecordMap(records, ids, preset, profile, currentUser) {

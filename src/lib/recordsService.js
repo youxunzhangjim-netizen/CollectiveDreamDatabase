@@ -409,6 +409,13 @@ function uniqueStrings(values = []) {
   return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
 }
 
+function safeTimestampOrServerTimestamp(value) {
+  if (value && typeof value.toDate === "function") return value;
+  if (value instanceof Date && Number.isFinite(value.getTime())) return value;
+
+  return serverTimestamp();
+}
+
 function getSelectedTagSlugs(tags = []) {
   return uniqueStrings(tags.map((tag) => tag?.slug || tag?.id || tag));
 }
@@ -527,7 +534,7 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
     ...publicDate,
     pseudonym,
     anonymousLabel: pseudonym ? "" : "Anonymous Observer",
-    publicCreatedAt: record.publicCreatedAt || record.createdAt || serverTimestamp(),
+    publicCreatedAt: safeTimestampOrServerTimestamp(record.publicCreatedAt || record.createdAt),
     publicConsent: true,
     adultContent: Boolean(record.adultContent),
     contentWarnings: getContentWarnings(record, sensitivityLevel),
@@ -565,13 +572,15 @@ export function buildResearchSignalDocument(record = {}, sharingMode = record.sh
     selectedTagSlugs,
     confirmedTagSlugs,
     aiSuggestedTagSlugs,
-    emotionTags: record.emotionTags || getTagSlugsForCategory(tags, "Emotions"),
-    settingTags: record.environmentTags || getTagSlugsForCategory(tags, "Environment"),
-    entityTags: record.entityTags || getTagSlugsForCategory(tags, "Entities"),
-    dreamTypeTags: record.dreamTypeTags || getTagSlugsForCategory(tags, "Dream Types"),
+    emotionTags: uniqueStrings(record.emotionTags || getTagSlugsForCategory(tags, "Emotions")),
+    settingTags: uniqueStrings(record.environmentTags || getTagSlugsForCategory(tags, "Environment")),
+    entityTags: uniqueStrings(record.entityTags || getTagSlugsForCategory(tags, "Entities")),
+    dreamTypeTags: uniqueStrings(record.dreamTypeTags || getTagSlugsForCategory(tags, "Dream Types")),
     psychologicalObservationTags:
-      record.psychologicalObservableTags ||
-      getTagSlugsForCategory(tags, "Psychological Observables"),
+      uniqueStrings(
+        record.psychologicalObservableTags ||
+          getTagSlugsForCategory(tags, "Psychological Observables")
+      ),
     adultContent: Boolean(record.adultContent),
     sensitivityLevelBucket: getSensitivityLevelBucket(sensitivityLevel),
     importSourceType: record.sourceType || (record.importBatchId ? "diary_import" : "single_record"),
