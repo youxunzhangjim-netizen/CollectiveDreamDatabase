@@ -162,7 +162,7 @@ const DETAIL_COPY = {
     statsOnlyRecord: "Stats only",
     sharingPanel: "Privacy & Sharing",
     sharingHelp:
-      "Every dream starts private. Choose exactly how this record may leave your personal archive.",
+      "Dream words stay private unless you choose a public mode. Choose exactly how this record may leave your personal archive.",
     keepPrivate: "Keep private",
     shareAnonymously: "Share anonymously",
     shareWithPseudonym: "Share with pseudonym",
@@ -253,7 +253,7 @@ const DETAIL_COPY = {
     publicRecord: "公開",
     statsOnlyRecord: "只加入統計",
     sharingPanel: "隱私與分享",
-    sharingHelp: "每一則夢境都先保持私人。請選擇這則紀錄可以如何離開你的個人檔案庫。",
+    sharingHelp: "夢境文字會保持私人，除非你選擇公開模式。請選擇這則紀錄可以如何離開你的個人檔案庫。",
     keepPrivate: "保持私人",
     shareAnonymously: "匿名分享",
     shareWithPseudonym: "以暱稱分享",
@@ -342,7 +342,7 @@ const DETAIL_COPY = {
     statsOnlyRecord: "Solo estadísticas",
     sharingPanel: "Privacidad y uso compartido",
     sharingHelp:
-      "Cada sueño empieza privado. Elige exactamente cómo puede salir este registro de tu archivo personal.",
+      "Las palabras del sueño siguen privadas salvo que elijas un modo público. Elige exactamente cómo puede salir este registro de tu archivo personal.",
     keepPrivate: "Mantener privado",
     shareAnonymously: "Compartir anónimo",
     shareWithPseudonym: "Compartir con seudónimo",

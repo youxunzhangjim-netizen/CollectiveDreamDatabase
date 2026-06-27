@@ -45,7 +45,7 @@ service cloud.firestore {
     }
 
     function validPrivacyOnboardingChoice(choice) {
-      return choice in ["private", "stats_only", "dream_by_dream"];
+      return choice in ["private", "stats_only", "anonymous_public", "dream_by_dream"];
     }
 
     function validVisibility(visibility) {

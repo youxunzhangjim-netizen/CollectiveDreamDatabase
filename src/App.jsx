@@ -4,7 +4,6 @@ import CollectiveDreamDashboard from "./components/CollectiveDreamDashboard.jsx"
 import DreamRecordPage from "./components/DreamRecordPage.jsx";
 import Footer from "./components/Footer.jsx";
 import ImportDreamDiaryPage from "./components/ImportDreamDiaryPage.jsx";
-import PrivacyOnboardingScreen from "./components/PrivacyOnboardingScreen.jsx";
 import RecordDreamPage from "./components/RecordDreamPage.jsx";
 import UserDashboard from "./components/UserDashboard.jsx";
 import { useAuth } from "./hooks/useAuth.js";
@@ -24,7 +23,6 @@ import {
 import {
   getOrCreateUserProfile,
   savePreferredLanguage,
-  savePrivacyOnboardingChoice,
 } from "./lib/profileService.js";
 import { fetchRecordById } from "./lib/recordsService.js";
 
@@ -34,10 +32,6 @@ export default function App() {
   const [activeView, setActiveView] = useState("database");
   const [lastListView, setLastListView] = useState("database");
   const [selectedRecord, setSelectedRecord] = useState(null);
-  const [accountProfile, setAccountProfile] = useState(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [onboardingSaving, setOnboardingSaving] = useState(false);
-  const [onboardingError, setOnboardingError] = useState("");
   const { currentUser, loading: authLoading } = useAuth();
 
   useEffect(() => {
@@ -50,25 +44,17 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser?.uid) {
-      setAccountProfile(null);
-      setProfileLoading(false);
       return undefined;
     }
 
     let ignore = false;
 
     async function syncAccountProfile() {
-      setAccountProfile(null);
-      setProfileLoading(true);
-      setOnboardingError("");
-
       try {
         const profile = await getOrCreateUserProfile(currentUser);
         const storedLanguage = getStoredLanguagePreference();
 
         if (ignore) return;
-
-        setAccountProfile(profile);
 
         if (isSupportedLanguage(storedLanguage)) {
           setLanguageState(storedLanguage);
@@ -82,10 +68,6 @@ export default function App() {
         }
       } catch {
         // Keep the locally selected language if the profile is not available yet.
-      } finally {
-        if (!ignore) {
-          setProfileLoading(false);
-        }
       }
     }
 
@@ -131,30 +113,7 @@ export default function App() {
   async function handleSignOut() {
     await logout();
     setSelectedRecord(null);
-    setAccountProfile(null);
     setActiveView("auth");
-  }
-
-  async function handlePrivacyOnboardingComplete(choice) {
-    if (!currentUser?.uid) return;
-
-    setOnboardingSaving(true);
-    setOnboardingError("");
-
-    try {
-      const nextProfile = await savePrivacyOnboardingChoice(
-        currentUser,
-        accountProfile,
-        choice
-      );
-
-      setAccountProfile(nextProfile);
-      setActiveView("dashboard");
-    } catch (error) {
-      setOnboardingError(error.message || "Could not save privacy settings.");
-    } finally {
-      setOnboardingSaving(false);
-    }
   }
 
   async function openDreamRecord(record, sourceView = activeView) {
@@ -200,26 +159,8 @@ export default function App() {
     );
   }
 
-  if (authLoading || (currentUser?.uid && profileLoading && !accountProfile)) {
+  if (authLoading) {
     return renderShell(<AuthLoadingScreen language={language} />);
-  }
-
-  if (
-    currentUser?.uid &&
-    !currentUser.isAnonymous &&
-    accountProfile &&
-    accountProfile.privacyOnboardingCompleted !== true &&
-    accountProfile.privacySettings?.onboardingCompleted !== true
-  ) {
-    return renderShell(
-      <PrivacyOnboardingScreen
-        language={language}
-        setLanguage={handleLanguageChange}
-        saving={onboardingSaving}
-        error={onboardingError}
-        onComplete={handlePrivacyOnboardingComplete}
-      />
-    );
   }
 
   if (activeView === "database") {

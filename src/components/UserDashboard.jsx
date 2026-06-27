@@ -91,6 +91,7 @@ const DASHBOARD_COPY = {
     savedCount: "Saved",
     identityStatus: "Preferred language",
     activeStatus: "Active",
+    recommendedLabel: "Recommended",
     accountEmailHidden: "Account email hidden",
     privateAccountLabel: "Private account",
     lastSync: "Last Sync",
@@ -116,10 +117,10 @@ const DASHBOARD_COPY = {
     preferredLanguageLabel: "Preferred Language",
     privacyCenterTitle: "Privacy & Research Contribution",
     privacyCenterSubtitle:
-      "Choose how your dreams live in the platform. You can keep them private, contribute anonymous statistics, or share selected dreams with the world.",
+      "New account dreams keep words private and join anonymous statistics by default. You can change that here whenever you want.",
     privacyDefaultsTitle: "Default for new dreams",
     privacyDefaultsDescription:
-      "Set this once. Future dreams and diary imports will follow this choice automatically, unless you override it.",
+      "Future dreams and diary imports follow this choice automatically. Recording stays fast; you can still override any dream later.",
     bulkSettingTitle: "Apply to existing dreams",
     bulkSettingDescription:
       "Update many dreams at once. You can filter by date, import batch, language, tags, sensitivity, or adult-content status.",
@@ -147,16 +148,16 @@ const DASHBOARD_COPY = {
       "Stats-only dreams do not publish the dream text. They only contribute non-identifying signals such as tags, language, dream type, length, emotion, and time bucket.",
     notDiagnosisReminder:
       "Dream tags and statistics are for self-reflection and research. They are not medical, psychological, or psychiatric diagnosis.",
-    privacyOptionPrivate: "Keep new dreams private",
-    privacyOptionStats: "Keep text private, contribute anonymous statistics",
-    privacyOptionAnonymous: "Share anonymously after review",
+    privacyOptionPrivate: "Fully private",
+    privacyOptionStats: "Default: private text + anonymous statistics",
+    privacyOptionAnonymous: "Recommended: anonymous words + statistics",
     privacyOptionPseudonym: "Share with pseudonym after review",
     privacyOptionRedacted: "Create public redacted versions after review",
     defaultPseudonymLabel: "Default pseudonym",
     defaultPseudonymPlaceholder: "Name shown only for pseudonym sharing",
     reviewBeforePublicLabel: "Require review before public sharing",
     presetsTitle: "One-click modes",
-    presetsDescription: "A quick helper. Pick the posture that feels right, then adjust details later.",
+    presetsDescription: "A quick helper. Anonymous public sharing is recommended when you want others to read the dream; stats-only is the quiet default.",
     presetScopeTitle: "Apply this preset to",
     presetScopeFuture: "Use this for future dreams",
     presetScopeExisting: "Also apply to existing dreams",
@@ -367,6 +368,7 @@ const DASHBOARD_COPY = {
     savedCount: "已儲存",
     identityStatus: "偏好語言",
     activeStatus: "啟用中",
+    recommendedLabel: "建議",
     accountEmailHidden: "帳戶電子郵件已隱藏",
     privateAccountLabel: "私人帳戶",
     lastSync: "最後同步",
@@ -392,10 +394,10 @@ const DASHBOARD_COPY = {
     preferredLanguageLabel: "偏好語言",
     privacyCenterTitle: "隱私與研究貢獻",
     privacyCenterSubtitle:
-      "選擇你的夢如何存在於平台：保持私人、貢獻匿名統計，或把選定的夢分享給世界。",
+      "帳戶的新夢境預設會保留文字私人並加入匿名統計。你可隨時在這裡自行更改。",
     privacyDefaultsTitle: "新夢境預設",
     privacyDefaultsDescription:
-      "設定一次。未來夢境與日記匯入會自動依照此選擇，除非你另外覆寫。",
+      "未來夢境與日記匯入會自動依照此選擇。記錄流程保持快速，之後仍可逐則覆寫。",
     bulkSettingTitle: "套用到既有夢境",
     bulkSettingDescription:
       "一次更新多則夢。可依日期、匯入批次、語言、標籤、敏感度或成人內容狀態篩選。",
@@ -421,16 +423,16 @@ const DASHBOARD_COPY = {
       "僅供統計的夢不會公開夢境文字，只貢獻非識別訊號，例如標籤、語言、夢境類型、長度、情緒與時間區段。",
     notDiagnosisReminder:
       "夢境標籤與統計用於自我反思與研究，不是醫療、心理或精神科診斷。",
-    privacyOptionPrivate: "新夢境保持私人",
-    privacyOptionStats: "文字私人，匿名加入統計",
-    privacyOptionAnonymous: "審查後匿名公開",
+    privacyOptionPrivate: "完全私人",
+    privacyOptionStats: "預設：文字私人＋匿名統計",
+    privacyOptionAnonymous: "建議：匿名公開文字＋統計",
     privacyOptionPseudonym: "審查後以筆名公開",
     privacyOptionRedacted: "審查後建立公開節錄版",
     defaultPseudonymLabel: "預設筆名",
     defaultPseudonymPlaceholder: "只在筆名公開時顯示",
     reviewBeforePublicLabel: "公開前必須先審查",
     presetsTitle: "一鍵模式",
-    presetsDescription: "快速輔助選擇。先選一種姿態，之後仍可調整細節。",
+    presetsDescription: "快速輔助選擇。想讓他人閱讀時建議匿名公開；只統計則是安靜的預設。",
     presetScopeTitle: "將此模式套用到",
     presetScopeFuture: "用於未來夢境",
     presetScopeExisting: "也套用到既有夢境",
@@ -632,6 +634,7 @@ const DASHBOARD_COPY = {
     savedCount: "Guardados",
     identityStatus: "Idioma preferido",
     activeStatus: "Activa",
+    recommendedLabel: "Recomendado",
     accountEmailHidden: "Correo de cuenta oculto",
     privateAccountLabel: "Cuenta privada",
     lastSync: "Última sincronización",
@@ -657,10 +660,10 @@ const DASHBOARD_COPY = {
     preferredLanguageLabel: "Idioma preferido",
     privacyCenterTitle: "Privacidad y contribución a la investigación",
     privacyCenterSubtitle:
-      "Elige cómo viven tus sueños en la plataforma. Puedes mantenerlos privados, contribuir estadísticas anónimas o compartir sueños seleccionados con el mundo.",
+      "Los sueños nuevos de cuenta mantienen el texto privado y aportan estadísticas anónimas por defecto. Puedes cambiarlo aquí cuando quieras.",
     privacyDefaultsTitle: "Predeterminado para nuevos sueños",
     privacyDefaultsDescription:
-      "Configúralo una vez. Los sueños futuros y las importaciones de diario seguirán esta elección automáticamente, salvo que la cambies.",
+      "Los sueños futuros y las importaciones siguen esta opción automáticamente. Registrar sigue siendo rápido; puedes cambiar cualquier sueño después.",
     bulkSettingTitle: "Aplicar a sueños existentes",
     bulkSettingDescription:
       "Actualiza muchos sueños a la vez. Puedes filtrar por fecha, lote de importación, idioma, etiquetas, sensibilidad o estado de contenido adulto.",
@@ -688,16 +691,16 @@ const DASHBOARD_COPY = {
       "Los sueños solo estadísticos no publican el texto. Solo aportan señales no identificables como etiquetas, idioma, tipo, longitud, emoción y periodo temporal.",
     notDiagnosisReminder:
       "Las etiquetas y estadísticas de sueños son para autorreflexión e investigación. No son diagnóstico médico, psicológico ni psiquiátrico.",
-    privacyOptionPrivate: "Mantener nuevos sueños privados",
-    privacyOptionStats: "Texto privado, estadísticas anónimas",
-    privacyOptionAnonymous: "Compartir anónimo tras revisión",
+    privacyOptionPrivate: "Totalmente privado",
+    privacyOptionStats: "Predeterminado: texto privado + estadísticas anónimas",
+    privacyOptionAnonymous: "Recomendado: texto anónimo + estadísticas",
     privacyOptionPseudonym: "Compartir con seudónimo tras revisión",
     privacyOptionRedacted: "Crear versiones públicas redactadas tras revisión",
     defaultPseudonymLabel: "Seudónimo predeterminado",
     defaultPseudonymPlaceholder: "Nombre mostrado solo con seudónimo",
     reviewBeforePublicLabel: "Revisar antes de publicar",
     presetsTitle: "Modos de un clic",
-    presetsDescription: "Una ayuda rápida. Elige una postura y ajusta detalles después.",
+    presetsDescription: "Una ayuda rápida. El público anónimo se recomienda si quieres que otros lean el sueño; solo estadísticas es el valor silencioso.",
     presetScopeTitle: "Aplicar este modo a",
     presetScopeFuture: "Usar para sueños futuros",
     presetScopeExisting: "Aplicar también a sueños existentes",
@@ -882,16 +885,16 @@ const BIOLOGICAL_SEX_OPTIONS = [
 function getPrivacyDefaultOptions(copy) {
   return [
     {
-      value: PRIVACY_SHARING_MODES.PRIVATE,
-      label: copy.privacyOptionPrivate,
-    },
-    {
       value: PRIVACY_SHARING_MODES.STATS_ONLY,
       label: copy.privacyOptionStats,
     },
     {
       value: PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC,
       label: copy.privacyOptionAnonymous,
+    },
+    {
+      value: PRIVACY_SHARING_MODES.PRIVATE,
+      label: copy.privacyOptionPrivate,
     },
     {
       value: PRIVACY_SHARING_MODES.PSEUDONYM_PUBLIC,
@@ -935,6 +938,7 @@ function getOneClickPresetCards(copy) {
       privateLine: copy.presetAnonymousPrivate,
       statsLine: copy.presetAnonymousStats,
       accent: "cyan",
+      recommended: true,
     },
     {
       id: "pseudonym_archive",
@@ -1058,7 +1062,7 @@ export default function UserDashboard({
   const [bulkSharingMode, setBulkSharingMode] = useState("");
   const [bulkShareNotice, setBulkShareNotice] = useState("");
   const [bulkPreset, setBulkPreset] = useState(null);
-  const [selectedPresetId, setSelectedPresetId] = useState("research_contributor");
+  const [selectedPresetId, setSelectedPresetId] = useState("anonymous_archive");
   const [presetApplyFuture, setPresetApplyFuture] = useState(true);
   const [presetApplyExisting, setPresetApplyExisting] = useState(false);
   const [selectedPublicVersionId, setSelectedPublicVersionId] = useState("");
@@ -3171,6 +3175,11 @@ function PresetCard({
             {active && (
               <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-cyan-100">
                 {copy.activeStatus}
+              </span>
+            )}
+            {preset.recommended && (
+              <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-emerald-100">
+                {copy.recommendedLabel}
               </span>
             )}
           </div>

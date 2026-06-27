@@ -9,10 +9,10 @@ export const PRIVACY_SHARING_MODES = {
 };
 
 export const DEFAULT_PRIVACY_SETTINGS = {
-  defaultSharingMode: PRIVACY_SHARING_MODES.PRIVATE,
-  defaultResearchConsent: false,
+  defaultSharingMode: PRIVACY_SHARING_MODES.STATS_ONLY,
+  defaultResearchConsent: true,
   defaultPublicConsent: false,
-  defaultIncludeInResearchStats: false,
+  defaultIncludeInResearchStats: true,
   defaultPseudonym: null,
   defaultApplyToImports: true,
   defaultApplyToSingleDreams: true,
@@ -27,6 +27,7 @@ export const ACCOUNT_DEFAULT_SHARING_MODE = "account_default";
 export const PRIVACY_ONBOARDING_CHOICES = {
   PRIVATE: "private",
   STATS_ONLY: "stats_only",
+  ANONYMOUS_PUBLIC: "anonymous_public",
   DREAM_BY_DREAM: "dream_by_dream",
 };
 
@@ -155,6 +156,10 @@ export function getOnboardingChoiceForSharingMode(value) {
     return PRIVACY_ONBOARDING_CHOICES.PRIVATE;
   }
 
+  if (sharingMode === PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC) {
+    return PRIVACY_ONBOARDING_CHOICES.ANONYMOUS_PUBLIC;
+  }
+
   return PRIVACY_ONBOARDING_CHOICES.DREAM_BY_DREAM;
 }
 
@@ -163,13 +168,21 @@ export function getSharingModeForOnboardingChoice(value) {
     return PRIVACY_SHARING_MODES.STATS_ONLY;
   }
 
+  if (value === PRIVACY_ONBOARDING_CHOICES.ANONYMOUS_PUBLIC) {
+    return PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC;
+  }
+
+  if (value === PRIVACY_ONBOARDING_CHOICES.PRIVATE) {
+    return PRIVACY_SHARING_MODES.PRIVATE;
+  }
+
   return PRIVACY_SHARING_MODES.PRIVATE;
 }
 
 export function normalizePrivacyOnboardingChoice(value) {
   return Object.values(PRIVACY_ONBOARDING_CHOICES).includes(value)
     ? value
-    : PRIVACY_ONBOARDING_CHOICES.PRIVATE;
+    : PRIVACY_ONBOARDING_CHOICES.STATS_ONLY;
 }
 
 export function buildPrivacySettingsMap(

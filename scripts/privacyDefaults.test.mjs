@@ -38,6 +38,20 @@ assert.equal(
 );
 
 {
+  const defaults = normalizePrivacySettings({});
+  const state = resolveNewRecordPrivacyState({ currentUser: user, profile: defaults });
+
+  assert.equal(defaults.defaultSharingMode, DREAM_SHARING_MODES.STATS_ONLY);
+  assert.equal(defaults.defaultResearchConsent, true);
+  assert.equal(defaults.defaultPublicConsent, false);
+  assert.equal(defaults.defaultIncludeInResearchStats, true);
+  assert.equal(state.sharingMode, DREAM_SHARING_MODES.STATS_ONLY);
+  assert.equal(state.visibility, "private");
+  assert.equal(state.publicConsent, false);
+  assert.equal(state.includedInResearchStats, true);
+}
+
+{
   const state = resolveNewRecordPrivacyState({
     currentUser: anonymousUser,
     draft: {

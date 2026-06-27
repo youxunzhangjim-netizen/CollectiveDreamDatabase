@@ -27,8 +27,8 @@ export function createDefaultProfile(currentUser) {
   const privacySettingsMap = buildPrivacySettingsMap(
     {
       ...privacySettings,
-      privacyOnboardingCompleted: false,
-      privacyOnboardingChoice: "private",
+      privacyOnboardingCompleted: true,
+      privacyOnboardingChoice: "stats_only",
     },
     currentUser
   );
@@ -47,8 +47,8 @@ export function createDefaultProfile(currentUser) {
     preferredLanguage: "zh",
     ...privacySettings,
     privacySettings: privacySettingsMap,
-    privacyOnboardingCompleted: false,
-    privacyOnboardingChoice: "private",
+    privacyOnboardingCompleted: true,
+    privacyOnboardingChoice: "stats_only",
   };
 }
 
@@ -56,10 +56,19 @@ export async function getOrCreateUserProfile(currentUser) {
   if (!currentUser?.uid) return null;
 
   const profileRef = doc(requireFirestore(), "users", currentUser.uid);
-  const snapshot = await getDoc(profileRef);
   const defaultProfile = createDefaultProfile(currentUser);
+  let snapshot = null;
 
-  if (snapshot.exists()) {
+  try {
+    snapshot = await getDoc(profileRef);
+  } catch (error) {
+    return {
+      ...defaultProfile,
+      profileLoadError: error?.message || "Account profile could not be loaded.",
+    };
+  }
+
+  if (snapshot?.exists()) {
     const profileData = {
       ...defaultProfile,
       ...snapshot.data(),
@@ -75,15 +84,23 @@ export async function getOrCreateUserProfile(currentUser) {
     };
   }
 
-  await setDoc(
-    profileRef,
-    {
+  try {
+    await setDoc(
+      profileRef,
+      {
+        ...defaultProfile,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    return {
       ...defaultProfile,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
+      profileWritePending: true,
+      profileWriteError: error?.message || "Account profile could not be created yet.",
+    };
+  }
 
   return defaultProfile;
 }

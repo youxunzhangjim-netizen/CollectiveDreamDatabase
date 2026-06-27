@@ -41,7 +41,7 @@ const AUTH_COPY = {
     loadingGoogle: "Opening Google",
     loadingGuest: "Opening guest mode",
     consentText:
-      "By proceeding, your dreams stay private by default. You choose later whether to share anonymously, use a pseudonym, or contribute only to aggregated research statistics.",
+      "By proceeding, new account dreams keep the words private by default while contributing anonymous statistics. You can change sharing later in your account.",
     switchToSignup: "Need an account profile?",
     switchToLogin: "Already have an account?",
     switchSignupAction: "Create account",
@@ -91,7 +91,7 @@ const AUTH_COPY = {
     loadingGoogle: "正在開啟 Google",
     loadingGuest: "正在開啟訪客通道",
     consentText:
-      "繼續後，你的夢境預設保持私人。之後可由你選擇匿名分享、以暱稱分享，或只加入整體研究統計。",
+      "繼續後，帳戶的新夢境預設會保留文字私人，並加入匿名統計。之後可在帳戶中自行更改分享方式。",
     switchToSignup: "需要建立帳戶？",
     switchToLogin: "已經有帳戶？",
     switchSignupAction: "建立帳戶",
@@ -140,7 +140,7 @@ const AUTH_COPY = {
     loadingGoogle: "Abriendo Google",
     loadingGuest: "Abriendo modo invitado",
     consentText:
-      "Al continuar, tus sueños permanecen privados por defecto. Después eliges si compartirlos de forma anónima, con seudónimo o contribuir a estadísticas agregadas de investigación.",
+      "Al continuar, los sueños nuevos de cuenta mantienen el texto privado por defecto y aportan estadísticas anónimas. Puedes cambiarlo después en tu cuenta.",
     switchToSignup: "¿Necesitas un perfil?",
     switchToLogin: "¿Ya tienes cuenta?",
     switchSignupAction: "Crear cuenta",
