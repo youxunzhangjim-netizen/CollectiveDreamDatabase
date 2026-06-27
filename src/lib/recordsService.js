@@ -157,7 +157,7 @@ export function buildSharingState(
   sharingMode,
   {
     recordIdentityMode = "anonymous",
-    redactionStatus = "",
+    redactionStatus = "none",
   } = {}
 ) {
   const normalizedMode = normalizeSharingMode(sharingMode);
@@ -181,8 +181,14 @@ export function buildSharingState(
     attributionMode: identityMode,
     redactionStatus:
       normalizedMode === DREAM_SHARING_MODES.REDACTED_PUBLIC
-        ? redactionStatus || "user_confirmed"
-        : "",
+        ? redactionStatus === "user_confirmed"
+          ? "user_confirmed"
+          : redactionStatus === "ai_suggested"
+            ? "ai_suggested"
+            : "none"
+        : redactionStatus === "ai_suggested" || redactionStatus === "user_confirmed"
+          ? redactionStatus
+          : "none",
   };
 }
 
@@ -308,6 +314,7 @@ function getPublicTitle(record = {}, sharingMode) {
 
 function getPublicText(record = {}, sharingMode) {
   if (normalizeSharingMode(sharingMode) === DREAM_SHARING_MODES.REDACTED_PUBLIC) {
+    if (record.redactionStatus !== "user_confirmed") return "";
     return limitString(record.publicText || record.redactedText || "", 120000);
   }
 
@@ -490,6 +497,12 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
 
   const publicText = getPublicText(record, normalizedMode);
   if (!publicText) return null;
+  if (
+    normalizedMode === DREAM_SHARING_MODES.REDACTED_PUBLIC &&
+    (publicText === record.dream_text || publicText === record.originalText)
+  ) {
+    return null;
+  }
 
   const publicTitle = getPublicTitle(record, normalizedMode);
   const originalLanguage = normalizeLanguage(record.originalLanguage || "zh");
@@ -515,6 +528,7 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
     pseudonym,
     anonymousLabel: pseudonym ? "" : "Anonymous Observer",
     publicCreatedAt: record.publicCreatedAt || record.createdAt || serverTimestamp(),
+    publicConsent: true,
     adultContent: Boolean(record.adultContent),
     contentWarnings: getContentWarnings(record, sensitivityLevel),
     originalLanguage,
@@ -1856,6 +1870,14 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
   if ("publicText" in updates) {
     metadata.publicText = limitString(updates.publicText || "", 120000);
     metadata.publicExcerpt = metadata.publicText ? createExcerpt(metadata.publicText) : "";
+  }
+
+  if ("redactionStatus" in updates) {
+    metadata.redactionStatus = ["none", "ai_suggested", "user_confirmed"].includes(
+      updates.redactionStatus
+    )
+      ? updates.redactionStatus
+      : "none";
   }
 
   if ("recordIdentityMode" in updates) {

@@ -172,6 +172,7 @@ assert.equal(
       ...baseRecord,
       publicTitle: "Safe title",
       publicText: "Safe public wording only.",
+      redactionStatus: "user_confirmed",
     },
     {},
     DREAM_SHARING_MODES.REDACTED_PUBLIC

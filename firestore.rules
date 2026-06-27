@@ -320,7 +320,7 @@ service cloud.firestore {
         && (!data.keys().hasAny(["publicReviewStatus"])
           || data.publicReviewStatus in ["", "pending_review", "approved", "rejected"])
         && (!data.keys().hasAny(["redactionStatus"])
-          || data.redactionStatus in ["", "draft", "user_confirmed"])
+          || data.redactionStatus in ["", "none", "draft", "ai_suggested", "user_confirmed"])
         && optionalBool(data, "reviewRequiredBeforePublic")
         && optionalBool(data, "defaultPrivacyApplied")
         && optionalString(data, "privacyDefaultSource", 40)
@@ -568,7 +568,7 @@ service cloud.firestore {
         && (!data.keys().hasAny(["publicReviewStatus"])
           || data.publicReviewStatus in ["", "pending_review", "approved", "rejected"])
         && (!data.keys().hasAny(["redactionStatus"])
-          || data.redactionStatus in ["", "draft", "user_confirmed"]);
+          || data.redactionStatus in ["", "none", "draft", "ai_suggested", "user_confirmed"]);
     }
 
     function noForbiddenPublicDreamFields(data) {
@@ -612,6 +612,7 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/Records/$(recordId)).data.keys().hasAny(["publicText"])
           && get(/databases/$(database)/documents/Records/$(recordId)).data.publicText is string
           && get(/databases/$(database)/documents/Records/$(recordId)).data.publicText.size() > 0
+          && get(/databases/$(database)/documents/Records/$(recordId)).data.redactionStatus == "user_confirmed"
           && data.publicText == get(/databases/$(database)/documents/Records/$(recordId)).data.publicText
           && data.publicText != get(/databases/$(database)/documents/Records/$(recordId)).data.dream_text
           && (!get(/databases/$(database)/documents/Records/$(recordId)).data.keys().hasAny(["originalText"])
@@ -629,13 +630,14 @@ service cloud.firestore {
           "pseudonym",
           "anonymousLabel",
           "publicCreatedAt",
+          "publicConsent",
           "adultContent",
           "contentWarnings",
           "originalLanguage",
           "sharingMode"
         ])
         && noForbiddenPublicDreamFields(data)
-        && data.keys().hasAll(["publicText", "publicLanguage", "originalLanguage", "sharingMode", "adultContent"])
+        && data.keys().hasAll(["publicText", "publicLanguage", "originalLanguage", "sharingMode", "publicConsent", "adultContent"])
         && requiredString(data, "publicText", 1, 120000)
         && optionalString(data, "publicTitle", 220)
         && optionalList(data, "publicTags", 160)
@@ -646,6 +648,7 @@ service cloud.firestore {
         && optionalString(data, "pseudonym", 120)
         && optionalString(data, "anonymousLabel", 120)
         && optionalTimestamp(data, "publicCreatedAt")
+        && data.publicConsent == true
         && data.adultContent is bool
         && optionalList(data, "contentWarnings", 40)
         && validSharingMode(data.sharingMode)

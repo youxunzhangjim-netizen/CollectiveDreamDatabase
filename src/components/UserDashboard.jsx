@@ -7,6 +7,7 @@ import {
   removeCollectedRecord,
   removeSavedRecord,
   calculateDreamSignalCoherence,
+  updateOwnedRecordMetadata,
   updateOwnedRecordSharing,
 } from "../lib/recordsService.js";
 import {
@@ -41,6 +42,11 @@ import {
   normalizePrivacySettings,
   normalizePrivacySharingMode,
 } from "../lib/privacyDefaults.js";
+import {
+  buildSuggestedPublicVersion,
+  getPrivateDreamText,
+  getPrivateDreamTitle,
+} from "../lib/publicRedactionService.js";
 import BulkSharingModal from "./BulkSharingModal.jsx";
 import LanguageMenu from "./LanguageMenu.jsx";
 
@@ -117,6 +123,24 @@ const DASHBOARD_COPY = {
     bulkSettingTitle: "Apply to existing dreams",
     bulkSettingDescription:
       "Update many dreams at once. You can filter by date, import batch, language, tags, sensitivity, or adult-content status.",
+    publicVersionTitle: "Create Public Versions",
+    publicVersionDescription:
+      "Prepare a reviewed public version without changing the private original.",
+    publicVersionSelect: "Selected dream",
+    publicVersionGenerate: "Generate suggestion",
+    publicVersionApprove: "Approve public version",
+    publicVersionReject: "Reject suggestion",
+    publicVersionEdit: "Edit manually",
+    publicVersionPrivate: "Private original",
+    publicVersionPublic: "Public version",
+    publicVersionSensitive: "Changed or sensitive phrases",
+    publicVersionEmpty: "Select one of your dreams to prepare a public version.",
+    publicVersionNoSuggestion: "No public version yet. Generate a suggestion or write one manually.",
+    publicVersionSaved: "Public version saved for review.",
+    publicVersionApproved: "Public version confirmed.",
+    publicVersionRejected: "Public version rejected.",
+    publicVersionNotice:
+      "Suggestions preserve first-person perspective and dream imagery, but they may miss private clues. Review before approving.",
     safetyWarning:
       "Some dreams may contain private people, places, relationships, sexuality, trauma, shame, or identity clues. Review sensitive dreams before making them public.",
     statsOnlyReassurance:
@@ -366,6 +390,22 @@ const DASHBOARD_COPY = {
     bulkSettingTitle: "套用到既有夢境",
     bulkSettingDescription:
       "一次更新多則夢。可依日期、匯入批次、語言、標籤、敏感度或成人內容狀態篩選。",
+    publicVersionTitle: "建立公開版本",
+    publicVersionDescription: "準備經檢查的公開版本，不改動私人原文。",
+    publicVersionSelect: "選擇夢境",
+    publicVersionGenerate: "產生建議",
+    publicVersionApprove: "批准公開版本",
+    publicVersionReject: "拒絕建議",
+    publicVersionEdit: "手動編輯",
+    publicVersionPrivate: "私人原文",
+    publicVersionPublic: "公開版本",
+    publicVersionSensitive: "已變更或敏感片語",
+    publicVersionEmpty: "選擇一則你的夢來準備公開版本。",
+    publicVersionNoSuggestion: "尚無公開版本。可以先產生建議或手動撰寫。",
+    publicVersionSaved: "公開版本已存為待檢查。",
+    publicVersionApproved: "公開版本已確認。",
+    publicVersionRejected: "公開版本已拒絕。",
+    publicVersionNotice: "建議會保留第一人稱與夢境意象，但可能漏掉私人線索。批准前請檢查。",
     safetyWarning:
       "有些夢可能包含私人人物、地點、關係、性、創傷、羞恥或身份線索。公開前請先檢查敏感夢境。",
     statsOnlyReassurance:
@@ -606,6 +646,24 @@ const DASHBOARD_COPY = {
     bulkSettingTitle: "Aplicar a sueños existentes",
     bulkSettingDescription:
       "Actualiza muchos sueños a la vez. Puedes filtrar por fecha, lote de importación, idioma, etiquetas, sensibilidad o estado de contenido adulto.",
+    publicVersionTitle: "Crear versiones públicas",
+    publicVersionDescription:
+      "Prepara una versión pública revisada sin cambiar el original privado.",
+    publicVersionSelect: "Sueño seleccionado",
+    publicVersionGenerate: "Generar sugerencia",
+    publicVersionApprove: "Aprobar versión pública",
+    publicVersionReject: "Rechazar sugerencia",
+    publicVersionEdit: "Editar manualmente",
+    publicVersionPrivate: "Original privado",
+    publicVersionPublic: "Versión pública",
+    publicVersionSensitive: "Frases cambiadas o sensibles",
+    publicVersionEmpty: "Selecciona uno de tus sueños para preparar una versión pública.",
+    publicVersionNoSuggestion: "Aún no hay versión pública. Genera una sugerencia o escribe una manualmente.",
+    publicVersionSaved: "Versión pública guardada para revisión.",
+    publicVersionApproved: "Versión pública confirmada.",
+    publicVersionRejected: "Versión pública rechazada.",
+    publicVersionNotice:
+      "Las sugerencias conservan la primera persona y las imágenes del sueño, pero pueden omitir pistas privadas. Revísalas antes de aprobar.",
     safetyWarning:
       "Algunos sueños pueden contener personas, lugares, relaciones, sexualidad, trauma, vergüenza o pistas de identidad. Revisa los sueños sensibles antes de hacerlos públicos.",
     statsOnlyReassurance:
@@ -974,6 +1032,10 @@ export default function UserDashboard({
   const [bulkShareNotice, setBulkShareNotice] = useState("");
   const [bulkPreset, setBulkPreset] = useState(null);
   const [selectedPresetId, setSelectedPresetId] = useState("research_contributor");
+  const [selectedPublicVersionId, setSelectedPublicVersionId] = useState("");
+  const [publicVersionDrafts, setPublicVersionDrafts] = useState({});
+  const [publicVersionNotice, setPublicVersionNotice] = useState("");
+  const [publicVersionSaving, setPublicVersionSaving] = useState("");
   const [exportDetail, setExportDetail] = useState(EXPORT_DETAIL_LEVELS.ANALYSIS);
   const [timeOrder, setTimeOrder] = useState("desc");
   const exportDetailOptions = [
@@ -1041,6 +1103,13 @@ export default function UserDashboard({
     [copy, language, observations]
   );
   const lastSyncLabel = useMemo(() => formatLastSync(language), [language]);
+  const selectedPublicVersionRecord = useMemo(
+    () =>
+      observations.find((record) => record.id === selectedPublicVersionId) ||
+      observations[0] ||
+      null,
+    [observations, selectedPublicVersionId]
+  );
 
   useEffect(() => {
     document.title = copy.documentTitle;
@@ -1184,6 +1253,100 @@ export default function UserDashboard({
   function handleOpenPresetPreview(preset) {
     setSelectedPresetId(preset.id);
     setBulkPreset(preset);
+  }
+
+  function updatePublicVersionDraft(recordId, patch) {
+    setPublicVersionDrafts((current) => ({
+      ...current,
+      [recordId]: {
+        ...(current[recordId] || {}),
+        ...patch,
+      },
+    }));
+  }
+
+  async function persistPublicVersion(record, patch, notice) {
+    if (!record?.id || !user?.uid) return;
+
+    setPublicVersionSaving(record.id);
+    setPublicVersionNotice("");
+
+    try {
+      await updateOwnedRecordMetadata(user, record.id, patch);
+      setObservations((current) =>
+        current.map((item) =>
+          item.id === record.id
+            ? {
+                ...item,
+                ...patch,
+                publicExcerpt: patch.publicText
+                  ? String(patch.publicText).slice(0, 520)
+                  : patch.publicText === ""
+                    ? ""
+                    : item.publicExcerpt,
+              }
+            : item
+        )
+      );
+      setPublicVersionNotice(notice);
+    } catch (error) {
+      setPublicVersionNotice(error.message);
+    } finally {
+      setPublicVersionSaving("");
+    }
+  }
+
+  async function handleGeneratePublicVersion(record) {
+    if (!record?.id) return;
+
+    const suggestion = buildSuggestedPublicVersion(record);
+    updatePublicVersionDraft(record.id, {
+      ...suggestion,
+      editing: false,
+    });
+    await persistPublicVersion(
+      record,
+      {
+        publicTitle: suggestion.publicTitle,
+        publicText: suggestion.publicText,
+        redactionStatus: "ai_suggested",
+      },
+      copy.publicVersionSaved
+    );
+  }
+
+  async function handleApprovePublicVersion(record, draft) {
+    if (!record?.id) return;
+
+    await persistPublicVersion(
+      record,
+      {
+        publicTitle: draft.publicTitle || record.publicTitle || "",
+        publicText: draft.publicText || record.publicText || "",
+        redactionStatus: "user_confirmed",
+      },
+      copy.publicVersionApproved
+    );
+  }
+
+  async function handleRejectPublicVersion(record) {
+    if (!record?.id) return;
+
+    updatePublicVersionDraft(record.id, {
+      publicTitle: "",
+      publicText: "",
+      changes: [],
+      editing: false,
+    });
+    await persistPublicVersion(
+      record,
+      {
+        publicTitle: "",
+        publicText: "",
+        redactionStatus: "none",
+      },
+      copy.publicVersionRejected
+    );
   }
 
   function handleBulkSharingApplied(result) {
@@ -1474,8 +1637,9 @@ export default function UserDashboard({
                   </button>
                 </div>
 
-                <div className="rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-5 sm:p-6">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <details className="rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-5 sm:p-6">
+                  <summary className="cursor-pointer list-none">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                       <h2 className="cdo-card-heading">
                         {copy.presetsTitle}
@@ -1488,6 +1652,7 @@ export default function UserDashboard({
                       {copy.notDiagnosisReminder}
                     </p>
                   </div>
+                  </summary>
                   <div className="mt-4 grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
                     {oneClickPresets.map((preset) => (
                       <PresetCard
@@ -1506,7 +1671,7 @@ export default function UserDashboard({
                       />
                     ))}
                   </div>
-                </div>
+                </details>
 
                 <div className="rounded-2xl border border-white/10 bg-black/30 p-5 sm:p-6">
                   <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,.55fr)]">
@@ -1567,6 +1732,24 @@ export default function UserDashboard({
               />
             </div>
           </section>
+        )}
+
+        {profileDraft && (
+          <PublicVersionTool
+            records={observations}
+            selectedRecord={selectedPublicVersionRecord}
+            selectedRecordId={selectedPublicVersionRecord?.id || ""}
+            drafts={publicVersionDrafts}
+            copy={copy}
+            language={language}
+            savingId={publicVersionSaving}
+            notice={publicVersionNotice}
+            onSelect={setSelectedPublicVersionId}
+            onDraftChange={updatePublicVersionDraft}
+            onGenerate={handleGeneratePublicVersion}
+            onApprove={handleApprovePublicVersion}
+            onReject={handleRejectPublicVersion}
+          />
         )}
 
         {profileDraft && (
@@ -2552,6 +2735,222 @@ function PrivacyPresetPreview({ preset, copy, disabled, onUse, onApply }) {
   );
 }
 
+function PublicVersionTool({
+  records = [],
+  selectedRecord,
+  selectedRecordId,
+  drafts = {},
+  copy,
+  language = "en",
+  savingId = "",
+  notice = "",
+  onSelect,
+  onDraftChange,
+  onGenerate,
+  onApprove,
+  onReject,
+}) {
+  const draft = selectedRecord
+    ? {
+        publicTitle: selectedRecord.publicTitle || "",
+        publicText: selectedRecord.publicText || "",
+        changes: [],
+        editing: false,
+        ...(drafts[selectedRecord.id] || {}),
+      }
+    : null;
+  const privateText = selectedRecord ? getPrivateDreamText(selectedRecord) : "";
+  const privateTitle = selectedRecord ? getPrivateDreamTitle(selectedRecord) : "";
+  const busy = Boolean(selectedRecord?.id && savingId === selectedRecord.id);
+
+  return (
+    <details className="mb-6 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-7">
+      <summary className="cursor-pointer list-none">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="cdo-kicker">{copy.publicVersionTitle}</p>
+            <p className="cdo-body-copy mt-3 max-w-3xl">
+              {copy.publicVersionDescription}
+            </p>
+          </div>
+          <p className="max-w-lg rounded-2xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs leading-relaxed text-amber-100">
+            {copy.publicVersionNotice}
+          </p>
+        </div>
+      </summary>
+
+      {records.length === 0 ? (
+        <p className="cdo-muted-copy mt-5">{copy.publicVersionEmpty}</p>
+      ) : (
+        <div className="mt-6 space-y-5">
+          <label className="block">
+            <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+              {copy.publicVersionSelect}
+            </span>
+            <select
+              value={selectedRecordId}
+              onChange={(event) => onSelect(event.target.value)}
+              className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-xs text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+            >
+              {records.map((record) => (
+                <option key={record.id} value={record.id}>
+                  {getDisplayItemTitle(record, language) || record.id}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <section className="rounded-2xl border border-white/10 bg-black/30 p-5">
+              <h3 className="cdo-card-heading">{copy.publicVersionPrivate}</h3>
+              {privateTitle && (
+                <p className="mt-4 text-lg font-semibold leading-snug text-zinc-100">
+                  <HighlightedText text={privateTitle} changes={draft?.changes || []} variant="private" />
+                </p>
+              )}
+              <p className="mt-4 max-h-96 overflow-y-auto pr-2 text-sm leading-relaxed text-zinc-300">
+                <HighlightedText text={privateText} changes={draft?.changes || []} variant="private" />
+              </p>
+            </section>
+
+            <section className="rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-5">
+              <h3 className="cdo-card-heading">{copy.publicVersionPublic}</h3>
+              {draft?.editing ? (
+                <div className="mt-4 space-y-3">
+                  <input
+                    value={draft.publicTitle}
+                    onChange={(event) =>
+                      onDraftChange(selectedRecord.id, { publicTitle: event.target.value })
+                    }
+                    className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 font-mono text-xs text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                  />
+                  <textarea
+                    value={draft.publicText}
+                    onChange={(event) =>
+                      onDraftChange(selectedRecord.id, { publicText: event.target.value })
+                    }
+                    rows={12}
+                    className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 text-sm leading-relaxed text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                  />
+                </div>
+              ) : draft?.publicText ? (
+                <>
+                  {draft.publicTitle && (
+                    <p className="mt-4 text-lg font-semibold leading-snug text-zinc-100">
+                      <HighlightedText text={draft.publicTitle} changes={draft.changes || []} variant="public" />
+                    </p>
+                  )}
+                  <p className="mt-4 max-h-96 overflow-y-auto pr-2 text-sm leading-relaxed text-zinc-300">
+                    <HighlightedText text={draft.publicText} changes={draft.changes || []} variant="public" />
+                  </p>
+                </>
+              ) : (
+                <p className="cdo-muted-copy mt-4">{copy.publicVersionNoSuggestion}</p>
+              )}
+            </section>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+            <h3 className="cdo-card-heading">{copy.publicVersionSensitive}</h3>
+            {draft?.changes?.length ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {draft.changes.map((change, index) => (
+                  <span
+                    key={`${change.original}-${index}`}
+                    className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1.5 font-mono text-[10px] text-amber-100"
+                  >
+                    {change.original} {"->"} {change.replacement}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="cdo-muted-copy mt-3">{copy.publicVersionNoSuggestion}</p>
+            )}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <button
+              type="button"
+              onClick={() => selectedRecord && onGenerate(selectedRecord)}
+              disabled={!selectedRecord || busy}
+              className="rounded-2xl border border-cyan-300/35 bg-cyan-300 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy ? "..." : copy.publicVersionGenerate}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                selectedRecord &&
+                onDraftChange(selectedRecord.id, { editing: !draft?.editing })
+              }
+              disabled={!selectedRecord}
+              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-200 transition hover:border-cyan-300/35 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {copy.publicVersionEdit}
+            </button>
+            <button
+              type="button"
+              onClick={() => selectedRecord && onApprove(selectedRecord, draft || {})}
+              disabled={!selectedRecord || !draft?.publicText || busy}
+              className="rounded-2xl border border-emerald-300/30 bg-emerald-300/10 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-emerald-100 transition hover:border-emerald-300/50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {copy.publicVersionApprove}
+            </button>
+            <button
+              type="button"
+              onClick={() => selectedRecord && onReject(selectedRecord)}
+              disabled={!selectedRecord || busy}
+              className="rounded-2xl border border-red-300/25 bg-red-400/5 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-red-100 transition hover:border-red-300/45 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {copy.publicVersionReject}
+            </button>
+          </div>
+
+          {notice && (
+            <p className="font-mono text-xs uppercase tracking-[0.16em] text-cyan-100">
+              {notice}
+            </p>
+          )}
+        </div>
+      )}
+    </details>
+  );
+}
+
+function HighlightedText({ text, changes = [], variant }) {
+  const source = String(text || "");
+  const phrases = changes
+    .map((change) => (variant === "public" ? change.replacement : change.original))
+    .filter(Boolean);
+
+  if (!source || phrases.length === 0) return source;
+
+  const escaped = phrases.map(escapeRegExp).sort((a, b) => b.length - a.length);
+  const matcher = new RegExp(`(${escaped.join("|")})`, "giu");
+  const parts = source.split(matcher);
+
+  return (
+    <>
+      {parts.map((part, index) =>
+        phrases.some((phrase) => phrase.toLowerCase() === part.toLowerCase()) ? (
+          <mark
+            key={`${part}-${index}`}
+            className="rounded bg-amber-300/20 px-1 text-amber-100"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={`${part}-${index}`}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function PresetCard({
   preset,
   copy,
@@ -2702,8 +3101,8 @@ function PersonalAnalysisPanel({ stats, copy }) {
   const [visualsOpen, setVisualsOpen] = useState(false);
 
   return (
-    <section className="mb-8 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-7">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <details className="mb-8 rounded-3xl border border-cyan-300/15 bg-zinc-950/60 p-5 shadow-[0_0_34px_rgba(34,211,238,.06)] backdrop-blur sm:p-7">
+      <summary className="cursor-pointer list-none">
         <div>
           <p className="cdo-kicker">
             {copy.analysisTitle}
@@ -2712,10 +3111,12 @@ function PersonalAnalysisPanel({ stats, copy }) {
             {copy.analysisText}
           </p>
         </div>
+      </summary>
+      <div className="mt-5 flex justify-start sm:justify-end">
         <button
           type="button"
           onClick={() => setVisualsOpen(true)}
-          className="self-start rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15 sm:self-end"
+          className="rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15"
         >
           {copy.analysisVisualsButton}
         </button>
@@ -2765,7 +3166,7 @@ function PersonalAnalysisPanel({ stats, copy }) {
           onClose={() => setVisualsOpen(false)}
         />
       )}
-    </section>
+    </details>
   );
 }
 

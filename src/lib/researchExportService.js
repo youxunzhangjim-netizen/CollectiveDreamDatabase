@@ -11,7 +11,7 @@ import {
   TAG_CATEGORY_ORDER,
 } from "./tagTaxonomy.js";
 
-export const RESEARCH_EXPORT_VERSION = "research-export-2026-06-24";
+export const RESEARCH_EXPORT_VERSION = "research-export-2026-06-27";
 export const EXPORT_DETAIL_LEVELS = {
   DREAMS: "dreams",
   CODED: "coded",
@@ -43,6 +43,10 @@ const EXPORT_COPY = {
       "Browser exports remove direct owner/auth identifiers. Private and statistics-only dream text should be exported only by the owner or through a server-side, consent-aware research pipeline.",
     diagnosisWarning:
       "Dream tags, titles, AI suggestions, statistics, and reflections are for self-exploration and research coding, not medical, psychological, or psychiatric diagnosis.",
+    statsOnlyMethodology:
+      "Stats-only records contribute non-identifying metadata and tags, not original dream text.",
+    biasReportText:
+      "Public readable dreams and stats-only private dreams may differ in sensitivity and topic distribution.",
   },
   zh: {
     methodologyTitle: "集體夢境觀測站研究匯出說明",
@@ -68,6 +72,10 @@ const EXPORT_COPY = {
       "瀏覽器匯出會移除直接的擁有者／認證識別碼。私人與僅供統計的夢境原文，只應由本人匯出，或透過伺服器端且尊重同意的研究流程提供。",
     diagnosisWarning:
       "夢境標籤、標題、AI 建議、統計與反思僅用於自我探索與研究編碼，不是醫療、心理或精神科診斷。",
+    statsOnlyMethodology:
+      "僅供統計的紀錄只貢獻非識別中繼資料與標籤，不包含原始夢境文字。",
+    biasReportText:
+      "可公開閱讀的夢與僅供統計的私人夢，可能在敏感度與主題分布上不同。",
   },
   es: {
     methodologyTitle: "Notas de exportación del Observatorio Colectivo de Sueños",
@@ -93,6 +101,10 @@ const EXPORT_COPY = {
       "Las exportaciones del navegador eliminan identificadores directos de propietario/autenticación. El texto de sueños privados o solo estadísticos debe exportarse solo por el propietario o mediante una canalización de investigación del servidor con consentimiento.",
     diagnosisWarning:
       "Las etiquetas, títulos, sugerencias de IA, estadísticas y reflexiones de sueños sirven para autoexploración y codificación de investigación; no son diagnósticos médicos, psicológicos ni psiquiátricos.",
+    statsOnlyMethodology:
+      "Los registros solo estadísticos aportan metadatos y etiquetas no identificables, no el texto original del sueño.",
+    biasReportText:
+      "Los sueños públicos legibles y los sueños privados solo estadísticos pueden diferir en sensibilidad y distribución temática.",
   },
 };
 
@@ -159,6 +171,10 @@ export function exportMethodologyMarkdown(options = {}) {
     "",
     copy.scopeText,
     "",
+    copy.statsOnlyMethodology,
+    "",
+    copy.biasReportText,
+    "",
     `## ${copy.privacyTitle}`,
     "",
     ...copy.privacyItems.map((item) => `- ${item}`),
@@ -216,23 +232,48 @@ export function downloadResearchCodebook(language = "en") {
 
 function buildResearchRecordsPayload(records = [], options = {}) {
   const language = normalizeLanguage(options.language || "en");
-  const detailLevel = normalizeExportDetailLevel(options.detailLevel || options.exportDetail);
   const researchSignals = Array.isArray(options.researchSignals)
     ? options.researchSignals
     : [];
-  const exportableRecords = records
+  const publicRows = records
     .filter((record) => record && isResearchReadable(record))
-    .map((record, index) => sanitizeRecordForResearch(record, index, language, detailLevel));
+    .map((record, index) => sanitizePublicDreamForResearch(record, index, language));
+  const signalRows = researchSignals
+    .filter((signal) => signal && isResearchSignalReadable(signal))
+    .map((signal, index) =>
+      sanitizeResearchSignalForExport(signal, publicRows.length + index, language)
+    );
+  const exportableRows = [...publicRows, ...signalRows];
+  const signalSummary = buildResearchSignalsSummary(researchSignals);
 
   return {
     metadata: buildMetadata({
       type: "public_research_records",
-      sampleSize: exportableRecords.length,
-      options: { ...options, language, detailLevel },
+      sampleSize: exportableRows.length,
+      options: { ...options, language, detailLevel: EXPORT_DETAIL_LEVELS.ANALYSIS },
     }),
     filters: sanitizeFilters(options.filters || {}),
-    researchSignalsSummary: buildResearchSignalsSummary(researchSignals),
-    records: exportableRecords,
+    methodology: buildMethodologySummary(language),
+    aggregateStatistics: {
+      publicDreams: publicRows.length,
+      researchSignals: signalRows.length,
+      sharingModes: countValues(exportableRows.map((row) => row.sharing_mode)),
+      languages: countValues(exportableRows.map((row) => row.language)),
+      dreamLengthBuckets: countValues(exportableRows.map((row) => row.dream_length_bucket)),
+      sensitivityBuckets: countValues(exportableRows.map((row) => row.sensitivity_bucket)),
+      adultContent: countValues(
+        exportableRows.map((row) => (row.adult_content ? "adult" : "non_adult"))
+      ),
+    },
+    researchSignalsSummary: signalSummary,
+    biasAndCoverageReport: buildBiasAndCoverageReport({
+      language,
+      publicRows,
+      signalRows,
+      signalSummary,
+    }),
+    taxonomyCodebook: buildTagCodebookRows(Object.values(RECORD_TAGS), language),
+    records: exportableRows,
   };
 }
 
@@ -287,71 +328,66 @@ function isPublicResearchExportable(record) {
   );
 }
 
-function sanitizeRecordForResearch(record, index, language, detailLevel = EXPORT_DETAIL_LEVELS.ANALYSIS) {
-  const dreamText = getRecordText(record);
+function sanitizePublicDreamForResearch(record, index, language) {
+  const publicText = getPublicRecordText(record);
   const tags = normalizeTags(record.tags || record.publicTags);
   const tagSlugs = tags.map((tag) => tag.slug).filter(Boolean);
-  const tagLabels = tags.map((tag) => getTagLabel(tag, language)).filter(Boolean);
-  const dateStatus = getRecordDateStatus(record);
-  const dreamDate = dateStatus === "hidden" ? "" : getRecordDate(record);
-  const baseRecord = {
-    export_row: index + 1,
-    research_record_id: createResearchRecordId(record, index),
-    title: getRecordTitle(record),
-    dream_text: dreamText,
-    original_language: normalizeLanguage(record.originalLanguage || record.original_language || "en"),
-    original_language_label: getLanguageName(
-      normalizeLanguage(record.originalLanguage || record.original_language || "en"),
-      language
-    ),
-    dream_date: dreamDate,
-    dream_date_status: dateStatus,
-    word_count: countWords(dreamText),
-    character_count: dreamText.length,
-  };
-
-  if (detailLevel === EXPORT_DETAIL_LEVELS.DREAMS) {
-    return baseRecord;
-  }
-
-  const codedRecord = {
-    ...baseRecord,
-    excerpt: createExcerpt(dreamText),
-    age_group_at_dream: getAgeGroup(record.ageAtDream || record.age_at_dream),
-    adult_content: Boolean(
-      record.adultContent ||
-        record.adult_content ||
-        Number(record.minimumViewerAge || record.minimum_viewer_age || 0) >= 18
-    ),
-    sharing_mode:
-      record.sharingMode || record.sharing_mode
-        ? normalizePrivacySharingMode(record.sharingMode || record.sharing_mode)
-        : "anonymous_public",
-    included_in_research_stats: Boolean(
-      record.includedInResearchStats || record.included_in_research_stats || record.researchConsent || record.isPublic
-    ),
-    public_consent: Boolean(record.publicConsent || record.public_consent || record.isPublic),
-    research_consent: Boolean(record.researchConsent || record.research_consent || record.includedInResearchStats),
-    tag_slugs: tagSlugs.join(" | "),
-    tag_labels: tagLabels.join(" | "),
-    ...buildCategoryColumns(tags, language),
-  };
-
-  if (detailLevel === EXPORT_DETAIL_LEVELS.CODED) {
-    return codedRecord;
-  }
+  const publicDate = getPublicDateBucket(record);
 
   return {
-    ...codedRecord,
-    title_source: record.titleSource || record.title_source || "unknown",
-    title_confidence: clampNumber(record.titleConfidence || record.title_confidence),
-    tags_source: record.tagsSource || record.tags_source || "user_or_legacy",
-    tags_reviewed_by_user: Boolean(record.tagsReviewedByUser || record.tags_reviewed_by_user),
-    suggested_tags_json: JSON.stringify(record.suggestedTags || record.suggested_tags || []),
-    source_type: record.importBatchId || record.import_batch_id ? "diary_import" : "single_record",
-    source_format: record.sourceFormat || record.source_format || "",
-    parser_version: record.importParserVersion || record.parserVersion || record.parser_version || "",
-    auto_tagger_version: record.autoTaggerVersion || record.auto_tagger_version || "",
+    export_row: index + 1,
+    record_id_hash: getRecordHash(record, index),
+    source_type: "public_dream",
+    sharing_mode: normalizePrivacySharingMode(record.sharingMode || record.sharing_mode),
+    language: normalizeLanguage(
+      record.publicLanguage || record.originalLanguage || record.original_language || "en"
+    ),
+    date_bucket: publicDate,
+    period: record.publicPeriod || record.period || "",
+    dream_length_bucket: getDreamLengthBucket(publicText),
+    title_source: record.titleSource || record.title_source || "public_record",
+    tag_source: record.tagSource || record.tagsSource || record.tags_source || "public_tags",
+    tags: tagSlugs.join(" | "),
+    tag_labels: tags.map((tag) => getTagLabel(tag, language)).filter(Boolean).join(" | "),
+    adult_content: Boolean(record.adultContent || record.adult_content),
+    sensitivity_bucket: getPublicSensitivityBucket(record),
+    public_text: publicText,
+    public_title: getPublicRecordTitle(record),
+    public_consent: record.publicConsent !== false,
+    ...buildCategoryColumns(tags, language),
+  };
+}
+
+function sanitizeResearchSignalForExport(signal, index) {
+  const tags = [
+    ...(signal.tagSlugs || []),
+    ...(signal.selectedTagSlugs || []),
+    ...(signal.confirmedTagSlugs || []),
+  ];
+
+  return {
+    export_row: index + 1,
+    record_id_hash: signal.recordIdHash || signal.signalId || "",
+    source_type: "research_signal",
+    sharing_mode: normalizePrivacySharingMode(signal.sharingMode),
+    language: normalizeLanguage(signal.language || "en"),
+    date_bucket: signal.monthBucket || signal.yearBucket || "",
+    period: signal.period || "",
+    dream_length_bucket: signal.dreamLengthBucket || "",
+    title_source: signal.titleSource || "",
+    tag_source: signal.tagSource || "",
+    tags: [...new Set(tags)].filter(Boolean).join(" | "),
+    adult_content: Boolean(signal.adultContent),
+    sensitivity_bucket: signal.sensitivityLevelBucket || "",
+    public_text: "",
+    public_title: "",
+    confirmed_by_user: Boolean(signal.confirmedByUser),
+    has_unconfirmed_ai_tags: Boolean(signal.hasUnconfirmedAiTags),
+    emotion_tags: (signal.emotionTags || []).join(" | "),
+    setting_tags: (signal.settingTags || []).join(" | "),
+    entity_tags: (signal.entityTags || []).join(" | "),
+    dream_type_tags: (signal.dreamTypeTags || []).join(" | "),
+    psychological_observation_tags: (signal.psychologicalObservationTags || []).join(" | "),
   };
 }
 
@@ -504,6 +540,56 @@ function buildResearchSignalsSummary(signals = []) {
   };
 }
 
+function buildMethodologySummary(language) {
+  const copy = EXPORT_COPY[language] || EXPORT_COPY.en;
+
+  return {
+    notes: [
+      copy.scopeText,
+      copy.statsOnlyMethodology,
+      copy.privacyNote,
+      copy.diagnosisWarning,
+    ],
+    allowedSources: [
+      "PublicDreams with public consent",
+      "ResearchSignals without dream text",
+      "Aggregate statistics",
+      "Taxonomy/codebook",
+      "Bias and coverage report",
+    ],
+    prohibitedFields: [
+      "private dream text",
+      "private title",
+      "exact ownerId",
+      "email",
+      "private account metadata",
+      "raw diary import files",
+      "unredacted sensitive notes",
+      "exact timestamp without explicit consent",
+    ],
+  };
+}
+
+function buildBiasAndCoverageReport({ language, publicRows = [], signalRows = [], signalSummary = {} }) {
+  const copy = EXPORT_COPY[language] || EXPORT_COPY.en;
+  const statsOnlyRows = signalRows.filter((row) => row.sharing_mode === "stats_only");
+
+  return {
+    statement: copy.biasReportText,
+    publicReadableDreams: publicRows.length,
+    statsOnlySignals: statsOnlyRows.length,
+    totalSignalRows: signalRows.length,
+    adultPublicDreams: publicRows.filter((row) => row.adult_content).length,
+    adultSignalRows: signalRows.filter((row) => row.adult_content).length,
+    sensitivityBuckets: {
+      publicDreams: countValues(publicRows.map((row) => row.sensitivity_bucket)),
+      researchSignals: signalSummary.sensitivityBuckets || {},
+    },
+    caution:
+      "Do not overclaim universal conclusions from voluntary public and stats-only submissions.",
+  };
+}
+
 function countValues(values = []) {
   return values
     .filter((value) => value !== "" && value != null)
@@ -515,7 +601,54 @@ function countValues(values = []) {
 }
 
 function isResearchReadable(record) {
-  return isPublicResearchExportable(record);
+  return isPublicResearchExportable(record) && record?.publicConsent !== false;
+}
+
+function isResearchSignalReadable(signal) {
+  const sharingMode = normalizePrivacySharingMode(signal?.sharingMode);
+  return sharingMode === "stats_only" || isPublicPrivacySharingMode(sharingMode);
+}
+
+function getPublicRecordText(record = {}) {
+  return String(record.publicText || record.public_text || "");
+}
+
+function getPublicRecordTitle(record = {}) {
+  return String(record.publicTitle || record.public_title || "");
+}
+
+function getPublicDateBucket(record = {}) {
+  return String(
+    record.dateBucket ||
+      record.date_bucket ||
+      record.publicDate ||
+      record.public_date ||
+      ""
+  ).slice(0, 16);
+}
+
+function getPublicSensitivityBucket(record = {}) {
+  if (record.sensitivityLevelBucket || record.sensitivity_bucket) {
+    return record.sensitivityLevelBucket || record.sensitivity_bucket;
+  }
+
+  const warnings = Array.isArray(record.contentWarnings) ? record.contentWarnings : [];
+  if (warnings.includes("high-sensitivity")) return "high";
+  if (warnings.length > 0) return "medium";
+  return "not_exported";
+}
+
+function getDreamLengthBucket(text = "") {
+  const wordCount = countWords(text);
+  if (wordCount === 0) return "empty";
+  if (wordCount < 80) return "short";
+  if (wordCount < 260) return "medium";
+  if (wordCount < 800) return "long";
+  return "very_long";
+}
+
+function getRecordHash(record = {}, index = 0) {
+  return stableHashString(record.id || record.dream_id || record.recordIdHash || `public-${index + 1}`);
 }
 
 function getRecordTitle(record) {
@@ -587,6 +720,18 @@ function createResearchRecordId(record, index) {
     .toUpperCase()
     .padEnd(8, "0");
   return `CDO-${seed}`;
+}
+
+function stableHashString(value = "") {
+  const input = String(value || "");
+  let hash = 2166136261;
+
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return `h${(hash >>> 0).toString(36)}`;
 }
 
 function getAgeGroup(value) {
