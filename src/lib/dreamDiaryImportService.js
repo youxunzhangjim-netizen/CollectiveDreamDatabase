@@ -1211,7 +1211,7 @@ function getSelectedCustomTags(draft) {
   return (draft.importedCustomTags || draft.customTagLabels || [])
     .map((entry) => normalizeImportedCustomTag(entry))
     .filter((entry) => entry.label && selectedSlugs.has(entry.slug))
-    .map(({ label, category }) => ({ label, category }));
+    .map(({ label, category, language }) => ({ label, category, language }));
 }
 
 function parseImportedTags(value, language = "en") {
@@ -1248,6 +1248,7 @@ function parseImportedTags(value, language = "en") {
       slug: normalizedSlug,
       label,
       category: "Custom",
+      language,
     });
     suggestions.push({
       slug: normalizedSlug,
@@ -1336,6 +1337,7 @@ function normalizeImportedCustomTag(entry) {
   return {
     label,
     category,
+    language: normalizeLanguage(entry?.language || entry?.originalLanguage || "en"),
     slug: entry?.slug || makeSharedTagSlug(category, label),
   };
 }

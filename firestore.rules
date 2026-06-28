@@ -224,8 +224,14 @@ service cloud.firestore {
         && data.name is string
         && data.name.size() >= 1
         && data.name.size() <= 80
+        && optionalString(data, "name_en", 80)
         && optionalString(data, "name_zh", 80)
         && optionalString(data, "name_es", 80)
+        && optionalString(data, "originalLabel", 80)
+        && (!data.keys().hasAny(["originalLanguage"])
+          || data.originalLanguage in ["en", "zh", "es"])
+        && (!data.keys().hasAny(["translationStatus"])
+          || data.translationStatus in ["pending", "complete"])
         && validCustomTagCategory(data.category)
         && (!data.keys().hasAny(["status"])
           || data.status in ["active", "hidden", "pending_review"])

@@ -37,6 +37,7 @@ import {
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import {
   getCategoryLabel as getTaxonomyCategoryLabel,
+  getTagLabel,
   RECORD_TAGS,
   TAG_CATEGORY_ORDER,
 } from "../lib/tagTaxonomy.js";
@@ -804,7 +805,18 @@ export default function CollectiveDreamDashboard({
 
       if (ignore) return;
 
-      const liveDreams = mergeDreamSets(firestoreDreams.map(normalizeDreamCard));
+      const sharedTagLookup = new Map(
+        sharedTags.map((tagData) => [tagData.slug, tagData])
+      );
+      const liveDreams = mergeDreamSets(firestoreDreams.map(normalizeDreamCard)).map(
+        (dream) => ({
+          ...dream,
+          tags: dream.tags.map((tagData) => ({
+            ...tagData,
+            ...(sharedTagLookup.get(tagData.slug) || {}),
+          })),
+        })
+      );
 
       if (liveDreams.length === 0) {
         setLoadState(loadErrors.length > 0 ? "fallback" : EMPTY_LOAD_STATE);
@@ -820,8 +832,8 @@ export default function CollectiveDreamDashboard({
       setTags(
         mergeTagSets(
           DEFAULT_TAGS,
-          sharedTags,
-          liveDreams.flatMap((dream) => dream.tags)
+          liveDreams.flatMap((dream) => dream.tags),
+          sharedTags
         )
       );
       setLoadError(loadErrors[0] || null);
@@ -1710,14 +1722,14 @@ function getTagName(tag, language) {
   const canonicalTag = RECORD_TAGS[tag.slug];
 
   if (language === "zh") {
-    return TAG_TRANSLATIONS[tag.slug]?.zh || canonicalTag?.name_zh || tag.name_zh || tag.nameZh || tag.name;
+    return TAG_TRANSLATIONS[tag.slug]?.zh || getTagLabel(canonicalTag || tag, language);
   }
 
   if (language === "es") {
-    return TAG_TRANSLATIONS[tag.slug]?.es || canonicalTag?.name_es || tag.name_es || tag.nameEs || tag.name;
+    return TAG_TRANSLATIONS[tag.slug]?.es || getTagLabel(canonicalTag || tag, language);
   }
 
-  return canonicalTag?.name || tag.name;
+  return getTagLabel(canonicalTag || tag, language);
 }
 
 function getCategoryLabel(category, language) {

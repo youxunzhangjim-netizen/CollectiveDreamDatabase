@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   serverTimestamp,
   setDoc,
@@ -45,23 +46,45 @@ export async function upsertSharedCustomTags(currentUser, customTagEntries = [])
     });
   });
 
-  const writes = [...normalizedEntries.values()].map((entry) => {
-    const tagData = normalizeSharedTag({
+  const writes = [...normalizedEntries.values()].map(async (entry) => {
+    const tagRef = doc(db, CUSTOM_TAGS_COLLECTION, entry.slug);
+    const existingSnapshot = await getDoc(tagRef);
+    const existingTag = existingSnapshot.exists()
+      ? normalizeSharedTag({
+          id: existingSnapshot.id,
+          ...existingSnapshot.data(),
+        })
+      : null;
+    const incomingTag = normalizeSharedTag({
       slug: entry.slug,
       category: entry.category,
-      name: entry.label,
-      name_zh: entry.label,
-      name_es: entry.label,
+      name: entry.originalLabel,
+      name_en: entry.nameEn,
+      name_zh: entry.nameZh,
+      name_es: entry.nameEs,
+      originalLabel: entry.originalLabel,
+      originalLanguage: entry.originalLanguage,
     });
 
-    if (!tagData) return null;
+    if (!incomingTag) return null;
+
+    const tagData = normalizeSharedTag({
+      ...incomingTag,
+      name: existingTag?.name || incomingTag.name,
+      name_en: existingTag?.name_en || incomingTag.name_en,
+      name_zh: existingTag?.name_zh || incomingTag.name_zh,
+      name_es: existingTag?.name_es || incomingTag.name_es,
+      originalLabel: existingTag?.originalLabel || incomingTag.originalLabel,
+      originalLanguage:
+        existingTag?.originalLanguage || incomingTag.originalLanguage,
+    });
 
     return setDoc(
-      doc(db, CUSTOM_TAGS_COLLECTION, tagData.slug),
+      tagRef,
       {
         ...tagData,
         status: "active",
-        createdBy: currentUser.uid,
+        ...(existingSnapshot.exists() ? {} : { createdBy: currentUser.uid }),
         updatedBy: currentUser.uid,
         lastUsedBy: currentUser.uid,
         updatedAt: serverTimestamp(),

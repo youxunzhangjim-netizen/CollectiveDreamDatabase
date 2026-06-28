@@ -503,10 +503,25 @@ export function getTagLabel(tagOrSlug, language = "en") {
   const tagData = typeof tagOrSlug === "string" ? RECORD_TAGS[tagOrSlug] : tagOrSlug;
 
   if (!tagData) return tagOrSlug || "";
-  if (language === "zh") return tagData.name_zh || tagData.nameZh || tagData.name;
-  if (language === "es") return tagData.name_es || tagData.nameEs || tagData.name;
+  const fallbackLabel =
+    tagData.originalLabel ||
+    tagData.name ||
+    tagData.name_en ||
+    tagData.nameEn ||
+    tagData.name_zh ||
+    tagData.nameZh ||
+    tagData.name_es ||
+    tagData.nameEs ||
+    "";
 
-  return tagData.name;
+  if (language === "zh") {
+    return tagData.name_zh || tagData.nameZh || fallbackLabel;
+  }
+  if (language === "es") {
+    return tagData.name_es || tagData.nameEs || fallbackLabel;
+  }
+
+  return tagData.name_en || tagData.nameEn || fallbackLabel;
 }
 
 export function buildRecordTags(
@@ -535,8 +550,10 @@ export function buildRecordTags(
     [...Object.values(RECORD_TAGS), ...sharedTagMap.values()].flatMap((item) => [
       item.slug,
       normalizeTagName(item.name),
+      normalizeTagName(item.name_en),
       normalizeTagName(item.name_zh),
       normalizeTagName(item.name_es),
+      normalizeTagName(item.originalLabel),
     ])
   );
   const customTags = [];
@@ -554,9 +571,13 @@ export function buildRecordTags(
     customTags.push({
       id: `custom-${slug}`,
       category: normalizedEntry.category,
-      name: normalizedLabel,
-      name_zh: normalizedLabel,
-      name_es: normalizedLabel,
+      name: normalizedEntry.originalLabel,
+      name_en: normalizedEntry.nameEn,
+      name_zh: normalizedEntry.nameZh,
+      name_es: normalizedEntry.nameEs,
+      originalLabel: normalizedEntry.originalLabel,
+      originalLanguage: normalizedEntry.originalLanguage,
+      translationStatus: normalizedEntry.translationStatus,
       slug,
       custom: true,
     });
@@ -575,19 +596,55 @@ export function normalizeCustomTagLabel(value) {
 
 export function normalizeCustomTagEntry(entry) {
   if (typeof entry === "string") {
+    const label = normalizeCustomTagLabel(entry);
+    const originalLanguage = inferTagLanguage(label);
+
     return {
-      label: normalizeCustomTagLabel(entry),
+      label,
       category: "Custom",
+      originalLabel: label,
+      originalLanguage,
+      nameEn: originalLanguage === "en" ? label : "",
+      nameZh: originalLanguage === "zh" ? label : "",
+      nameEs: originalLanguage === "es" ? label : "",
+      translationStatus: "pending",
     };
   }
 
   const category = TAG_CATEGORY_ORDER.includes(entry?.category)
     ? entry.category
     : "Custom";
+  const label = normalizeCustomTagLabel(
+    entry?.label ||
+      entry?.originalLabel ||
+      entry?.name ||
+      entry?.name_en ||
+      entry?.name_zh ||
+      entry?.name_es
+  );
+  const originalLanguage = normalizeTagLanguage(
+    entry?.language || entry?.originalLanguage,
+    label
+  );
+  const nameEn =
+    normalizeCustomTagLabel(entry?.name_en || entry?.nameEn) ||
+    (originalLanguage === "en" ? label : "");
+  const nameZh =
+    normalizeCustomTagLabel(entry?.name_zh || entry?.nameZh) ||
+    (originalLanguage === "zh" ? label : "");
+  const nameEs =
+    normalizeCustomTagLabel(entry?.name_es || entry?.nameEs) ||
+    (originalLanguage === "es" ? label : "");
 
   return {
-    label: normalizeCustomTagLabel(entry?.label),
+    label,
     category,
+    originalLabel: normalizeCustomTagLabel(entry?.originalLabel) || label,
+    originalLanguage,
+    nameEn,
+    nameZh,
+    nameEs,
+    translationStatus: nameEn && nameZh && nameEs ? "complete" : "pending",
   };
 }
 
@@ -597,12 +654,26 @@ export function tagExists(labelOrSlug, selectedCustomEntries = [], sharedTags = 
   return (
     Boolean(RECORD_TAGS[makeCustomTagSlug(labelOrSlug)]) ||
     Object.values(RECORD_TAGS).some((tagData) =>
-      [tagData.slug, tagData.name, tagData.name_zh, tagData.name_es]
+      [
+        tagData.slug,
+        tagData.name,
+        tagData.name_en,
+        tagData.name_zh,
+        tagData.name_es,
+        tagData.originalLabel,
+      ]
         .map(normalizeTagName)
         .includes(normalized)
     ) ||
     normalizeSharedTags(sharedTags).some((tagData) =>
-      [tagData.slug, tagData.name, tagData.name_zh, tagData.name_es]
+      [
+        tagData.slug,
+        tagData.name,
+        tagData.name_en,
+        tagData.name_zh,
+        tagData.name_es,
+        tagData.originalLabel,
+      ]
         .map(normalizeTagName)
         .includes(normalized)
     ) ||
@@ -639,26 +710,72 @@ export function normalizeSharedTag(tagData) {
   const category = TAG_CATEGORY_ORDER.includes(tagData?.category)
     ? tagData.category
     : "Custom";
-  const name = normalizeCustomTagLabel(
-    tagData?.name || tagData?.label || tagData?.name_zh || tagData?.name_es
+  const originalLabel = normalizeCustomTagLabel(
+    tagData?.originalLabel ||
+      tagData?.name ||
+      tagData?.label ||
+      tagData?.name_en ||
+      tagData?.name_zh ||
+      tagData?.name_es
   );
 
-  if (!name || category === "Content") return null;
+  if (!originalLabel || category === "Content") return null;
 
   const slug = tagData?.slug
     ? makeCustomTagSlug(tagData.slug)
-    : makeSharedTagSlug(category, name);
+    : makeSharedTagSlug(category, originalLabel);
+  const originalLanguage = normalizeTagLanguage(
+    tagData?.originalLanguage,
+    originalLabel
+  );
+  let nameEn = normalizeCustomTagLabel(tagData?.name_en || tagData?.nameEn);
+  let nameZh = normalizeCustomTagLabel(tagData?.name_zh || tagData?.nameZh);
+  let nameEs = normalizeCustomTagLabel(tagData?.name_es || tagData?.nameEs);
+  const copiedLegacyLabels =
+    !tagData?.originalLanguage &&
+    nameZh &&
+    nameEs &&
+    originalLabel === nameZh &&
+    nameZh === nameEs &&
+    (!nameEn || nameEn === originalLabel);
+
+  // Older custom tags copied one label into every language. Keep it only as
+  // the original label so the other fields remain available for real translations.
+  if (copiedLegacyLabels) {
+    nameEn = originalLanguage === "en" ? originalLabel : "";
+    nameZh = originalLanguage === "zh" ? originalLabel : "";
+    nameEs = originalLanguage === "es" ? originalLabel : "";
+  } else {
+    if (!nameEn && originalLanguage === "en") nameEn = originalLabel;
+    if (!nameZh && originalLanguage === "zh") nameZh = originalLabel;
+    if (!nameEs && originalLanguage === "es") nameEs = originalLabel;
+  }
 
   return {
     id: tagData?.id || `custom-${slug}`,
     category,
-    name,
-    name_zh: normalizeCustomTagLabel(tagData?.name_zh || tagData?.nameZh || name),
-    name_es: normalizeCustomTagLabel(tagData?.name_es || tagData?.nameEs || name),
+    name: originalLabel,
+    name_en: nameEn,
+    name_zh: nameZh,
+    name_es: nameEs,
+    originalLabel,
+    originalLanguage,
+    translationStatus: nameEn && nameZh && nameEs ? "complete" : "pending",
     slug,
     custom: true,
     shared: true,
   };
+}
+
+function normalizeTagLanguage(language, label = "") {
+  if (["en", "zh", "es"].includes(language)) return language;
+  return inferTagLanguage(label);
+}
+
+function inferTagLanguage(label = "") {
+  if (/[\u3400-\u9fff]/u.test(label)) return "zh";
+  if (/[áéíóúüñ¿¡]/iu.test(label)) return "es";
+  return "en";
 }
 
 export function makeSharedTagSlug(category, label) {

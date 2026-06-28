@@ -633,7 +633,10 @@ export default function RecordDreamPage({
       return;
     }
 
-    setCustomTagEntries((current) => [...current, { label, category }]);
+    setCustomTagEntries((current) => [
+      ...current,
+      { label, category, language: normalizeLanguage(language) },
+    ]);
     setCustomTagDrafts((current) => ({ ...current, [category]: "" }));
     setTagNotices((current) => ({ ...current, [category]: "" }));
   }
