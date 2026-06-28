@@ -22,6 +22,10 @@ import { fetchSharedCustomTags } from "../lib/customTagsService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
 import { createDreamRecord } from "../lib/recordsService.js";
 import {
+  PRIVACY_SHARING_MODES,
+  isPublicPrivacySharingMode,
+} from "../lib/privacyDefaults.js";
+import {
   getCategoryLabel,
   getTagLabel,
   mergeRecorderTagGroups,
@@ -166,12 +170,32 @@ const RECORD_COPY = {
     recordIdentity: "Future sharing identity",
     recordAsAccount: "Use username",
     recordAsAnonymous: "Stay anonymous",
+    sharingChoiceTitle: "How should this dream appear?",
+    sharingChoiceDescription:
+      "Choose before the first save. You can change account-owned dreams later.",
+    sharingAnonymousTitle: "Anonymous public",
+    sharingAnonymousText:
+      "Default. Publish the words without your name and include anonymous statistics.",
+    sharingUsernameTitle: "Public with username",
+    sharingUsernameText:
+      "Publish the words and your public username, and include statistics.",
+    sharingStatsTitle: "Statistics only",
+    sharingStatsText:
+      "Keep the words private and contribute only anonymous tags and statistics.",
+    sharingPrivateTitle: "Private",
+    sharingPrivateText:
+      "Keep the words and statistics in your account only.",
+    sharingAccountRequired: "Sign in to publish with a username.",
+    sharingPrivateAccountRequired:
+      "Sign in first to keep the words private and available later.",
+    sharingDefaultBadge: "Default",
+    submitSelected: "Save with selected sharing",
     submitAccount: "Save Dream",
     submitAnonymous: "Publish Anonymous Dream",
     submitting: "Publishing record",
-    consentText: "By proceeding, you keep copyright of your words and grant this observatory permission to store, analyze, and publicly display this record according to the selected identity.",
-    privacyFirstTitle: "Guest public, account text private by default",
-    privacyFirstText: "Guests publish anonymously and contribute to collective statistics. If you log in before publishing, the dream follows your account defaults: words stay private unless you later choose to share them.",
+    consentText: "By proceeding, you keep copyright of your words and grant this observatory permission to store, analyze, and display this record according to the sharing choice above.",
+    privacyFirstTitle: "Choose before the first save",
+    privacyFirstText: "Anonymous public is selected by default: the words appear without your name and contribute to statistics. Choose another option above before saving when needed.",
     diagnosisReminderTitle: "Not a diagnosis",
     diagnosisReminderText:
       "Dream tags, statistics, and reflections are for self-exploration and research patterns only. They are not medical, psychological, or psychiatric diagnosis.",
@@ -186,8 +210,8 @@ const RECORD_COPY = {
     publishInvalidData:
       "One record field needs adjustment before saving.",
     accountEditable:
-      "Account records keep words private by default, contribute anonymous statistics, and can be edited, deleted, unpublished, or shared later.",
-    anonymousLocked: "Guest records publish anonymously and contribute to statistics. To edit or delete later, keep this browser session or log in before publishing.",
+      "The selected sharing choice is applied on this first save. Account records can be edited, deleted, unpublished, or changed later.",
+    anonymousLocked: "The selected sharing choice is applied on this first save. To edit or delete later, keep this browser session or log in before publishing.",
     authTitle: "Optional account link",
     authText: "You can log in or create an account without leaving this draft. After login, publishing will attach this dream to that account automatically.",
     loginTab: "Login",
@@ -204,7 +228,7 @@ const RECORD_COPY = {
     loadingSignup: "Creating account",
     loadingGoogle: "Opening Google",
     loadingMicrosoft: "Opening Microsoft",
-    linkedNotice: "Account linked. This draft will use your account privacy default.",
+    linkedNotice: "Account linked. This draft keeps the sharing choice selected below.",
     emailRequired: "Enter an email address.",
     passwordRequired: "Enter a password.",
     authError: "The account state could not be confirmed. The draft is still here.",
@@ -274,12 +298,32 @@ const RECORD_COPY = {
     recordIdentity: "之後分享身分",
     recordAsAccount: "使用用戶名",
     recordAsAnonymous: "保持匿名",
+    sharingChoiceTitle: "這則夢要如何顯示？",
+    sharingChoiceDescription:
+      "請在第一次儲存前選擇。連結帳戶的夢之後仍可更改。",
+    sharingAnonymousTitle: "匿名公開",
+    sharingAnonymousText:
+      "預設選項。公開夢境文字但不顯示姓名，並加入匿名統計。",
+    sharingUsernameTitle: "以用戶名公開",
+    sharingUsernameText:
+      "公開夢境文字與公開用戶名，並加入統計。",
+    sharingStatsTitle: "只加入統計",
+    sharingStatsText:
+      "夢境文字保持私人，只提供匿名標籤與統計。",
+    sharingPrivateTitle: "私人保存",
+    sharingPrivateText:
+      "夢境文字與統計都只保留在你的帳戶。",
+    sharingAccountRequired: "請先登入，才能使用用戶名公開。",
+    sharingPrivateAccountRequired:
+      "請先登入，才能保留私人文字並在之後查看。",
+    sharingDefaultBadge: "預設",
+    submitSelected: "依照選擇儲存",
     submitAccount: "儲存夢境",
     submitAnonymous: "匿名發布夢境",
     submitting: "正在發布紀錄",
-    consentText: "繼續後，你保留文字著作權，並同意觀測站依照所選身分儲存、分析並公開顯示這份紀錄。",
-    privacyFirstTitle: "訪客匿名公開，帳戶預設文字私人",
-    privacyFirstText: "訪客會匿名發布並加入集體統計。若你在發布前登入，這則夢會使用帳戶預設：文字不公開，除非你之後選擇分享。",
+    consentText: "繼續後，你保留文字著作權，並同意觀測站依照上方選擇儲存、分析及顯示這份紀錄。",
+    privacyFirstTitle: "第一次儲存前先選擇",
+    privacyFirstText: "預設為匿名公開：夢境文字不顯示姓名並加入統計。如有需要，請在儲存前改選上方其他方式。",
     diagnosisReminderTitle: "這不是診斷",
     diagnosisReminderText:
       "夢境標籤、統計與反思只用於自我探索與研究模式觀察，並不是醫療、心理或精神科診斷。",
@@ -289,8 +333,8 @@ const RECORD_COPY = {
     publishAuthMismatch: "你的帳戶狀態還在同步。請再按一次儲存。",
     publishUnavailable: "資料庫目前無法連線。請稍後再試。",
     publishInvalidData: "有一個紀錄欄位需要調整後才能儲存。",
-    accountEditable: "帳戶紀錄預設保留文字私人並加入匿名統計，之後可以修改、刪除、取消公開或選擇分享。",
-    anonymousLocked: "訪客紀錄會匿名公開並加入統計。若之後想修改或刪除，請保留這個瀏覽器工作階段，或在發布前登入。",
+    accountEditable: "第一次儲存會直接套用目前選擇。帳戶紀錄之後仍可修改、刪除、取消公開或更改方式。",
+    anonymousLocked: "第一次儲存會直接套用目前選擇。若之後想修改或刪除，請保留這個瀏覽器工作階段，或在發布前登入。",
     authTitle: "選用帳戶連結",
     authText: "你可以在不離開草稿的情況下登入或建立帳戶。登入後，發布會自動連到該帳戶。",
     loginTab: "登入",
@@ -307,7 +351,7 @@ const RECORD_COPY = {
     loadingSignup: "正在建立帳戶",
     loadingGoogle: "正在開啟 Google",
     loadingMicrosoft: "正在開啟 Microsoft",
-    linkedNotice: "帳戶已連結。這份草稿會套用你的帳戶隱私預設。",
+    linkedNotice: "帳戶已連結。這份草稿會保留你在下方選擇的分享方式。",
     emailRequired: "請輸入電子郵件。",
     passwordRequired: "請輸入密碼。",
     authError: "無法確認帳戶狀態；草稿仍然保留在這裡。",
@@ -378,12 +422,33 @@ const RECORD_COPY = {
     recordIdentity: "Identidad futura",
     recordAsAccount: "Usar nombre de usuario",
     recordAsAnonymous: "Seguir anónimo",
+    sharingChoiceTitle: "¿Cómo debe aparecer este sueño?",
+    sharingChoiceDescription:
+      "Elige antes del primer guardado. Los sueños vinculados a una cuenta pueden cambiarse después.",
+    sharingAnonymousTitle: "Público anónimo",
+    sharingAnonymousText:
+      "Predeterminado. Publica el texto sin tu nombre y aporta estadísticas anónimas.",
+    sharingUsernameTitle: "Público con nombre de usuario",
+    sharingUsernameText:
+      "Publica el texto y tu nombre de usuario público, y aporta estadísticas.",
+    sharingStatsTitle: "Solo estadísticas",
+    sharingStatsText:
+      "Mantén el texto privado y aporta solo etiquetas y estadísticas anónimas.",
+    sharingPrivateTitle: "Privado",
+    sharingPrivateText:
+      "Mantén el texto y las estadísticas únicamente en tu cuenta.",
+    sharingAccountRequired:
+      "Inicia sesión para publicar con un nombre de usuario.",
+    sharingPrivateAccountRequired:
+      "Inicia sesión para conservar el texto privado y consultarlo después.",
+    sharingDefaultBadge: "Predeterminado",
+    submitSelected: "Guardar con la opción elegida",
     submitAccount: "Guardar sueño",
     submitAnonymous: "Publicar sueño anónimo",
     submitting: "Publicando registro",
-    consentText: "Al continuar, conservas los derechos de autor de tus palabras y permites que este observatorio almacene, analice y muestre públicamente este registro según la identidad seleccionada.",
-    privacyFirstTitle: "Invitado público; cuenta con texto privado por defecto",
-    privacyFirstText: "Los invitados publican de forma anónima y aportan estadísticas colectivas. Si inicias sesión antes de publicar, el sueño seguirá tus valores de cuenta: el texto queda privado salvo que lo compartas después.",
+    consentText: "Al continuar, conservas los derechos de autor y permites que el observatorio almacene, analice y muestre este registro según la opción elegida arriba.",
+    privacyFirstTitle: "Elige antes del primer guardado",
+    privacyFirstText: "La opción predeterminada es público anónimo: el texto aparece sin tu nombre y aporta estadísticas. Puedes elegir otra opción antes de guardar.",
     diagnosisReminderTitle: "No es un diagnóstico",
     diagnosisReminderText:
       "Las etiquetas, estadísticas y reflexiones sirven para autoexploración y patrones de investigación. No son diagnósticos médicos, psicológicos ni psiquiátricos.",
@@ -398,8 +463,8 @@ const RECORD_COPY = {
     publishInvalidData:
       "Un campo del registro necesita ajuste antes de guardar.",
     accountEditable:
-      "Los registros de cuenta mantienen el texto privado por defecto, aportan estadísticas anónimas y luego se pueden editar, eliminar, retirar o compartir.",
-    anonymousLocked: "Los registros de invitado se publican de forma anónima y contribuyen a estadísticas. Para editar o eliminar después, conserva esta sesión del navegador o inicia sesión antes de publicar.",
+      "La opción seleccionada se aplica en el primer guardado. Los registros de cuenta pueden editarse, eliminarse o cambiarse después.",
+    anonymousLocked: "La opción seleccionada se aplica en el primer guardado. Para editar o eliminar después, conserva esta sesión o inicia sesión antes de publicar.",
     authTitle: "Vincular cuenta opcional",
     authText: "Puedes iniciar sesión o crear una cuenta sin salir del borrador. Después de iniciar sesión, la publicación se conectará automáticamente a esa cuenta.",
     loginTab: "Entrar",
@@ -416,7 +481,7 @@ const RECORD_COPY = {
     loadingSignup: "Creando cuenta",
     loadingGoogle: "Abriendo Google",
     loadingMicrosoft: "Abriendo Microsoft",
-    linkedNotice: "Cuenta vinculada. Este borrador usará tu privacidad predeterminada.",
+    linkedNotice: "Cuenta vinculada. Este borrador conserva la opción de publicación elegida abajo.",
     emailRequired: "Introduce un correo.",
     passwordRequired: "Introduce una contraseña.",
     authError: "No se pudo confirmar la cuenta. El borrador sigue aquí.",
@@ -470,7 +535,9 @@ export default function RecordDreamPage({
   const [customTagEntries, setCustomTagEntries] = useState([]);
   const [sharedTags, setSharedTags] = useState([]);
   const [tagNotices, setTagNotices] = useState({});
-  const [recordIdentityMode, setRecordIdentityMode] = useState("anonymous");
+  const [sharingMode, setSharingMode] = useState(
+    PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC
+  );
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [authMode, setAuthMode] = useState("login");
@@ -535,10 +602,13 @@ export default function RecordDreamPage({
   }, []);
 
   useEffect(() => {
-    if (!accountBacked) {
-      setRecordIdentityMode("anonymous");
+    if (
+      !accountBacked &&
+      sharingMode === PRIVACY_SHARING_MODES.PSEUDONYM_PUBLIC
+    ) {
+      setSharingMode(PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC);
     }
-  }, [accountBacked]);
+  }, [accountBacked, sharingMode]);
 
   function toggleTag(slug) {
     setSelectedTagSlugs((current) =>
@@ -757,7 +827,14 @@ export default function RecordDreamPage({
           selectedTagSlugs,
           customTagLabels: customTagEntries,
           sharedTags,
-          recordIdentityMode,
+          sharingMode,
+          publicReviewStatus: isPublicPrivacySharingMode(sharingMode)
+            ? "approved"
+            : "",
+          recordIdentityMode:
+            sharingMode === PRIVACY_SHARING_MODES.PSEUDONYM_PUBLIC
+              ? "pseudonym"
+              : "anonymous",
         },
         profile
       );
@@ -1158,7 +1235,7 @@ export default function RecordDreamPage({
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="grid gap-4">
                 <label className="flex min-h-14 items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/5 px-4 py-3">
                   <input
                     type="checkbox"
@@ -1170,29 +1247,61 @@ export default function RecordDreamPage({
                     {copy.adultContent}
                   </span>
                 </label>
-
-                {accountBacked && (
-                  <div>
-                    <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                      {copy.recordIdentity}
-                    </p>
-                    <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-black/40 p-1">
-                      <ModeButton
-                        active={recordIdentityMode === "account"}
-                        onClick={() => setRecordIdentityMode("account")}
-                      >
-                        {copy.recordAsAccount}
-                      </ModeButton>
-                      <ModeButton
-                        active={recordIdentityMode === "anonymous"}
-                        onClick={() => setRecordIdentityMode("anonymous")}
-                      >
-                        {copy.recordAsAnonymous}
-                      </ModeButton>
-                    </div>
-                  </div>
-                )}
               </div>
+
+              <section className="rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4 sm:p-5">
+                <h3 className="cdo-card-heading">{copy.sharingChoiceTitle}</h3>
+                <p className="cdo-muted-copy mt-2 max-w-3xl">
+                  {copy.sharingChoiceDescription}
+                </p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <SharingChoice
+                    active={sharingMode === PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC}
+                    title={copy.sharingAnonymousTitle}
+                    text={copy.sharingAnonymousText}
+                    badge={copy.sharingDefaultBadge}
+                    onClick={() =>
+                      setSharingMode(PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC)
+                    }
+                  />
+                  <SharingChoice
+                    active={sharingMode === PRIVACY_SHARING_MODES.PSEUDONYM_PUBLIC}
+                    title={copy.sharingUsernameTitle}
+                    text={
+                      accountBacked
+                        ? copy.sharingUsernameText
+                        : copy.sharingAccountRequired
+                    }
+                    disabled={!accountBacked}
+                    onClick={() =>
+                      setSharingMode(PRIVACY_SHARING_MODES.PSEUDONYM_PUBLIC)
+                    }
+                  />
+                  <SharingChoice
+                    active={sharingMode === PRIVACY_SHARING_MODES.STATS_ONLY}
+                    title={copy.sharingStatsTitle}
+                    text={
+                      accountBacked
+                        ? copy.sharingStatsText
+                        : copy.sharingPrivateAccountRequired
+                    }
+                    disabled={!accountBacked}
+                    onClick={() => setSharingMode(PRIVACY_SHARING_MODES.STATS_ONLY)}
+                  />
+                  <SharingChoice
+                    active={sharingMode === PRIVACY_SHARING_MODES.PRIVATE}
+                    title={copy.sharingPrivateTitle}
+                    text={
+                      accountBacked
+                        ? copy.sharingPrivateText
+                        : copy.sharingPrivateAccountRequired
+                    }
+                    disabled={!accountBacked}
+                    onClick={() => setSharingMode(PRIVACY_SHARING_MODES.PRIVATE)}
+                  />
+                </div>
+              </section>
 
               <p className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-zinc-300">
                 {accountBacked ? copy.accountEditable : copy.anonymousLocked}
@@ -1227,9 +1336,7 @@ export default function RecordDreamPage({
                 {submitting && <LoadingSpinner dark />}
                 {submitting
                   ? copy.submitting
-                  : accountBacked
-                    ? copy.submitAccount
-                    : copy.submitAnonymous}
+                  : copy.submitSelected}
               </button>
               <p className="mt-3 text-xs leading-5 text-slate-500">
                 {copy.consentText}
@@ -1610,6 +1717,42 @@ function ModeButton({ active, children, onClick }) {
       ].join(" ")}
     >
       {children}
+    </button>
+  );
+}
+
+function SharingChoice({
+  active,
+  title,
+  text,
+  badge = "",
+  disabled = false,
+  onClick,
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+      className={[
+        "min-h-28 rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-45",
+        active
+          ? "border-cyan-300/55 bg-cyan-300/15 shadow-[0_0_22px_rgba(34,211,238,.10)]"
+          : "border-white/10 bg-black/30 hover:border-cyan-300/30 hover:bg-cyan-300/5",
+      ].join(" ")}
+    >
+      <span className="flex items-start justify-between gap-3">
+        <span className="text-sm font-semibold text-cyan-50">{title}</span>
+        {badge && (
+          <span className="shrink-0 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-cyan-100">
+            {badge}
+          </span>
+        )}
+      </span>
+      <span className="mt-2 block text-xs leading-relaxed text-zinc-400">
+        {text}
+      </span>
     </button>
   );
 }

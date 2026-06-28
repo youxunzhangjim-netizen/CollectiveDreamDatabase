@@ -124,6 +124,30 @@ assert.equal(
 }
 
 {
+  const profile = normalizePrivacySettings({
+    defaultSharingMode: DREAM_SHARING_MODES.STATS_ONLY,
+    requireReviewBeforePublic: true,
+  });
+  const state = resolveNewRecordPrivacyState({
+    currentUser: user,
+    profile,
+    draft: {
+      sharingMode: DREAM_SHARING_MODES.ANONYMOUS_PUBLIC,
+      publicReviewStatus: "approved",
+      recordIdentityMode: "anonymous",
+    },
+  });
+
+  assert.equal(state.sharingMode, DREAM_SHARING_MODES.ANONYMOUS_PUBLIC);
+  assert.equal(state.requestedSharingMode, DREAM_SHARING_MODES.ANONYMOUS_PUBLIC);
+  assert.equal(state.visibility, "public");
+  assert.equal(state.isPublic, true);
+  assert.equal(state.publicConsent, true);
+  assert.equal(state.includedInResearchStats, true);
+  assert.equal(state.defaultPrivacyApplied, false);
+}
+
+{
   const researchSignal = buildResearchSignalDocument(
     baseRecord,
     DREAM_SHARING_MODES.STATS_ONLY
