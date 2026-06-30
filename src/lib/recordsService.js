@@ -646,7 +646,7 @@ function sanitizePublicSketches(record = {}, usedVisualSlots = 0) {
   }
 
   return normalizeDreamSketches(record)
-    .filter((sketch) => sketch.publicAllowed && sketch.imageUrl)
+    .filter((sketch) => sketch.publicAllowed && !sketch.memoryOnly && sketch.imageUrl)
     .slice(0, Math.max(0, MAX_DREAM_IMAGES - usedVisualSlots))
     .map((sketch) => ({
       id: limitString(sketch.id, 120),
@@ -733,6 +733,7 @@ export function buildResearchSignalDocument(record = {}, sharingMode = record.sh
   const confirmedTagSlugs = getConfirmedTagSlugs(record, tags);
   const aiSuggestedTagSlugs = getAiSuggestedTagSlugs(record);
   const languageMissing = !String(record.originalLanguage || record.original_language || "").trim();
+  const sketchMetadata = buildSketchResearchMetadata(record);
 
   return {
     signalVersion: RESEARCH_SIGNAL_VERSION,
@@ -784,7 +785,40 @@ export function buildResearchSignalDocument(record = {}, sharingMode = record.sh
     ),
     confirmedByUser: Boolean(record.tagsReviewedByUser || record.tags_reviewed_by_user),
     hasUnconfirmedAiTags: hasUnconfirmedAiTags(record),
+    ...sketchMetadata,
   };
+}
+
+function buildSketchResearchMetadata(record = {}) {
+  const consent = normalizeSketchConsent(record.sketchConsent);
+  const sketches = consent.allowResearchUse
+    ? normalizeDreamSketches(record).filter((sketch) => sketch.researchAllowed)
+    : [];
+  const textLabelCount = sketches.reduce(
+    (total, sketch) =>
+      total + (Array.isArray(sketch.textLabels) ? sketch.textLabels.length : 0),
+    0
+  );
+
+  return {
+    sketchMetadataAllowed: sketches.length > 0,
+    sketchCountBucket: getSmallCountBucket(sketches.length),
+    sketchHasTextLabels: textLabelCount > 0,
+    sketchTextLabelCountBucket: getSmallCountBucket(textLabelCount),
+    sketchAiAnalysisAllowed:
+      sketches.length > 0 &&
+      (Boolean(consent.allowAiAnalysis) ||
+        sketches.some((sketch) => Boolean(sketch.aiAnalysisAllowed))),
+  };
+}
+
+function getSmallCountBucket(count) {
+  const value = Math.max(0, Number(count || 0));
+
+  if (value === 0) return "none";
+  if (value === 1) return "one";
+  if (value <= 3) return "few";
+  return "many";
 }
 
 async function syncPrivacyMirrorDocuments({
@@ -1124,6 +1158,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   const sketchConsent = normalizeSketchConsent(draft?.sketchConsent, {
     allowPublicDisplay: includeSketchesWhenPublic,
     allowResearchUse: Boolean(draft?.sketchConsent?.allowResearchUse),
+    allowAiAnalysis: Boolean(draft?.sketchConsent?.allowAiAnalysis),
   });
   const coreRecord = {
     id: recordRef.id,

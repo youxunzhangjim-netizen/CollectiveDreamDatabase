@@ -728,7 +728,9 @@ export default function RecordDreamPage({
         allowPrivateStorage: true,
         allowPublicDisplay: includeSketchesWhenPublic,
         allowResearchUse: sketches.some((sketch) => sketch?.researchAllowed),
-        allowAiAnalysis: false,
+        allowAiAnalysis: sketches.some(
+          (sketch) => sketch?.aiAnalysisAllowed || sketch?.allowAiAnalysis
+        ),
       },
     };
   }

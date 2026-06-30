@@ -478,10 +478,55 @@ service cloud.firestore {
         && optionalString(data, "generated_image_url", 1200)
         && optionalBool(data, "includeSketchesWhenPublic")
         && optionalList(data, "publicSketches", 4)
+        && validPublicSketchList(data)
         && validSharingMode(data.sharingMode)
         && isPublicSharingMode(data.sharingMode)
         && publicDreamSourceRecordAllowsMirror(data, recordId)
         && redactedPublicDreamUsesReviewedText(data, recordId);
+    }
+
+    function validPublicSketchList(data) {
+      return !data.keys().hasAny(["publicSketches"])
+        || (data.publicSketches is list
+          && data.publicSketches.size() <= 4
+          && (data.publicSketches.size() < 1 || validPublicSketch(data.publicSketches[0]))
+          && (data.publicSketches.size() < 2 || validPublicSketch(data.publicSketches[1]))
+          && (data.publicSketches.size() < 3 || validPublicSketch(data.publicSketches[2]))
+          && (data.publicSketches.size() < 4 || validPublicSketch(data.publicSketches[3])));
+    }
+
+    function validPublicSketch(sketch) {
+      return sketch is map
+        && sketch.keys().hasOnly([
+          "id",
+          "type",
+          "imageUrl",
+          "thumbnailUrl",
+          "width",
+          "height",
+          "mimeType",
+          "title",
+          "caption",
+          "textLabels",
+          "publicAllowed",
+          "researchAllowed",
+          "adultContent",
+          "sensitivityLevel",
+          "altText"
+        ])
+        && !sketch.keys().hasAny([
+          "storagePath",
+          "thumbnailStoragePath",
+          "layerStoragePath",
+          "layerData",
+          "layerFile",
+          "privatePath",
+          "ownerId",
+          "createdBy"
+        ])
+        && (!sketch.keys().hasAny(["publicAllowed"]) || sketch.publicAllowed == true)
+        && (!sketch.keys().hasAny(["imageUrl"]) || sketch.imageUrl is string)
+        && (!sketch.keys().hasAny(["thumbnailUrl"]) || sketch.thumbnailUrl is string);
     }
 
     function validResearchSignal(data, signalId) {
@@ -511,7 +556,12 @@ service cloud.firestore {
           "sharingMode",
           "tagSource",
           "confirmedByUser",
-          "hasUnconfirmedAiTags"
+          "hasUnconfirmedAiTags",
+          "sketchMetadataAllowed",
+          "sketchCountBucket",
+          "sketchHasTextLabels",
+          "sketchTextLabelCountBucket",
+          "sketchAiAnalysisAllowed"
         ])
         && data.keys().hasAll([
           "signalVersion",
@@ -552,7 +602,14 @@ service cloud.firestore {
         && (data.sharingMode == "stats_only" || isPublicSharingMode(data.sharingMode))
         && optionalString(data, "tagSource", 80)
         && data.confirmedByUser is bool
-        && data.hasUnconfirmedAiTags is bool;
+        && data.hasUnconfirmedAiTags is bool
+        && optionalBool(data, "sketchMetadataAllowed")
+        && (!data.keys().hasAny(["sketchCountBucket"])
+          || data.sketchCountBucket in ["none", "one", "few", "many"])
+        && optionalBool(data, "sketchHasTextLabels")
+        && (!data.keys().hasAny(["sketchTextLabelCountBucket"])
+          || data.sketchTextLabelCountBucket in ["none", "one", "few", "many"])
+        && optionalBool(data, "sketchAiAnalysisAllowed");
     }
 
     function canReadResearchSignal(data, signalId) {

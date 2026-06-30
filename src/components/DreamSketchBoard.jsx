@@ -177,6 +177,111 @@ const SKETCH_COPY = {
   },
 };
 
+Object.assign(SKETCH_COPY.en, {
+  title: "Sketch the dream",
+  subtitle:
+    "Draw a rough scene, symbol, map, creature, or place from the dream. It does not need to look good.",
+  privacy: "Sketches are private by default.",
+  privacyWarning:
+    "Sketches can reveal private places, people, bodies, symbols, names, handwriting, or intimate details. Keep them private unless you are sure.",
+  publishTextOnly: "You can publish the dream text without publishing the sketch.",
+  includePublic: "Include this sketch if I publish this dream",
+  keepPrivate: "Keep sketch private",
+  personalMemory: "Use sketch only for personal memory",
+  allowResearch: "Allow this sketch to contribute to research metadata",
+  allowAi: "Allow AI to analyze sketch for suggested tags",
+  aiOffDefault: "Optional and off by default.",
+  textReviewReminder: "This sketch contains text. Review it before making it public.",
+  altText: "Alt text",
+  altTextPlaceholder: "Briefly describe this sketch for accessibility",
+  open: "Open sketch board",
+  addText: "Add text",
+  clear: "Clear",
+  save: "Save sketch",
+  preview: "Preview sketch",
+});
+
+Object.assign(SKETCH_COPY.zh, {
+  title: "畫下這個夢",
+  subtitle:
+    "你可以粗略畫下夢中的場景、符號、地圖、生物或地方。不需要畫得好，只要能幫你記住夢。",
+  privacy: "草圖預設為私人。",
+  privacyWarning:
+    "草圖可能露出私人地點、人物、身體、符號、名字、筆跡或親密細節。除非你確定，否則請保持私人。",
+  publishTextOnly: "你可以公開夢的文字，而不公開草圖。",
+  includePublic: "如果公開這則夢，也顯示這張草圖",
+  keepPrivate: "保持草圖私人",
+  personalMemory: "只作為個人記憶",
+  allowResearch: "允許這張草圖提供研究中繼資料",
+  allowAi: "允許 AI 分析草圖並建議標籤",
+  aiOffDefault: "選用功能，預設關閉。",
+  textReviewReminder: "這張草圖含有文字。公開前請再次檢查。",
+  altText: "替代文字",
+  altTextPlaceholder: "簡短描述這張草圖，方便無障礙閱讀",
+  collapsedHint: "選用畫圖工具",
+  open: "開啟畫板",
+  close: "關閉",
+  addText: "加入文字",
+  labelText: "文字內容",
+  placeText: "點一下畫布放置文字，或選取既有文字來編輯。",
+  selectText: "選取文字",
+  deleteText: "刪除選取文字",
+  undo: "復原",
+  redo: "重做",
+  draw: "筆刷",
+  eraser: "橡皮擦",
+  clear: "清除",
+  save: "儲存草圖",
+  remove: "移除草圖",
+  preview: "預覽草圖",
+  brushSize: "筆刷",
+  opacity: "透明度",
+  format: "格式",
+  color: "顏色",
+  background: "背景",
+  dark: "深色",
+  white: "白色",
+  transparent: "透明",
+  showGrid: "淡格線",
+  canvasSize: "畫布尺寸",
+  phone: "手機",
+  square: "方形",
+  vertical: "直式",
+  horizontal: "橫式",
+  saved: "草圖已暫存到這則夢。",
+  noSketch: "尚未儲存草圖。",
+  previewTitle: "草圖預覽",
+  clearConfirm: "要清空畫板嗎？",
+  removeConfirm: "要從這則夢移除草圖嗎？",
+  closeConfirm: "尚未儲存最新草圖變更，仍要關閉嗎？",
+  saveFailed: "草圖無法準備完成，請再試一次。",
+  visualLimit: "這則夢已經有四個視覺附件。",
+});
+
+Object.assign(SKETCH_COPY.es, {
+  title: "Dibuja este sueño",
+  subtitle:
+    "Dibuja una escena, símbolo, mapa, criatura o lugar del sueño. No tiene que verse perfecto; solo tiene que ayudarte a recordarlo.",
+  privacy: "Los bocetos son privados por defecto.",
+  privacyWarning:
+    "Los bocetos pueden revelar lugares privados, personas, cuerpos, símbolos, nombres, escritura a mano o detalles íntimos. Mantenlos privados salvo que estés seguro.",
+  publishTextOnly: "Puedes publicar el texto del sueño sin publicar el boceto.",
+  includePublic: "Incluir este boceto si publico este sueño",
+  keepPrivate: "Mantener el boceto privado",
+  personalMemory: "Usar el boceto solo como memoria personal",
+  allowResearch: "Permitir que este boceto aporte metadatos de investigación",
+  allowAi: "Permitir que la IA analice el boceto para sugerir etiquetas",
+  aiOffDefault: "Opcional y desactivado por defecto.",
+  textReviewReminder: "Este boceto contiene texto. Revísalo antes de hacerlo público.",
+  altText: "Texto alternativo",
+  altTextPlaceholder: "Describe brevemente este boceto para accesibilidad",
+  open: "Abrir tablero de dibujo",
+  addText: "Añadir texto",
+  clear: "Borrar",
+  save: "Guardar boceto",
+  preview: "Vista previa",
+});
+
 export default function DreamSketchBoard({
   language = "zh",
   initialSketches = [],
@@ -210,6 +315,11 @@ export default function DreamSketchBoard({
   const [showGrid, setShowGrid] = useState(initialLayerData.showGrid);
   const [publicAllowed, setPublicAllowed] = useState(Boolean(initialSketch?.publicAllowed));
   const [researchAllowed, setResearchAllowed] = useState(Boolean(initialSketch?.researchAllowed));
+  const [memoryOnly, setMemoryOnly] = useState(Boolean(initialSketch?.memoryOnly));
+  const [aiAnalysisAllowed, setAiAnalysisAllowed] = useState(
+    Boolean(initialSketch?.aiAnalysisAllowed || initialSketch?.allowAiAnalysis)
+  );
+  const [altText, setAltText] = useState(initialSketch?.altText || "");
   const [tool, setTool] = useState("brush");
   const [brushSize, setBrushSize] = useState(8);
   const [opacity, setOpacity] = useState(1);
@@ -235,6 +345,9 @@ export default function DreamSketchBoard({
   const hasSketch = Boolean(sketch?.previewUrl || sketch?.imageUrl || sketch?.thumbnailUrl);
   const textLayers = layers.filter((layer) => layer.type === "text");
   const selectedText = textLayers.find((layer) => layer.id === selectedTextId);
+  const hasTextLabels =
+    textLayers.length > 0 ||
+    (Array.isArray(sketch?.textLabels) && sketch.textLabels.length > 0);
   const openDisabled = Boolean(disabled && !hasSketch);
 
   useEffect(() => {
@@ -247,6 +360,9 @@ export default function DreamSketchBoard({
     setCanvasMode(getCanvasModeFromLayerData(nextLayerData));
     setPublicAllowed(Boolean(nextSketch?.publicAllowed));
     setResearchAllowed(Boolean(nextSketch?.researchAllowed));
+    setMemoryOnly(Boolean(nextSketch?.memoryOnly));
+    setAiAnalysisAllowed(Boolean(nextSketch?.aiAnalysisAllowed || nextSketch?.allowAiAnalysis));
+    setAltText(nextSketch?.altText || "");
     setSelectedTextId("");
     setUndoStack([]);
     setRedoStack([]);
@@ -508,6 +624,36 @@ export default function DreamSketchBoard({
     });
   }
 
+  function applyPrivacyChoice(choice) {
+    if (choice === "public") {
+      setPublicAllowed(true);
+      setMemoryOnly(false);
+      updateSketchPrivacy({ publicAllowed: true, memoryOnly: false });
+      if (hasTextLabels) setNotice(copy.textReviewReminder);
+      return;
+    }
+
+    if (choice === "memory") {
+      setPublicAllowed(false);
+      setResearchAllowed(false);
+      setAiAnalysisAllowed(false);
+      setMemoryOnly(true);
+      updateSketchPrivacy({
+        publicAllowed: false,
+        researchAllowed: false,
+        aiAnalysisAllowed: false,
+        allowAiAnalysis: false,
+        memoryOnly: true,
+      });
+      return;
+    }
+
+    setPublicAllowed(false);
+    if (choice === "private") {
+      updateSketchPrivacy({ publicAllowed: false, memoryOnly: false });
+    }
+  }
+
   function updateBackground(nextMode) {
     setBackgroundMode(nextMode);
     setDirty(true);
@@ -566,9 +712,12 @@ export default function DreamSketchBoard({
         layerData,
         publicAllowed,
         researchAllowed,
+        memoryOnly,
+        aiAnalysisAllowed,
+        allowAiAnalysis: aiAnalysisAllowed,
         adultContent: false,
         sensitivityLevel: null,
-        altText: null,
+        altText: altText.trim() || sketch?.altText || null,
       };
 
       await onSaveSketch(sketchPayload);
@@ -671,6 +820,7 @@ export default function DreamSketchBoard({
           onClick={() => setExpanded((current) => !current)}
           className="group flex min-w-0 items-start gap-3 text-left"
           aria-expanded={expanded}
+          aria-label={copy.title}
         >
           <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-300/25 bg-cyan-300/10 font-mono text-cyan-100">
             {expanded ? "v" : ">"}
@@ -688,6 +838,7 @@ export default function DreamSketchBoard({
           type="button"
           onClick={openBoard}
           disabled={openDisabled}
+          aria-label={copy.open}
           className="shrink-0 rounded-xl border border-cyan-300/35 bg-cyan-300 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {copy.open}
@@ -697,15 +848,44 @@ export default function DreamSketchBoard({
       {expanded && (
         <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="space-y-4">
-            <p className="rounded-2xl border border-white/10 bg-black/25 p-4 text-sm leading-relaxed text-slate-300">
-              {copy.privacy}
-            </p>
+            <div className="space-y-3 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm leading-relaxed text-slate-300">
+              <p className="font-semibold text-slate-100">{copy.privacy}</p>
+              <p>{copy.privacyWarning}</p>
+              <p className="text-cyan-100/85">{copy.publishTextOnly}</p>
+              {hasTextLabels && publicAllowed && (
+                <p className="rounded-xl border border-amber-300/25 bg-amber-300/10 p-3 text-amber-100">
+                  {copy.textReviewReminder}
+                </p>
+              )}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <SketchActionButton onClick={() => applyPrivacyChoice("private")}>
+                {copy.keepPrivate}
+              </SketchActionButton>
+              <SketchActionButton
+                active={publicAllowed && !memoryOnly}
+                onClick={() => applyPrivacyChoice("public")}
+              >
+                {copy.includePublic}
+              </SketchActionButton>
+              <SketchActionButton
+                active={memoryOnly}
+                onClick={() => applyPrivacyChoice("memory")}
+              >
+                {copy.personalMemory}
+              </SketchActionButton>
+            </div>
             <SketchToggle
               checked={publicAllowed}
               label={copy.includePublic}
               onChange={(checked) => {
                 setPublicAllowed(checked);
-                updateSketchPrivacy({ publicAllowed: checked });
+                if (checked) setMemoryOnly(false);
+                if (checked && hasTextLabels) setNotice(copy.textReviewReminder);
+                updateSketchPrivacy({
+                  publicAllowed: checked,
+                  memoryOnly: checked ? false : memoryOnly,
+                });
               }}
             />
             <SketchToggle
@@ -713,9 +893,41 @@ export default function DreamSketchBoard({
               label={copy.allowResearch}
               onChange={(checked) => {
                 setResearchAllowed(checked);
-                updateSketchPrivacy({ researchAllowed: checked });
+                if (checked) setMemoryOnly(false);
+                updateSketchPrivacy({
+                  researchAllowed: checked,
+                  memoryOnly: checked ? false : memoryOnly,
+                });
               }}
             />
+            <SketchToggle
+              checked={aiAnalysisAllowed}
+              label={`${copy.allowAi} (${copy.aiOffDefault})`}
+              onChange={(checked) => {
+                setAiAnalysisAllowed(checked);
+                if (checked) setMemoryOnly(false);
+                updateSketchPrivacy({
+                  aiAnalysisAllowed: checked,
+                  allowAiAnalysis: checked,
+                  memoryOnly: checked ? false : memoryOnly,
+                });
+              }}
+            />
+            <label className="block">
+              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                {copy.altText}
+              </span>
+              <input
+                value={altText}
+                onChange={(event) => {
+                  const nextAltText = event.target.value.slice(0, 280);
+                  setAltText(nextAltText);
+                  updateSketchPrivacy({ altText: nextAltText });
+                }}
+                placeholder={copy.altTextPlaceholder}
+                className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 text-sm text-cyan-50 outline-none placeholder:text-slate-600 focus:border-cyan-300/50"
+              />
+            </label>
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
@@ -735,6 +947,7 @@ export default function DreamSketchBoard({
                 type="button"
                 onClick={openBoard}
                 disabled={openDisabled}
+                aria-label={copy.preview}
                 className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {copy.preview}
@@ -743,6 +956,7 @@ export default function DreamSketchBoard({
                 type="button"
                 onClick={handleRemove}
                 disabled={!hasSketch}
+                aria-label={copy.remove}
                 className="rounded-xl border border-red-300/20 bg-red-400/5 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {copy.remove}
@@ -773,6 +987,7 @@ export default function DreamSketchBoard({
               <button
                 type="button"
                 onClick={closeBoard}
+                aria-label={copy.close}
                 className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-100"
               >
                 {copy.close}
@@ -875,12 +1090,13 @@ export default function DreamSketchBoard({
 
                 <div className="sticky bottom-0 grid gap-3 border-t border-white/10 bg-zinc-950/95 p-3 sm:grid-cols-[1fr_auto_auto] sm:p-4">
                   <p className="self-center text-sm leading-relaxed text-slate-300">
-                    {copy.privacy}
+                    {copy.privacy} {copy.publishTextOnly}
                   </p>
                   <button
                     type="button"
                     onClick={handleRemove}
                     disabled={!hasSketch}
+                    aria-label={copy.remove}
                     className="rounded-xl border border-red-300/25 bg-red-400/5 px-5 py-4 font-mono text-xs font-bold uppercase tracking-[0.16em] text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {copy.remove}
@@ -889,6 +1105,7 @@ export default function DreamSketchBoard({
                     type="button"
                     onClick={handleSave}
                     disabled={saving || openDisabled}
+                    aria-label={copy.save}
                     className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-5 py-4 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {saving ? "..." : copy.save}
@@ -1097,6 +1314,7 @@ function ToolButton({ active = false, danger = false, disabled = false, onClick,
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label={typeof children === "string" ? children : undefined}
       className={[
         "min-h-11 rounded-xl border px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] transition",
         active
@@ -1105,6 +1323,24 @@ function ToolButton({ active = false, danger = false, disabled = false, onClick,
             ? "border-red-300/25 bg-red-400/5 text-red-100 hover:border-red-300/45"
             : "border-white/10 bg-white/[0.04] text-zinc-200 hover:border-cyan-300/35 hover:text-cyan-100",
         disabled ? "cursor-not-allowed opacity-45" : "",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SketchActionButton({ active = false, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={typeof children === "string" ? children : undefined}
+      className={[
+        "min-h-12 rounded-2xl border px-4 py-3 text-left text-sm font-semibold leading-snug transition",
+        active
+          ? "border-cyan-300/45 bg-cyan-300/20 text-cyan-50"
+          : "border-white/10 bg-black/25 text-slate-300 hover:border-cyan-300/35 hover:text-cyan-50",
       ].join(" ")}
     >
       {children}

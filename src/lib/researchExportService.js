@@ -10,7 +10,9 @@ import {
   RECORD_TAGS,
   TAG_CATEGORY_ORDER,
 } from "./tagTaxonomy.js";
-import { normalizeDreamSketches } from "./dreamImageService.js";
+import {
+  normalizePublicDreamSketches,
+} from "./dreamImageService.js";
 
 export const RESEARCH_EXPORT_VERSION = "research-export-2026-06-27";
 export const EXPORT_DETAIL_LEVELS = {
@@ -397,8 +399,7 @@ function sanitizeResearchSignalForExport(signal, index) {
 function getPublicSketchUrls(record) {
   if (record?.publicConsent === false) return [];
 
-  return normalizeDreamSketches({ publicSketches: record?.publicSketches || record?.sketches })
-    .filter((sketch) => sketch.publicAllowed !== false)
+  return normalizePublicDreamSketches(record)
     .map((sketch) => sketch.thumbnailUrl || sketch.imageUrl)
     .filter(Boolean);
 }

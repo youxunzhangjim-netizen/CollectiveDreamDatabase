@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:privacy": "node scripts/privacyDefaults.test.mjs",
+    "test:sketch": "node scripts/dreamSketchBoard.test.mjs",
     "test:tags": "node scripts/tagLocalization.test.mjs",
     "tags:audit": "node scripts/curateCurrentCustomTags.mjs"
   },

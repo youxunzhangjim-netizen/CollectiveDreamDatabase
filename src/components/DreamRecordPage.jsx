@@ -214,7 +214,13 @@ const DETAIL_COPY = {
     sketchAltText: "Alt text",
     sketchPublicToggle: "Include this sketch when dream is public",
     sketchResearchToggle: "Allow this sketch for research metadata",
+    sketchMemoryToggle: "Use sketch only for personal memory",
+    sketchAiToggle: "Allow AI to suggest tags from this sketch",
     sketchAdultToggle: "Mark sketch as adult content",
+    sketchPrivateWarning:
+      "Sketches can reveal private places, people, bodies, symbols, names, handwriting, or intimate details. Keep them private unless you are sure.",
+    sketchTextReviewReminder:
+      "This sketch contains text. Review it before making it public.",
     sketchSensitivity: "Sensitivity",
     sketchSensitivityNone: "None",
     sketchSensitivityLow: "Low",
@@ -326,7 +332,12 @@ const DETAIL_COPY = {
     sketchAltText: "替代文字",
     sketchPublicToggle: "夢境公開時包含這張草圖",
     sketchResearchToggle: "允許這張草圖用於研究中繼資料",
+    sketchMemoryToggle: "只作為個人記憶",
+    sketchAiToggle: "允許 AI 從這張草圖建議標籤",
     sketchAdultToggle: "標記草圖為成人內容",
+    sketchPrivateWarning:
+      "草圖可能露出私人地點、人物、身體、符號、名字、筆跡或親密細節。除非你確定，否則請保持私人。",
+    sketchTextReviewReminder: "這張草圖含有文字。公開前請再次檢查。",
     sketchSensitivity: "敏感程度",
     sketchSensitivityNone: "無",
     sketchSensitivityLow: "低",
@@ -444,7 +455,13 @@ const DETAIL_COPY = {
     sketchAltText: "Texto alternativo",
     sketchPublicToggle: "Incluir este boceto cuando el sueño sea público",
     sketchResearchToggle: "Permitir este boceto para metadatos de investigación",
+    sketchMemoryToggle: "Usar el boceto solo como memoria personal",
+    sketchAiToggle: "Permitir que la IA sugiera etiquetas desde este boceto",
     sketchAdultToggle: "Marcar boceto como contenido adulto",
+    sketchPrivateWarning:
+      "Los bocetos pueden revelar lugares privados, personas, cuerpos, símbolos, nombres, escritura a mano o detalles íntimos. Mantenlos privados salvo que estés seguro.",
+    sketchTextReviewReminder:
+      "Este boceto contiene texto. Revísalo antes de hacerlo público.",
     sketchSensitivity: "Sensibilidad",
     sketchSensitivityNone: "Ninguna",
     sketchSensitivityLow: "Baja",
@@ -739,7 +756,9 @@ export default function DreamRecordPage({
         allowPrivateStorage: true,
         allowPublicDisplay: nextInclude,
         allowResearchUse: nextSketches.some((item) => item.researchAllowed),
-        allowAiAnalysis: false,
+        allowAiAnalysis: nextSketches.some(
+          (item) => item.aiAnalysisAllowed || item.allowAiAnalysis
+        ),
       };
 
       const updatedRecord = await updateOwnedRecordMetadata(currentUser, normalizedRecord.id, {
@@ -785,7 +804,9 @@ export default function DreamRecordPage({
       allowPrivateStorage: true,
       allowPublicDisplay: nextInclude,
       allowResearchUse: sketches.some((sketch) => sketch.researchAllowed),
-      allowAiAnalysis: false,
+      allowAiAnalysis: sketches.some(
+        (sketch) => sketch.aiAnalysisAllowed || sketch.allowAiAnalysis
+      ),
     };
 
     setLocalRecord((current) => ({
@@ -816,7 +837,9 @@ export default function DreamRecordPage({
       allowPrivateStorage: true,
       allowPublicDisplay: nextInclude,
       allowResearchUse: sketches.some((sketch) => sketch.researchAllowed),
-      allowAiAnalysis: false,
+      allowAiAnalysis: sketches.some(
+        (sketch) => sketch.aiAnalysisAllowed || sketch.allowAiAnalysis
+      ),
     };
 
     setStatus("");
@@ -855,7 +878,9 @@ export default function DreamRecordPage({
       allowPrivateStorage: true,
       allowPublicDisplay: nextInclude,
       allowResearchUse: sketches.some((sketch) => sketch.researchAllowed),
-      allowAiAnalysis: false,
+      allowAiAnalysis: sketches.some(
+        (sketch) => sketch.aiAnalysisAllowed || sketch.allowAiAnalysis
+      ),
     };
 
     setStatus("");
@@ -1602,6 +1627,7 @@ function SketchOwnerCard({
   }, [sketch]);
 
   const hasLayerData = Boolean(sketch.layerData?.layers?.length);
+  const hasTextLabels = Array.isArray(sketch.textLabels) && sketch.textLabels.length > 0;
 
   function saveDetails() {
     onUpdate({
@@ -1673,6 +1699,14 @@ function SketchOwnerCard({
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
             {hasLayerData ? copy.layerEditable : copy.layerMissing}
           </p>
+          <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs leading-relaxed text-slate-300">
+            {copy.sketchPrivateWarning}
+          </p>
+          {hasTextLabels && sketch.publicAllowed && (
+            <p className="rounded-xl border border-amber-300/25 bg-amber-300/10 p-3 text-xs leading-relaxed text-amber-100">
+              {copy.sketchTextReviewReminder}
+            </p>
+          )}
 
           <div className="grid gap-3">
             <label className="block">
@@ -1701,12 +1735,46 @@ function SketchOwnerCard({
             <SketchOwnerToggle
               label={copy.sketchPublicToggle}
               checked={Boolean(sketch.publicAllowed)}
-              onChange={(checked) => onUpdate({ publicAllowed: checked })}
+              onChange={(checked) =>
+                onUpdate({
+                  publicAllowed: checked,
+                  memoryOnly: checked ? false : Boolean(sketch.memoryOnly),
+                })
+              }
             />
             <SketchOwnerToggle
               label={copy.sketchResearchToggle}
               checked={Boolean(sketch.researchAllowed)}
-              onChange={(checked) => onUpdate({ researchAllowed: checked })}
+              onChange={(checked) =>
+                onUpdate({
+                  researchAllowed: checked,
+                  memoryOnly: checked ? false : Boolean(sketch.memoryOnly),
+                })
+              }
+            />
+            <SketchOwnerToggle
+              label={copy.sketchMemoryToggle}
+              checked={Boolean(sketch.memoryOnly)}
+              onChange={(checked) =>
+                onUpdate({
+                  memoryOnly: checked,
+                  publicAllowed: checked ? false : Boolean(sketch.publicAllowed),
+                  researchAllowed: checked ? false : Boolean(sketch.researchAllowed),
+                  aiAnalysisAllowed: checked ? false : Boolean(sketch.aiAnalysisAllowed),
+                  allowAiAnalysis: checked ? false : Boolean(sketch.aiAnalysisAllowed),
+                })
+              }
+            />
+            <SketchOwnerToggle
+              label={copy.sketchAiToggle}
+              checked={Boolean(sketch.aiAnalysisAllowed || sketch.allowAiAnalysis)}
+              onChange={(checked) =>
+                onUpdate({
+                  aiAnalysisAllowed: checked,
+                  allowAiAnalysis: checked,
+                  memoryOnly: checked ? false : Boolean(sketch.memoryOnly),
+                })
+              }
             />
             <SketchOwnerToggle
               label={copy.sketchAdultToggle}
@@ -1851,6 +1919,9 @@ function normalizeSketchForOwnerEdit(sketch) {
     altText: String(sketch.altText || "").trim().slice(0, 280) || null,
     publicAllowed: Boolean(sketch.publicAllowed),
     researchAllowed: Boolean(sketch.researchAllowed),
+    memoryOnly: Boolean(sketch.memoryOnly),
+    aiAnalysisAllowed: Boolean(sketch.aiAnalysisAllowed || sketch.allowAiAnalysis),
+    allowAiAnalysis: Boolean(sketch.aiAnalysisAllowed || sketch.allowAiAnalysis),
     adultContent: Boolean(sketch.adultContent),
     sensitivityLevel: Number.isFinite(sensitivityValue) ? sensitivityValue : null,
   };

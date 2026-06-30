@@ -191,6 +191,8 @@ export async function uploadDreamSketches(sketchDrafts, { ownerId, recordId }) {
       layerData: normalizeSketchLayerData(draft.layerData),
       publicAllowed: Boolean(draft.publicAllowed),
       researchAllowed: Boolean(draft.researchAllowed),
+      memoryOnly: Boolean(draft.memoryOnly),
+      aiAnalysisAllowed: Boolean(draft.aiAnalysisAllowed || draft.allowAiAnalysis),
       adultContent: Boolean(draft.adultContent),
       sensitivityLevel:
         draft.sensitivityLevel == null || draft.sensitivityLevel === ""
@@ -300,6 +302,7 @@ export function normalizePublicDreamSketches(record) {
 
   return normalizeDreamSketches({ sketches })
     .filter((sketch) => sketch.publicAllowed === true)
+    .filter((sketch) => !sketch.memoryOnly)
     .filter((sketch) => hasSafePublicUrl(sketch.thumbnailUrl || sketch.imageUrl))
     .filter((sketch) => !sketch.storagePath && !sketch.layerStoragePath)
     .slice(0, MAX_DREAM_IMAGES);
@@ -414,6 +417,8 @@ function normalizeDreamSketch(sketch, index) {
       layerData: null,
       publicAllowed: false,
       researchAllowed: false,
+      memoryOnly: false,
+      aiAnalysisAllowed: false,
       adultContent: false,
       sensitivityLevel: null,
       altText: null,
@@ -446,6 +451,8 @@ function normalizeDreamSketch(sketch, index) {
     layerData: normalizeSketchLayerData(sketch?.layerData),
     publicAllowed: Boolean(sketch?.publicAllowed),
     researchAllowed: Boolean(sketch?.researchAllowed),
+    memoryOnly: Boolean(sketch?.memoryOnly),
+    aiAnalysisAllowed: Boolean(sketch?.aiAnalysisAllowed || sketch?.allowAiAnalysis),
     adultContent: Boolean(sketch?.adultContent),
     sensitivityLevel:
       sketch?.sensitivityLevel == null || sketch?.sensitivityLevel === ""
