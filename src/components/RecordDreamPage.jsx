@@ -153,11 +153,11 @@ const RECORD_COPY = {
     agePlaceholder: "Optional",
     picturesLabel: "Dream pictures (optional)",
     picturesHelp:
-      "Attach up to 4 images. Logged-in accounts can see pictures; guests read words only.",
+      "Attach pictures within the shared 4-visual limit for pictures and sketches. Logged-in accounts can see pictures; guests read words only.",
     choosePictures: "Choose pictures",
     selectedPictures: "Selected pictures",
     removePicture: "Remove",
-    tooManyPictures: "Use up to 4 pictures for one dream record.",
+    tooManyPictures: "Use up to 4 total pictures or sketches for one dream record.",
     invalidPictureType: "Only JPG, PNG, WebP, or GIF pictures can be attached.",
     pictureTooLarge: "Each picture must be 8 MB or smaller.",
     pictureStorageUnavailable:
@@ -286,11 +286,11 @@ const RECORD_COPY = {
     ageAtDream: "做夢時年齡",
     agePlaceholder: "選填",
     picturesLabel: "夢境圖片（選填）",
-    picturesHelp: "最多可附加 4 張圖片。登入帳戶可看圖片；訪客只閱讀文字。",
+    picturesHelp: "圖片與草圖共用 4 個視覺附件上限。登入帳戶可看圖片；訪客只閱讀文字。",
     choosePictures: "選擇圖片",
     selectedPictures: "已選圖片",
     removePicture: "移除",
-    tooManyPictures: "一筆夢境記錄最多可使用 4 張圖片。",
+    tooManyPictures: "一筆夢境記錄最多可使用 4 張圖片或草圖。",
     invalidPictureType: "只能附加 JPG、PNG、WebP 或 GIF 圖片。",
     pictureTooLarge: "每張圖片必須小於 8 MB。",
     pictureStorageUnavailable:
@@ -413,11 +413,11 @@ const RECORD_COPY = {
     agePlaceholder: "Opcional",
     picturesLabel: "Imágenes del sueño (opcional)",
     picturesHelp:
-      "Adjunta hasta 4 imágenes. Las cuentas registradas pueden verlas; los invitados solo leen texto.",
+      "Las imágenes y bocetos comparten un límite total de 4 recursos visuales. Las cuentas registradas pueden verlas; los invitados solo leen texto.",
     choosePictures: "Elegir imágenes",
     selectedPictures: "Imágenes seleccionadas",
     removePicture: "Quitar",
-    tooManyPictures: "Usa hasta 4 imágenes para un registro.",
+    tooManyPictures: "Usa hasta 4 imágenes o bocetos en total para un registro.",
     invalidPictureType: "Solo se pueden adjuntar imágenes JPG, PNG, WebP o GIF.",
     pictureTooLarge: "Cada imagen debe tener 8 MB o menos.",
     pictureStorageUnavailable:
@@ -577,6 +577,10 @@ export default function RecordDreamPage({
       })),
     [imageFiles]
   );
+  const visualAttachmentCount = imageFiles.length + sketchDrafts.length;
+  const availablePictureSlots = Math.max(0, MAX_DREAM_IMAGES - sketchDrafts.length);
+  const sketchBoardAtLimit =
+    visualAttachmentCount >= MAX_DREAM_IMAGES && sketchDrafts.length === 0;
   const tagGroups = useMemo(() => mergeRecorderTagGroups(sharedTags), [sharedTags]);
   const tagLookup = useMemo(
     () =>
@@ -686,7 +690,7 @@ export default function RecordDreamPage({
     const nextFiles = [...imageFiles];
 
     for (const file of selectedFiles) {
-      if (nextFiles.length >= MAX_DREAM_IMAGES) {
+      if (nextFiles.length >= availablePictureSlots) {
         setImageNotice(copy.tooManyPictures);
         break;
       }
@@ -1223,6 +1227,8 @@ export default function RecordDreamPage({
                 onSaveSketch={(sketch) => setSketchDrafts([sketch])}
                 onSketchChange={(sketch) => setSketchDrafts(sketch ? [sketch] : [])}
                 onRemoveSketch={() => setSketchDrafts([])}
+                disabled={sketchBoardAtLimit}
+                disabledReason={copy.tooManyPictures}
               />
 
               <section className="rounded-2xl border border-cyan-300/15 bg-black/25 p-4">
@@ -1236,12 +1242,20 @@ export default function RecordDreamPage({
                     </p>
                   </div>
 
-                  <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15">
+                  <label
+                    className={[
+                      "inline-flex items-center justify-center rounded-xl border px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] transition",
+                      imageFiles.length >= availablePictureSlots
+                        ? "cursor-not-allowed border-white/10 bg-white/[0.03] text-zinc-500"
+                        : "cursor-pointer border-cyan-300/30 bg-cyan-300/10 text-cyan-100 hover:border-cyan-300/50 hover:bg-cyan-300/15",
+                    ].join(" ")}
+                  >
                     {copy.choosePictures}
                     <input
                       type="file"
                       accept={DREAM_IMAGE_ACCEPT}
                       multiple
+                      disabled={imageFiles.length >= availablePictureSlots}
                       onChange={handleImageSelection}
                       className="sr-only"
                     />

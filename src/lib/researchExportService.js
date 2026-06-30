@@ -10,6 +10,7 @@ import {
   RECORD_TAGS,
   TAG_CATEGORY_ORDER,
 } from "./tagTaxonomy.js";
+import { normalizeDreamSketches } from "./dreamImageService.js";
 
 export const RESEARCH_EXPORT_VERSION = "research-export-2026-06-27";
 export const EXPORT_DETAIL_LEVELS = {
@@ -353,6 +354,7 @@ function sanitizePublicDreamForResearch(record, index, language) {
     sensitivity_bucket: getPublicSensitivityBucket(record),
     public_text: publicText,
     public_title: getPublicRecordTitle(record),
+    public_sketch_urls: getPublicSketchUrls(record).join(" | "),
     public_consent: record.publicConsent !== false,
     ...buildCategoryColumns(tags, language),
   };
@@ -381,6 +383,7 @@ function sanitizeResearchSignalForExport(signal, index) {
     sensitivity_bucket: signal.sensitivityLevelBucket || "",
     public_text: "",
     public_title: "",
+    public_sketch_urls: "",
     confirmed_by_user: Boolean(signal.confirmedByUser),
     has_unconfirmed_ai_tags: Boolean(signal.hasUnconfirmedAiTags),
     emotion_tags: (signal.emotionTags || []).join(" | "),
@@ -389,6 +392,15 @@ function sanitizeResearchSignalForExport(signal, index) {
     dream_type_tags: (signal.dreamTypeTags || []).join(" | "),
     psychological_observation_tags: (signal.psychologicalObservationTags || []).join(" | "),
   };
+}
+
+function getPublicSketchUrls(record) {
+  if (record?.publicConsent === false) return [];
+
+  return normalizeDreamSketches({ publicSketches: record?.publicSketches || record?.sketches })
+    .filter((sketch) => sketch.publicAllowed !== false)
+    .map((sketch) => sketch.thumbnailUrl || sketch.imageUrl)
+    .filter(Boolean);
 }
 
 function sanitizeRecordForPersonalExport(record, index, language, detailLevel = EXPORT_DETAIL_LEVELS.ANALYSIS) {

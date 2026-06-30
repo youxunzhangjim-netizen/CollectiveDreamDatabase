@@ -8,6 +8,7 @@ import {
 import {
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
+  normalizeDreamVisualAttachments,
   normalizeDreamSketches,
 } from "../lib/dreamImageService.js";
 import {
@@ -3385,7 +3386,10 @@ function ObservationCard({
   const displayTitle = guestAdultGate
     ? copy.adultRestrictedTitle
     : getDreamTitle(dream, language);
-  const canShowThumbnail = Boolean(canSeeImages && getPrimaryDreamImageUrl(dream));
+  const visualAttachments = canSeeImages
+    ? normalizeDreamVisualAttachments(dream)
+    : [];
+  const canShowThumbnail = visualAttachments.length > 0;
   const recorderId = getRecorderId(dream);
   const canShowFollow =
     !guestAdultGate &&
@@ -3494,6 +3498,7 @@ function ObservationCard({
           language={language}
           copy={copy}
           canSeeImages={canSeeImages}
+          visuals={visualAttachments}
         />
       ) : (
         null
@@ -3655,20 +3660,39 @@ function AdultGatePanel({ copy, currentUser, onConfirm }) {
   );
 }
 
-function ObservationThumbnail({ dream, language, copy, canSeeImages }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const imageUrl = getPrimaryDreamImageUrl(dream);
+function ObservationThumbnail({ dream, language, copy, canSeeImages, visuals = [] }) {
+  const [failedVisuals, setFailedVisuals] = useState(() => new Set());
+  const visibleVisuals = visuals
+    .filter((visual) => visual.thumbnailUrl || visual.url)
+    .filter((visual) => !failedVisuals.has(visual.thumbnailUrl || visual.url));
 
-  if (!canSeeImages || !imageUrl || imageFailed) return null;
+  if (!canSeeImages || visibleVisuals.length === 0) return null;
+
+  function markVisualFailed(visual) {
+    const key = visual.thumbnailUrl || visual.url;
+    setFailedVisuals((current) => new Set([...current, key]));
+  }
 
   return (
     <div className="relative h-48 overflow-hidden border-b border-white/10 bg-black">
-      <img
-        src={imageUrl}
-        alt={`${copy.generatedImageAlt} ${getDreamTitle(dream, language)}`}
-        className="h-full w-full object-cover opacity-90"
-        onError={() => setImageFailed(true)}
-      />
+      <div className={getVisualGridClass(visibleVisuals.length)}>
+        {visibleVisuals.map((visual, index) => (
+          <img
+            key={visual.id || visual.thumbnailUrl || visual.url || index}
+            src={visual.thumbnailUrl || visual.url}
+            alt={
+              visual.alt ||
+              `${copy.generatedImageAlt} ${getDreamTitle(dream, language)}`
+            }
+            className={[
+              "h-full w-full border border-cyan-300/10 object-cover opacity-90",
+              visibleVisuals.length === 1 ? "" : "rounded-xl",
+              getVisualTileClass(visibleVisuals.length, index),
+            ].join(" ")}
+            onError={() => markVisualFailed(visual)}
+          />
+        ))}
+      </div>
 
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px)] bg-[size:28px_28px] opacity-20" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.24),transparent_42%)]" />
@@ -3676,6 +3700,7 @@ function ObservationThumbnail({ dream, language, copy, canSeeImages }) {
 
       <div className="absolute left-4 top-4 rounded-full border border-cyan-300/20 bg-black/50 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-100 backdrop-blur">
         {copy.generatedImage}
+        {visibleVisuals.length > 1 ? ` ${visibleVisuals.length}` : ""}
       </div>
 
       <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
@@ -3692,6 +3717,21 @@ function ObservationThumbnail({ dream, language, copy, canSeeImages }) {
       </div>
     </div>
   );
+}
+
+function getVisualGridClass(count) {
+  if (count <= 1) return "absolute inset-0";
+  if (count === 2) return "grid h-full grid-cols-2 gap-1 p-1";
+  if (count === 3) {
+    return "grid h-full grid-cols-[1.2fr_0.8fr] grid-rows-2 gap-1 p-1";
+  }
+
+  return "grid h-full grid-cols-2 grid-rows-2 gap-1 p-1";
+}
+
+function getVisualTileClass(count, index) {
+  if (count === 3 && index === 0) return "row-span-2";
+  return "";
 }
 
 function NavButton({ children, active = false, onClick, fixed = false }) {

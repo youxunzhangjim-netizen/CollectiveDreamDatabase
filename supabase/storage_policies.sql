@@ -16,7 +16,7 @@ values (
   'dream-images',
   true,
   8388608,
-  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/json']
 )
 on conflict (id) do update
 set

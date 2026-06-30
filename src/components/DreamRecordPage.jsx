@@ -12,8 +12,10 @@ import {
   normalizeLanguage,
 } from "../lib/language.js";
 import {
+  MAX_DREAM_IMAGES,
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
+  normalizeDreamVisualAttachments,
   normalizeDreamSketches,
 } from "../lib/dreamImageService.js";
 import { fetchSharedCustomTags } from "../lib/customTagsService.js";
@@ -197,6 +199,7 @@ const DETAIL_COPY = {
     confirmAdult: "I am 18+",
     denyAdult: "Not now",
     metadataSaved: "Dream metadata saved",
+    visualLimit: "This dream already has four pictures or sketches.",
     signInToCollect: "Sign in to collect this dream",
     recorderRulesTitle: "Recording Standards",
     recorderRulesCollapse: "Collapse",
@@ -286,6 +289,7 @@ const DETAIL_COPY = {
     confirmAdult: "我已滿 18 歲",
     denyAdult: "暫不閱讀",
     metadataSaved: "夢境資料已儲存",
+    visualLimit: "這則夢境已經有四張圖片或草圖。",
     signInToCollect: "登入後可收藏此夢境",
     recorderRulesTitle: "記錄標準",
     recorderRulesCollapse: "收合",
@@ -380,6 +384,7 @@ const DETAIL_COPY = {
     confirmAdult: "Tengo 18+",
     denyAdult: "Ahora no",
     metadataSaved: "Metadatos guardados",
+    visualLimit: "Este sueño ya tiene cuatro imágenes o bocetos.",
     signInToCollect: "Inicia sesión para coleccionar este sueño",
     recorderRulesTitle: "Reglas de registro",
     recorderRulesCollapse: "Contraer",
@@ -470,6 +475,9 @@ export default function DreamRecordPage({
   const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
   const dreamImages = normalizedRecord.images || [];
   const dreamSketches = normalizedRecord.sketches || [];
+  const visualAttachments = normalizeDreamVisualAttachments(normalizedRecord);
+  const sketchBoardAtLimit =
+    visualAttachments.length >= MAX_DREAM_IMAGES && dreamSketches.length === 0;
   const pageTitle = adultAllowed ? title : copy.adultRestrictedTitle;
   const tagGroups = useMemo(() => mergeRecorderTagGroups(sharedTags), [sharedTags]);
   const tagLookup = useMemo(
@@ -645,17 +653,29 @@ export default function DreamRecordPage({
         allowAiAnalysis: false,
       };
 
-      await updateOwnedRecordMetadata(currentUser, normalizedRecord.id, {
+      const updatedRecord = await updateOwnedRecordMetadata(currentUser, normalizedRecord.id, {
         sketchFiles: [sketch],
         includeSketchesWhenPublic: nextInclude,
         sketchConsent: nextConsent,
       });
-      setLocalRecord((current) => ({
-        ...current,
-        sketches: [...normalizeDreamSketches(current), sketch].slice(0, 12),
-        includeSketchesWhenPublic: nextInclude,
-        sketchConsent: nextConsent,
-      }));
+      setLocalRecord((current) => {
+        if (updatedRecord?.sketches) return { ...current, ...updatedRecord };
+
+        const existingImages = normalizeDreamImages(current);
+        const sketches = [
+          ...normalizeDreamSketches(current).filter(
+            (existingSketch) => existingSketch.id !== sketch.id
+          ),
+          sketch,
+        ].slice(0, Math.max(0, MAX_DREAM_IMAGES - existingImages.length));
+
+        return {
+          ...current,
+          sketches,
+          includeSketchesWhenPublic: nextInclude,
+          sketchConsent: nextConsent,
+        };
+      });
       setStatus(copy.metadataSaved);
     } catch (error) {
       setStatus(error.message);
@@ -1248,6 +1268,8 @@ export default function DreamRecordPage({
                       onSaveSketch={handleSaveSketch}
                       onSketchChange={handleSketchPrivacyChange}
                       onRemoveSketch={handleRemoveSketch}
+                      disabled={sketchBoardAtLimit}
+                      disabledReason={copy.visualLimit}
                     />
                   </div>
                   <label className="mt-5 flex min-h-12 items-center gap-4 rounded-2xl border border-white/10 bg-black/30 px-5 py-4">

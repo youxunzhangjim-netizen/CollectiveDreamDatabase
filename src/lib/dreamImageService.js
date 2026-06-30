@@ -116,22 +116,48 @@ export async function uploadDreamSketches(sketchDrafts, { ownerId, recordId }) {
       recordId,
       file,
       index,
-      assetFolder: "dream-sketches",
+      assetFolder: "dream-records",
+      subFolder: "sketches",
     });
     const imageUrl = await uploadSupabaseFile(path, file);
     let thumbnailUrl = imageUrl;
+    let thumbnailPath = path;
+    let layerStoragePath = "";
+    let layerUploadError = null;
 
     if (draft.thumbnailFile) {
       const thumbnailValidationCode = validateDreamSketchFile(draft.thumbnailFile);
       if (!thumbnailValidationCode) {
-        const thumbnailPath = createDreamAssetPath({
+        thumbnailPath = createDreamAssetPath({
           ownerId,
           recordId,
           file: draft.thumbnailFile,
           index,
-          assetFolder: "dream-sketch-thumbnails",
+          assetFolder: "dream-records",
+          subFolder: "sketches/thumbnails",
         });
         thumbnailUrl = await uploadSupabaseFile(thumbnailPath, draft.thumbnailFile);
+      }
+    }
+
+    if (draft.layerFile) {
+      try {
+        layerStoragePath = createDreamAssetPath({
+          ownerId,
+          recordId,
+          file: draft.layerFile,
+          index,
+          assetFolder: "dream-records",
+          subFolder: "sketches/layers",
+          extensionOverride: "json",
+        });
+        await uploadSupabaseFile(layerStoragePath, draft.layerFile);
+      } catch (error) {
+        layerStoragePath = "";
+        layerUploadError = {
+          code: error?.code || "storage/upload-failed",
+          message: error?.message || "Sketch layer data could not be uploaded.",
+        };
       }
     }
 
@@ -140,6 +166,10 @@ export async function uploadDreamSketches(sketchDrafts, { ownerId, recordId }) {
       type: "dream_sketch",
       storageProvider: "supabase",
       storagePath: path,
+      thumbnailStoragePath: thumbnailPath,
+      layerStoragePath,
+      layerMimeType: layerStoragePath ? "application/json" : "",
+      layerUploadError,
       imageUrl,
       thumbnailUrl,
       width: normalizeDimension(draft.width),
@@ -153,6 +183,7 @@ export async function uploadDreamSketches(sketchDrafts, { ownerId, recordId }) {
       title: normalizeNullableString(draft.title, 120),
       caption: normalizeNullableString(draft.caption, 280),
       textLabels: normalizeSketchTextLabels(draft.textLabels),
+      layerData: normalizeSketchLayerData(draft.layerData),
       publicAllowed: Boolean(draft.publicAllowed),
       researchAllowed: Boolean(draft.researchAllowed),
       adultContent: Boolean(draft.adultContent),
@@ -186,7 +217,9 @@ export function normalizeDreamImages(record) {
     ? record.images
     : Array.isArray(record?.dreamImages)
       ? record.dreamImages
-      : [];
+      : Array.isArray(record?.publicImages)
+        ? record.publicImages
+        : [];
   const imageUrls = [
     ...(Array.isArray(record?.imageUrls) ? record.imageUrls : []),
     ...(Array.isArray(record?.pictureUrls) ? record.pictureUrls : []),
@@ -214,6 +247,29 @@ export function normalizeDreamImages(record) {
 
 export function getPrimaryDreamImageUrl(record) {
   return normalizeDreamImages(record).find((image) => image.url)?.url || "";
+}
+
+export function normalizeDreamVisualAttachments(record) {
+  const imageAttachments = normalizeDreamImages(record).map((image, index) => ({
+    id: image.path || image.url || `dream-image-${index + 1}`,
+    kind: "image",
+    url: image.url,
+    thumbnailUrl: image.url,
+    alt: image.name || `Dream picture ${index + 1}`,
+    source: image,
+  }));
+  const sketchAttachments = normalizeDreamSketches(record).map((sketch, index) => ({
+    id: sketch.id || sketch.imageUrl || `dream-sketch-${index + 1}`,
+    kind: "sketch",
+    url: sketch.imageUrl,
+    thumbnailUrl: sketch.thumbnailUrl || sketch.imageUrl,
+    alt: sketch.altText || sketch.title || `Dream sketch ${index + 1}`,
+    source: sketch,
+  }));
+
+  return [...imageAttachments, ...sketchAttachments]
+    .filter((attachment) => attachment.thumbnailUrl || attachment.url)
+    .slice(0, MAX_DREAM_IMAGES);
 }
 
 export function normalizeDreamSketches(record) {
@@ -262,6 +318,10 @@ function normalizeDreamSketch(sketch, index) {
       type: "dream_sketch",
       storageProvider: "other",
       storagePath: "",
+      thumbnailStoragePath: "",
+      layerStoragePath: "",
+      layerMimeType: "",
+      layerUploadError: null,
       imageUrl: sketch,
       thumbnailUrl: sketch,
       width: 0,
@@ -275,6 +335,7 @@ function normalizeDreamSketch(sketch, index) {
       title: null,
       caption: null,
       textLabels: [],
+      layerData: null,
       publicAllowed: false,
       researchAllowed: false,
       adultContent: false,
@@ -288,6 +349,10 @@ function normalizeDreamSketch(sketch, index) {
     type: sketch?.type || "dream_sketch",
     storageProvider: sketch?.storageProvider || "other",
     storagePath: sketch?.storagePath || "",
+    thumbnailStoragePath: sketch?.thumbnailStoragePath || "",
+    layerStoragePath: sketch?.layerStoragePath || "",
+    layerMimeType: sketch?.layerMimeType || "",
+    layerUploadError: sketch?.layerUploadError || null,
     imageUrl: sketch?.imageUrl || sketch?.url || sketch?.publicUrl || "",
     thumbnailUrl: sketch?.thumbnailUrl || sketch?.imageUrl || sketch?.url || "",
     width: normalizeDimension(sketch?.width),
@@ -302,6 +367,7 @@ function normalizeDreamSketch(sketch, index) {
     title: sketch?.title || null,
     caption: sketch?.caption || null,
     textLabels: normalizeSketchTextLabels(sketch?.textLabels),
+    layerData: normalizeSketchLayerData(sketch?.layerData),
     publicAllowed: Boolean(sketch?.publicAllowed),
     researchAllowed: Boolean(sketch?.researchAllowed),
     adultContent: Boolean(sketch?.adultContent),
@@ -323,14 +389,26 @@ function createDreamImagePath({ ownerId, recordId, file, index }) {
   });
 }
 
-function createDreamAssetPath({ ownerId, recordId, file, index, assetFolder }) {
-  const extension = getFileExtension(file);
+function createDreamAssetPath({
+  ownerId,
+  recordId,
+  file,
+  index,
+  assetFolder,
+  subFolder = "",
+  extensionOverride = "",
+}) {
+  const extension = extensionOverride || getFileExtension(file);
   const randomId = createRandomId();
 
   return [
     assetFolder,
     sanitizePathPart(ownerId || "guest"),
     sanitizePathPart(recordId || "record"),
+    ...String(subFolder || "")
+      .split("/")
+      .map((part) => sanitizePathPart(part))
+      .filter(Boolean),
     `${Date.now()}-${index + 1}-${randomId}.${extension}`,
   ].join("/");
 }
@@ -368,6 +446,7 @@ function getFileExtension(file) {
   if (file?.type === "image/png") return "png";
   if (file?.type === "image/webp") return "webp";
   if (file?.type === "image/gif") return "gif";
+  if (file?.type === "application/json") return "json";
   return "jpg";
 }
 
@@ -414,6 +493,67 @@ function normalizeSketchTextLabels(labels = []) {
         : "#e0faff",
     }))
     .filter((label) => label.text);
+}
+
+function normalizeSketchLayerData(layerData) {
+  if (!layerData || typeof layerData !== "object" || Array.isArray(layerData)) {
+    return null;
+  }
+
+  const layers = Array.isArray(layerData.layers)
+    ? layerData.layers.slice(0, 240).map(normalizeSketchLayer).filter(Boolean)
+    : [];
+
+  return {
+    version: "dream-sketch-2026.1",
+    width: normalizeDimension(layerData.width),
+    height: normalizeDimension(layerData.height),
+    backgroundMode: ["dark", "white", "transparent"].includes(layerData.backgroundMode)
+      ? layerData.backgroundMode
+      : "dark",
+    showGrid: layerData.showGrid !== false,
+    layers,
+  };
+}
+
+function normalizeSketchLayer(layer) {
+  if (!layer || typeof layer !== "object") return null;
+
+  if (layer.type === "text") {
+    const label = normalizeSketchTextLabels([layer])[0];
+    return label
+      ? {
+          id: String(layer.id || createRandomId()).slice(0, 120),
+          type: "text",
+          ...label,
+        }
+      : null;
+  }
+
+  if (layer.type !== "stroke") return null;
+
+  const points = Array.isArray(layer.points)
+    ? layer.points
+        .slice(0, 1600)
+        .map((point) => ({
+          x: normalizeDimension(point?.x),
+          y: normalizeDimension(point?.y),
+        }))
+    : [];
+
+  if (points.length === 0) return null;
+
+  return {
+    id: String(layer.id || createRandomId()).slice(0, 120),
+    type: "stroke",
+    tool: layer.tool === "eraser" ? "eraser" : "brush",
+    color: /^#[0-9a-f]{6}$/i.test(String(layer.color || ""))
+      ? String(layer.color)
+      : "#67e8f9",
+    size: Math.max(1, Math.min(80, Number(layer.size || 8))),
+    opacity: Math.max(0.05, Math.min(1, Number(layer.opacity || 1))),
+    points,
+  };
 }
 
 function throwStorageError(code, message) {

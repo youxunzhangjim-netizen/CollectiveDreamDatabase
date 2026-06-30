@@ -434,6 +434,12 @@ service cloud.firestore {
           "publicExcerptEs",
           "translationLanguages",
           "translationSource",
+          "publicImages",
+          "imageUrls",
+          "pictureUrls",
+          "thumbnailUrl",
+          "thumbnail_url",
+          "generated_image_url",
           "publicSketches"
         ])
         && noForbiddenPublicDreamFields(data)
@@ -463,7 +469,13 @@ service cloud.firestore {
         && optionalList(data, "translationLanguages", 3)
         && (!data.keys().hasAny(["translationSource"])
           || data.translationSource == "recorder_provided")
-        && optionalList(data, "publicSketches", 12)
+        && optionalList(data, "publicImages", 4)
+        && optionalList(data, "imageUrls", 4)
+        && optionalList(data, "pictureUrls", 4)
+        && optionalString(data, "thumbnailUrl", 1200)
+        && optionalString(data, "thumbnail_url", 1200)
+        && optionalString(data, "generated_image_url", 1200)
+        && optionalList(data, "publicSketches", 4)
         && validSharingMode(data.sharingMode)
         && isPublicSharingMode(data.sharingMode)
         && publicDreamSourceRecordAllowsMirror(data, recordId)

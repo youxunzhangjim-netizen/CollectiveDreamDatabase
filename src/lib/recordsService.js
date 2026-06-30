@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebaseClient.js";
 import {
+  MAX_DREAM_IMAGES,
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
   normalizeDreamSketches,
@@ -573,7 +574,8 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
     originalLanguage
   );
   const publicTags = sanitizePublicTags(record.tags);
-  const publicSketches = sanitizePublicSketches(record);
+  const publicImages = sanitizePublicImages(record);
+  const publicSketches = sanitizePublicSketches(record, publicImages.length);
   const publicDate = getPublicDateFields(record);
   const sensitivityLevel = calculateSensitivityLevel(record);
   const pseudonym =
@@ -603,6 +605,16 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
 
   Object.assign(publicDream, publicTranslationFields);
 
+  if (publicImages.length > 0) {
+    const imageUrls = publicImages.map((image) => image.url).filter(Boolean);
+    publicDream.publicImages = publicImages;
+    publicDream.imageUrls = imageUrls;
+    publicDream.pictureUrls = imageUrls;
+    publicDream.thumbnailUrl = imageUrls[0] || "";
+    publicDream.thumbnail_url = imageUrls[0] || "";
+    publicDream.generated_image_url = imageUrls[0] || "";
+  }
+
   if (publicSketches.length > 0) {
     publicDream.publicSketches = publicSketches;
   }
@@ -610,7 +622,19 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
   return publicDream;
 }
 
-function sanitizePublicSketches(record = {}) {
+function sanitizePublicImages(record = {}) {
+  return normalizeDreamImages(record)
+    .filter((image) => image.url)
+    .slice(0, MAX_DREAM_IMAGES)
+    .map((image, index) => ({
+      url: limitString(image.url, 1200),
+      name: limitString(image.name || `dream-image-${index + 1}`, 160),
+      size: Math.max(0, Number(image.size || 0)),
+      type: limitString(image.type || "", 80),
+    }));
+}
+
+function sanitizePublicSketches(record = {}, usedVisualSlots = 0) {
   const sketchConsent = normalizeSketchConsent(record.sketchConsent);
 
   if (
@@ -622,7 +646,7 @@ function sanitizePublicSketches(record = {}) {
 
   return normalizeDreamSketches(record)
     .filter((sketch) => sketch.publicAllowed && sketch.imageUrl)
-    .slice(0, 12)
+    .slice(0, Math.max(0, MAX_DREAM_IMAGES - usedVisualSlots))
     .map((sketch) => ({
       id: limitString(sketch.id, 120),
       type: "dream_sketch",
@@ -1192,9 +1216,15 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   let imageUploadError = null;
   let sketches = [];
   let sketchUploadError = null;
+  const sketchDrafts = Array.from(draft?.sketchFiles || draft?.sketches || [])
+    .filter(Boolean)
+    .slice(0, MAX_DREAM_IMAGES);
+  const imageDraftFiles = Array.from(draft?.imageFiles || [])
+    .filter(Boolean)
+    .slice(0, Math.max(0, MAX_DREAM_IMAGES - sketchDrafts.length));
 
   try {
-    images = await uploadDreamImages(draft?.imageFiles || [], {
+    images = await uploadDreamImages(imageDraftFiles, {
       ownerId: currentUser.uid,
       recordId: recordRef.id,
     });
@@ -1206,7 +1236,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
   }
 
   try {
-    sketches = await uploadDreamSketches(draft?.sketchFiles || draft?.sketches || [], {
+    sketches = await uploadDreamSketches(sketchDrafts, {
       ownerId: currentUser.uid,
       recordId: recordRef.id,
     });
@@ -2293,19 +2323,43 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
   }
 
   if ("sketches" in updates) {
-    metadata.sketches = normalizeDreamSketches({ sketches: updates.sketches });
+    const existingImages = normalizeDreamImages(existingRecord);
+    metadata.sketches = normalizeDreamSketches({ sketches: updates.sketches }).slice(
+      0,
+      Math.max(0, MAX_DREAM_IMAGES - existingImages.length)
+    );
   }
 
   if ("sketchFiles" in updates) {
-    const uploadedSketches = await uploadDreamSketches(updates.sketchFiles || [], {
+    const incomingSketches = Array.from(updates.sketchFiles || []).filter(Boolean);
+    const incomingIds = new Set(
+      incomingSketches.map((sketch) => sketch?.id).filter(Boolean)
+    );
+    const existingImages = normalizeDreamImages(existingRecord);
+    const existingSketches = normalizeDreamSketches(existingRecord);
+    const keptSketches = existingSketches.filter(
+      (sketch) => !incomingIds.has(sketch.id)
+    );
+    const availableSlots = Math.max(
+      0,
+      MAX_DREAM_IMAGES - existingImages.length - keptSketches.length
+    );
+
+    if (incomingSketches.length > availableSlots) {
+      const error = new Error("Use up to 4 pictures or sketches for one dream record.");
+      error.code = "storage/visual-limit";
+      throw error;
+    }
+
+    const uploadedSketches = await uploadDreamSketches(incomingSketches, {
       ownerId: currentUser.uid,
       recordId,
     });
 
-    metadata.sketches = [
-      ...normalizeDreamSketches(existingRecord),
-      ...uploadedSketches,
-    ].slice(0, 12);
+    metadata.sketches = [...keptSketches, ...uploadedSketches].slice(
+      0,
+      Math.max(0, MAX_DREAM_IMAGES - existingImages.length)
+    );
   }
 
   if ("recordIdentityMode" in updates) {
@@ -2387,13 +2441,14 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     ...existingRecord,
     ...metadata,
   });
+  const updatedRecord = { ...existingRecord, ...metadata, id: recordId };
 
   await setDoc(recordRef, metadata, { merge: true });
 
   await syncPrivacyMirrorDocuments({
     firestore,
     currentUser,
-    record: { ...existingRecord, ...metadata },
+    record: updatedRecord,
     profile: existingRecord,
     sharingMode: metadata.sharingMode || existingRecord.sharingMode,
   }).catch(() => {});
@@ -2403,6 +2458,8 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
       () => {}
     );
   }
+
+  return updatedRecord;
 }
 
 export async function addRecorderTranslationToRecord(currentUser, recordId, translation) {

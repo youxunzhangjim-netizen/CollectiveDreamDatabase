@@ -17,8 +17,15 @@ const PALETTE = [
   "#111827",
 ];
 
-const BACKGROUND_COLOR = "#05070a";
-const MAX_HISTORY = 24;
+const BACKGROUND_COLORS = {
+  dark: "#05070a",
+  white: "#f8fafc",
+  transparent: "transparent",
+};
+
+const MAX_HISTORY = 40;
+const MAX_STROKE_POINTS = 1600;
+const LAYER_VERSION = "dream-sketch-2026.1";
 
 const SKETCH_COPY = {
   en: {
@@ -34,11 +41,12 @@ const SKETCH_COPY = {
     close: "Close",
     addText: "Add text label",
     labelText: "Label text",
-    placeText: "Tap the sketch to place this label.",
+    placeText: "Tap the sketch to place this label, or select an existing label to edit it.",
+    selectText: "Select text",
     deleteText: "Delete selected text",
     undo: "Undo",
     redo: "Redo",
-    draw: "Draw",
+    draw: "Brush",
     eraser: "Eraser",
     clear: "Clear",
     save: "Save sketch",
@@ -50,6 +58,11 @@ const SKETCH_COPY = {
     png: "PNG",
     webp: "WebP",
     color: "Color",
+    background: "Background",
+    dark: "Dark",
+    white: "White",
+    transparent: "Transparent",
+    showGrid: "Faint grid",
     canvasSize: "Canvas size",
     phone: "Phone",
     square: "Square",
@@ -62,6 +75,7 @@ const SKETCH_COPY = {
     removeConfirm: "Remove this sketch from the dream?",
     closeConfirm: "Close without saving the latest sketch changes?",
     saveFailed: "The sketch could not be prepared. Try again.",
+    visualLimit: "This dream already has four visual attachments.",
   },
   zh: {
     title: "畫下夢境",
@@ -76,7 +90,8 @@ const SKETCH_COPY = {
     close: "關閉",
     addText: "加入文字標籤",
     labelText: "標籤文字",
-    placeText: "點一下草圖即可放置標籤。",
+    placeText: "點一下草圖放置標籤；選取既有標籤可編輯。",
+    selectText: "選取文字",
     deleteText: "刪除選取標籤",
     undo: "復原",
     redo: "重做",
@@ -92,6 +107,11 @@ const SKETCH_COPY = {
     png: "PNG",
     webp: "WebP",
     color: "顏色",
+    background: "背景",
+    dark: "深色",
+    white: "白色",
+    transparent: "透明",
+    showGrid: "淡格線",
     canvasSize: "畫布尺寸",
     phone: "手機",
     square: "方形",
@@ -104,6 +124,7 @@ const SKETCH_COPY = {
     removeConfirm: "要從這則夢境移除草圖嗎？",
     closeConfirm: "尚未儲存最新草圖變更，仍要關閉嗎？",
     saveFailed: "草圖無法準備完成，請再試一次。",
+    visualLimit: "這則夢境已經有四個視覺附件。",
   },
   es: {
     title: "Dibuja el sueño",
@@ -118,11 +139,12 @@ const SKETCH_COPY = {
     close: "Cerrar",
     addText: "Añadir etiqueta",
     labelText: "Texto de etiqueta",
-    placeText: "Toca el boceto para colocar esta etiqueta.",
+    placeText: "Toca el boceto para colocar la etiqueta, o selecciona una para editarla.",
+    selectText: "Seleccionar texto",
     deleteText: "Borrar etiqueta",
     undo: "Deshacer",
     redo: "Rehacer",
-    draw: "Dibujar",
+    draw: "Pincel",
     eraser: "Borrador",
     clear: "Limpiar",
     save: "Guardar boceto",
@@ -134,6 +156,11 @@ const SKETCH_COPY = {
     png: "PNG",
     webp: "WebP",
     color: "Color",
+    background: "Fondo",
+    dark: "Oscuro",
+    white: "Blanco",
+    transparent: "Transparente",
+    showGrid: "Cuadrícula tenue",
     canvasSize: "Tamaño",
     phone: "Teléfono",
     square: "Cuadrado",
@@ -146,6 +173,7 @@ const SKETCH_COPY = {
     removeConfirm: "¿Quitar este boceto del sueño?",
     closeConfirm: "¿Cerrar sin guardar los últimos cambios del boceto?",
     saveFailed: "No se pudo preparar el boceto. Inténtalo otra vez.",
+    visualLimit: "Este sueño ya tiene cuatro adjuntos visuales.",
   },
 };
 
@@ -158,8 +186,17 @@ export default function DreamSketchBoard({
   onSketchChange = () => {},
   onRemoveSketch = () => {},
   disabled = false,
+  disabledReason = "",
 }) {
   const copy = SKETCH_COPY[language] || SKETCH_COPY.zh;
+  const initialSketch = useMemo(
+    () => normalizeInitialSketch(initialSketches),
+    [initialSketches]
+  );
+  const initialLayerData = useMemo(
+    () => normalizeLayerData(initialSketch?.layerData),
+    [initialSketch]
+  );
   const initialExpanded = useMemo(() => {
     if (typeof defaultExpanded === "boolean") return defaultExpanded;
     if (typeof window === "undefined") return false;
@@ -167,20 +204,22 @@ export default function DreamSketchBoard({
   }, [defaultExpanded]);
   const [expanded, setExpanded] = useState(initialExpanded);
   const [modalOpen, setModalOpen] = useState(false);
-  const [sketch, setSketch] = useState(() => normalizeInitialSketch(initialSketches));
-  const [publicAllowed, setPublicAllowed] = useState(Boolean(sketch?.publicAllowed));
-  const [researchAllowed, setResearchAllowed] = useState(Boolean(sketch?.researchAllowed));
-  const [tool, setTool] = useState("draw");
+  const [sketch, setSketch] = useState(initialSketch);
+  const [layers, setLayers] = useState(initialLayerData.layers);
+  const [backgroundMode, setBackgroundMode] = useState(initialLayerData.backgroundMode);
+  const [showGrid, setShowGrid] = useState(initialLayerData.showGrid);
+  const [publicAllowed, setPublicAllowed] = useState(Boolean(initialSketch?.publicAllowed));
+  const [researchAllowed, setResearchAllowed] = useState(Boolean(initialSketch?.researchAllowed));
+  const [tool, setTool] = useState("brush");
   const [brushSize, setBrushSize] = useState(8);
   const [opacity, setOpacity] = useState(1);
   const [exportMimeType, setExportMimeType] = useState("image/png");
   const [color, setColor] = useState(PALETTE[1]);
-  const [canvasMode, setCanvasMode] = useState("phone");
+  const [canvasMode, setCanvasMode] = useState(() =>
+    getCanvasModeFromLayerData(initialLayerData)
+  );
   const [labelDraft, setLabelDraft] = useState("");
-  const [textLabels, setTextLabels] = useState([]);
   const [selectedTextId, setSelectedTextId] = useState("");
-  const [drawing, setDrawing] = useState(false);
-  const [dragLabel, setDragLabel] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
   const [dirty, setDirty] = useState(false);
@@ -188,16 +227,29 @@ export default function DreamSketchBoard({
   const [previewUrl, setPreviewUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const canvasRef = useRef(null);
-  const lastPointRef = useRef(null);
+  const baseImageRef = useRef(null);
+  const activeStrokeRef = useRef(null);
+  const dragTextRef = useRef(null);
 
   const canvasSize = CANVAS_SIZES[canvasMode] || CANVAS_SIZES.phone;
   const hasSketch = Boolean(sketch?.previewUrl || sketch?.imageUrl || sketch?.thumbnailUrl);
+  const textLayers = layers.filter((layer) => layer.type === "text");
+  const selectedText = textLayers.find((layer) => layer.id === selectedTextId);
+  const openDisabled = Boolean(disabled && !hasSketch);
 
   useEffect(() => {
     const nextSketch = normalizeInitialSketch(initialSketches);
+    const nextLayerData = normalizeLayerData(nextSketch?.layerData);
     setSketch(nextSketch);
+    setLayers(nextLayerData.layers);
+    setBackgroundMode(nextLayerData.backgroundMode);
+    setShowGrid(nextLayerData.showGrid);
+    setCanvasMode(getCanvasModeFromLayerData(nextLayerData));
     setPublicAllowed(Boolean(nextSketch?.publicAllowed));
     setResearchAllowed(Boolean(nextSketch?.researchAllowed));
+    setSelectedTextId("");
+    setUndoStack([]);
+    setRedoStack([]);
   }, [initialSketches]);
 
   useEffect(() => {
@@ -213,8 +265,30 @@ export default function DreamSketchBoard({
 
   useEffect(() => {
     if (!modalOpen) return;
-    resetCanvas();
-  }, [modalOpen, canvasMode]);
+
+    const imageUrl = sketch?.imageUrl || sketch?.previewUrl || "";
+    if (!imageUrl || layers.length > 0) {
+      baseImageRef.current = null;
+      renderDisplayCanvas();
+      return;
+    }
+
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      baseImageRef.current = image;
+      renderDisplayCanvas();
+    };
+    image.onerror = () => {
+      baseImageRef.current = null;
+      renderDisplayCanvas();
+    };
+    image.src = imageUrl;
+  }, [modalOpen, sketch, canvasMode]);
+
+  useEffect(() => {
+    if (modalOpen) renderDisplayCanvas();
+  }, [layers, backgroundMode, showGrid, modalOpen, canvasMode]);
 
   useEffect(
     () => () => {
@@ -225,7 +299,11 @@ export default function DreamSketchBoard({
   );
 
   function openBoard() {
-    if (disabled) return;
+    if (openDisabled) {
+      setNotice(disabledReason || copy.visualLimit);
+      return;
+    }
+
     setNotice("");
     setModalOpen(true);
   }
@@ -239,82 +317,38 @@ export default function DreamSketchBoard({
     setDirty(false);
   }
 
-  function resetCanvas() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    canvas.width = canvasSize.width;
-    canvas.height = canvasSize.height;
-    const context = canvas.getContext("2d");
-    context.fillStyle = BACKGROUND_COLOR;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    setTextLabels(sketch?.textLabels || []);
-    setSelectedTextId("");
-    setUndoStack([]);
+  function pushUndoSnapshot(nextLayers = layers) {
+    setUndoStack((current) => [
+      ...current.slice(-(MAX_HISTORY - 1)),
+      cloneLayers(nextLayers),
+    ]);
     setRedoStack([]);
-    setPreviewUrl("");
-
-    const imageUrl = sketch?.imageUrl || sketch?.previewUrl || "";
-    if (!imageUrl) return;
-
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => {
-      const fit = getContainedRect(image.width, image.height, canvas.width, canvas.height);
-      context.drawImage(image, fit.x, fit.y, fit.width, fit.height);
-    };
-    image.src = imageUrl;
-  }
-
-  function pushUndoSnapshot() {
-    const snapshot = canvasRef.current?.toDataURL("image/png");
-    if (!snapshot) return;
-    setUndoStack((current) => [...current.slice(-(MAX_HISTORY - 1)), snapshot]);
-    setRedoStack([]);
-  }
-
-  function restoreSnapshot(snapshot) {
-    const canvas = canvasRef.current;
-    if (!canvas || !snapshot) return;
-    const context = canvas.getContext("2d");
-    const image = new Image();
-    image.onload = () => {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    };
-    image.src = snapshot;
   }
 
   function handleUndo() {
     if (undoStack.length === 0) return;
-    const current = canvasRef.current?.toDataURL("image/png");
     const previous = undoStack[undoStack.length - 1];
+    setRedoStack((stack) => [...stack.slice(-(MAX_HISTORY - 1)), cloneLayers(layers)]);
     setUndoStack((stack) => stack.slice(0, -1));
-    if (current) setRedoStack((stack) => [...stack.slice(-(MAX_HISTORY - 1)), current]);
-    restoreSnapshot(previous);
+    setLayers(previous);
+    setSelectedTextId("");
     setDirty(true);
   }
 
   function handleRedo() {
     if (redoStack.length === 0) return;
-    const current = canvasRef.current?.toDataURL("image/png");
     const next = redoStack[redoStack.length - 1];
+    setUndoStack((stack) => [...stack.slice(-(MAX_HISTORY - 1)), cloneLayers(layers)]);
     setRedoStack((stack) => stack.slice(0, -1));
-    if (current) setUndoStack((stack) => [...stack.slice(-(MAX_HISTORY - 1)), current]);
-    restoreSnapshot(next);
+    setLayers(next);
+    setSelectedTextId("");
     setDirty(true);
   }
 
   function handleClear() {
     if (typeof window !== "undefined" && !window.confirm(copy.clearConfirm)) return;
     pushUndoSnapshot();
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-    context.fillStyle = BACKGROUND_COLOR;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    setTextLabels([]);
+    setLayers([]);
     setSelectedTextId("");
     setDirty(true);
   }
@@ -323,108 +357,159 @@ export default function DreamSketchBoard({
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     return {
-      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
+      x: clamp(((event.clientX - rect.left) / rect.width) * canvasSize.width, 0, canvasSize.width),
+      y: clamp(((event.clientY - rect.top) / rect.height) * canvasSize.height, 0, canvasSize.height),
     };
   }
 
-  function beginDraw(event) {
-    if (disabled) return;
+  function beginPointer(event) {
+    if (openDisabled) return;
     event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+
+    const point = getCanvasPoint(event);
+    const hitText = findTextLayerAtPoint(layers, point);
+
+    if ((tool === "select" || tool === "text") && hitText) {
+      pushUndoSnapshot();
+      setSelectedTextId(hitText.id);
+      setLabelDraft(hitText.text);
+      dragTextRef.current = {
+        id: hitText.id,
+        offsetX: point.x - hitText.x,
+        offsetY: point.y - hitText.y,
+      };
+      return;
+    }
 
     if (tool === "text") {
       const trimmedLabel = labelDraft.trim();
       if (!trimmedLabel) return;
-      const point = getCanvasPoint(event);
-      const label = {
-        id: createClientId(),
-        text: trimmedLabel.slice(0, 80),
+
+      pushUndoSnapshot();
+      const label = createTextLayer({
+        text: trimmedLabel,
         x: point.x,
         y: point.y,
-        fontSize: Math.max(14, Math.min(42, brushSize * 3)),
+        fontSize: Math.max(14, Math.min(48, brushSize * 3)),
         color,
-      };
-      setTextLabels((labels) => [...labels, label]);
+      });
+      setLayers((current) => [...current, label]);
       setSelectedTextId(label.id);
-      setLabelDraft("");
+      setLabelDraft(label.text);
       setDirty(true);
       return;
     }
 
     pushUndoSnapshot();
-    const point = getCanvasPoint(event);
-    lastPointRef.current = point;
-    setDrawing(true);
-    drawLine(point, point);
+    const stroke = createStrokeLayer({
+      tool: tool === "eraser" ? "eraser" : "brush",
+      color,
+      size: brushSize,
+      opacity,
+      points: [point],
+    });
+    activeStrokeRef.current = { id: stroke.id, lastPoint: point };
+    setLayers((current) => [...current, stroke]);
+    setSelectedTextId("");
+    setDirty(true);
   }
 
   function movePointer(event) {
-    if (dragLabel) {
+    if (dragTextRef.current) {
       event.preventDefault();
       const point = getCanvasPoint(event);
-      setTextLabels((labels) =>
-        labels.map((label) =>
-          label.id === dragLabel.id
+      const drag = dragTextRef.current;
+      setLayers((current) =>
+        current.map((layer) =>
+          layer.id === drag.id
             ? {
-                ...label,
-                x: point.x - dragLabel.offsetX,
-                y: point.y - dragLabel.offsetY,
+                ...layer,
+                x: clamp(point.x - drag.offsetX, 0, canvasSize.width),
+                y: clamp(point.y - drag.offsetY, 0, canvasSize.height),
               }
-            : label
+            : layer
         )
       );
       setDirty(true);
       return;
     }
 
-    if (!drawing || !lastPointRef.current) return;
+    const activeStroke = activeStrokeRef.current;
+    if (!activeStroke) return;
     event.preventDefault();
     const point = getCanvasPoint(event);
-    drawLine(lastPointRef.current, point);
-    lastPointRef.current = point;
-  }
 
-  function endPointer() {
-    setDrawing(false);
-    setDragLabel(null);
-    lastPointRef.current = null;
-  }
+    if (!shouldAddPoint(activeStroke.lastPoint, point)) return;
 
-  function drawLine(from, to) {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-
-    context.save();
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.lineWidth = brushSize;
-    context.globalAlpha = opacity;
-    context.strokeStyle = tool === "eraser" ? BACKGROUND_COLOR : color;
-    context.beginPath();
-    context.moveTo(from.x, from.y);
-    context.lineTo(to.x, to.y);
-    context.stroke();
-    context.restore();
+    activeStrokeRef.current = { ...activeStroke, lastPoint: point };
+    setLayers((current) =>
+      current.map((layer) =>
+        layer.id === activeStroke.id
+          ? {
+              ...layer,
+              points: [...layer.points, point].slice(-MAX_STROKE_POINTS),
+            }
+          : layer
+      )
+    );
     setDirty(true);
+  }
+
+  function endPointer(event) {
+    event?.currentTarget?.releasePointerCapture?.(event.pointerId);
+    activeStrokeRef.current = null;
+    dragTextRef.current = null;
   }
 
   function beginLabelDrag(event, label) {
     event.preventDefault();
     event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    pushUndoSnapshot();
     const point = getCanvasPoint(event);
+    setTool("select");
     setSelectedTextId(label.id);
-    setDragLabel({
+    setLabelDraft(label.text);
+    dragTextRef.current = {
       id: label.id,
       offsetX: point.x - label.x,
       offsetY: point.y - label.y,
-    });
+    };
+  }
+
+  function updateSelectedText(value) {
+    setLabelDraft(value);
+    if (!selectedTextId) return;
+    setLayers((current) =>
+      current.map((layer) =>
+        layer.id === selectedTextId
+          ? { ...layer, text: value.slice(0, 80) }
+          : layer
+      )
+    );
+    setDirty(true);
   }
 
   function deleteSelectedText() {
     if (!selectedTextId) return;
-    setTextLabels((labels) => labels.filter((label) => label.id !== selectedTextId));
+    pushUndoSnapshot();
+    setLayers((current) => current.filter((layer) => layer.id !== selectedTextId));
     setSelectedTextId("");
+    setLabelDraft("");
+    setDirty(true);
+  }
+
+  function updateSketchPrivacy(patch) {
+    setSketch((current) => {
+      const next = current ? { ...current, ...patch } : current;
+      onSketchChange(next);
+      return next;
+    });
+  }
+
+  function updateBackground(nextMode) {
+    setBackgroundMode(nextMode);
     setDirty(true);
   }
 
@@ -445,19 +530,26 @@ export default function DreamSketchBoard({
     try {
       const mimeType = exportMimeType;
       const blob = await renderSketchBlob(mimeType);
-      const thumbnailBlob = await renderThumbnailBlob();
+      const thumbnailBlob = await renderThumbnailBlob(mimeType);
       const id = sketch?.id || createClientId();
       const extension = mimeType === "image/webp" ? "webp" : "png";
       const file = new File([blob], `${id}.${extension}`, { type: mimeType });
-      const thumbnailFile = new File([thumbnailBlob], `${id}-thumbnail.png`, {
-        type: "image/png",
+      const thumbnailFile = new File([thumbnailBlob], `${id}-thumb.${extension}`, {
+        type: mimeType,
       });
+      const layerData = serializeLayerData();
+      const layerFile = new File(
+        [JSON.stringify(layerData)],
+        `${id}-layers.json`,
+        { type: "application/json" }
+      );
       const previewObjectUrl = URL.createObjectURL(blob);
       const sketchPayload = {
         id,
         type: "dream_sketch",
         file,
         thumbnailFile,
+        layerFile,
         previewUrl: previewObjectUrl,
         imageUrl: previewObjectUrl,
         thumbnailUrl: previewObjectUrl,
@@ -470,7 +562,8 @@ export default function DreamSketchBoard({
         source,
         title: null,
         caption: null,
-        textLabels: textLabels.map(({ id: _id, ...label }) => label),
+        textLabels: textLayers.map(({ id: _id, type: _type, ...label }) => label),
+        layerData,
         publicAllowed,
         researchAllowed,
         adultContent: false,
@@ -497,40 +590,78 @@ export default function DreamSketchBoard({
     await onRemoveSketch(sketch);
     if (sketch?.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(sketch.previewUrl);
     setSketch(null);
-    setTextLabels([]);
+    setLayers([]);
     setSelectedTextId("");
+    setLabelDraft("");
     setNotice(copy.noSketch);
     setDirty(false);
   }
 
   async function renderSketchBlob(mimeType) {
-    const canvas = canvasRef.current;
-    if (!canvas) throw new Error("Canvas is not ready.");
-
-    const output = document.createElement("canvas");
-    output.width = canvas.width;
-    output.height = canvas.height;
-    const context = output.getContext("2d");
-    context.drawImage(canvas, 0, 0);
-    drawTextLabels(context, textLabels);
+    const output = renderLayersToCanvas({
+      canvasSize,
+      layers,
+      baseImage: baseImageRef.current,
+      backgroundMode,
+      showGrid,
+      includeText: true,
+    });
 
     return canvasToBlob(output, mimeType);
   }
 
-  async function renderThumbnailBlob() {
-    const blob = await renderSketchBlob("image/png");
-    const image = await loadImage(URL.createObjectURL(blob));
+  async function renderThumbnailBlob(mimeType) {
+    const output = renderLayersToCanvas({
+      canvasSize,
+      layers,
+      baseImage: baseImageRef.current,
+      backgroundMode,
+      showGrid,
+      includeText: true,
+    });
     const maxSide = 420;
-    const ratio = Math.min(maxSide / image.width, maxSide / image.height, 1);
+    const ratio = Math.min(maxSide / output.width, maxSide / output.height, 1);
     const thumbnail = document.createElement("canvas");
-    thumbnail.width = Math.max(1, Math.round(image.width * ratio));
-    thumbnail.height = Math.max(1, Math.round(image.height * ratio));
-    thumbnail.getContext("2d").drawImage(image, 0, 0, thumbnail.width, thumbnail.height);
+    thumbnail.width = Math.max(1, Math.round(output.width * ratio));
+    thumbnail.height = Math.max(1, Math.round(output.height * ratio));
+    thumbnail.getContext("2d").drawImage(output, 0, 0, thumbnail.width, thumbnail.height);
 
-    return canvasToBlob(thumbnail, "image/png");
+    return canvasToBlob(thumbnail, mimeType);
   }
 
-  const selectedLabel = textLabels.find((label) => label.id === selectedTextId);
+  function serializeLayerData() {
+    return {
+      version: LAYER_VERSION,
+      width: canvasSize.width,
+      height: canvasSize.height,
+      backgroundMode,
+      showGrid,
+      layers: normalizeLayersForStorage(layers),
+    };
+  }
+
+  function renderDisplayCanvas() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const pixelRatio =
+      typeof window !== "undefined" ? Math.max(1, window.devicePixelRatio || 1) : 1;
+    canvas.width = Math.round(canvasSize.width * pixelRatio);
+    canvas.height = Math.round(canvasSize.height * pixelRatio);
+    canvas.style.aspectRatio = `${canvasSize.width} / ${canvasSize.height}`;
+    const context = canvas.getContext("2d");
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+    drawLayers(context, {
+      width: canvasSize.width,
+      height: canvasSize.height,
+      layers: layers.filter((layer) => layer.type !== "text"),
+      baseImage: baseImageRef.current,
+      backgroundMode,
+      showGrid,
+      includeText: false,
+    });
+  }
 
   return (
     <section className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.04] p-4 sm:p-5">
@@ -542,13 +673,13 @@ export default function DreamSketchBoard({
           aria-expanded={expanded}
         >
           <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-300/25 bg-cyan-300/10 font-mono text-cyan-100">
-            {expanded ? "⌄" : "›"}
+            {expanded ? "v" : ">"}
           </span>
           <span>
             <span className="cdo-card-heading block">{copy.title}</span>
             <span className="cdo-body-copy mt-2 block">{copy.subtitle}</span>
             <span className="mt-2 block font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-200/70">
-              {hasSketch ? copy.saved : copy.collapsedHint}
+              {openDisabled ? disabledReason || copy.visualLimit : hasSketch ? copy.saved : copy.collapsedHint}
             </span>
           </span>
         </button>
@@ -556,7 +687,7 @@ export default function DreamSketchBoard({
         <button
           type="button"
           onClick={openBoard}
-          disabled={disabled}
+          disabled={openDisabled}
           className="shrink-0 rounded-xl border border-cyan-300/35 bg-cyan-300 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {copy.open}
@@ -574,11 +705,7 @@ export default function DreamSketchBoard({
               label={copy.includePublic}
               onChange={(checked) => {
                 setPublicAllowed(checked);
-                setSketch((current) => {
-                  const next = current ? { ...current, publicAllowed: checked } : current;
-                  onSketchChange(next);
-                  return next;
-                });
+                updateSketchPrivacy({ publicAllowed: checked });
               }}
             />
             <SketchToggle
@@ -586,11 +713,7 @@ export default function DreamSketchBoard({
               label={copy.allowResearch}
               onChange={(checked) => {
                 setResearchAllowed(checked);
-                setSketch((current) => {
-                  const next = current ? { ...current, researchAllowed: checked } : current;
-                  onSketchChange(next);
-                  return next;
-                });
+                updateSketchPrivacy({ researchAllowed: checked });
               }}
             />
           </div>
@@ -604,21 +727,22 @@ export default function DreamSketchBoard({
               />
             ) : (
               <div className="flex aspect-[4/3] items-center justify-center p-5 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-                {copy.noSketch}
+                {openDisabled ? disabledReason || copy.visualLimit : copy.noSketch}
               </div>
             )}
             <div className="grid grid-cols-2 gap-2 p-3">
               <button
                 type="button"
                 onClick={openBoard}
-                className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100"
+                disabled={openDisabled}
+                className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {copy.preview}
               </button>
               <button
                 type="button"
                 onClick={handleRemove}
-                disabled={!hasSketch || disabled}
+                disabled={!hasSketch}
                 className="rounded-xl border border-red-300/20 bg-red-400/5 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {copy.remove}
@@ -670,11 +794,18 @@ export default function DreamSketchBoard({
                   color={color}
                   setColor={setColor}
                   labelDraft={labelDraft}
-                  setLabelDraft={setLabelDraft}
-                  selectedLabel={selectedLabel}
+                  setLabelDraft={selectedText ? updateSelectedText : setLabelDraft}
+                  selectedText={selectedText}
                   onDeleteText={deleteSelectedText}
                   canvasMode={canvasMode}
                   setCanvasMode={setCanvasMode}
+                  backgroundMode={backgroundMode}
+                  setBackgroundMode={updateBackground}
+                  showGrid={showGrid}
+                  setShowGrid={(checked) => {
+                    setShowGrid(checked);
+                    setDirty(true);
+                  }}
                   onUndo={handleUndo}
                   onRedo={handleRedo}
                   onClear={handleClear}
@@ -685,7 +816,7 @@ export default function DreamSketchBoard({
               </div>
 
               <div className="order-1 flex min-h-0 flex-col bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.12),transparent_42%),#05070a] lg:order-2">
-                <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-5">
+                <div className="min-h-0 flex-1 overflow-auto overscroll-contain p-3 sm:p-5">
                   <div className="mx-auto w-full max-w-5xl">
                     <div
                       className="relative mx-auto touch-none select-none"
@@ -696,13 +827,13 @@ export default function DreamSketchBoard({
                     >
                       <canvas
                         ref={canvasRef}
-                        onPointerDown={beginDraw}
+                        onPointerDown={beginPointer}
                         onPointerMove={movePointer}
                         onPointerUp={endPointer}
                         onPointerCancel={endPointer}
                         className="block h-auto w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)]"
                       />
-                      {textLabels.map((label) => (
+                      {textLayers.map((label) => (
                         <button
                           key={label.id}
                           type="button"
@@ -719,6 +850,7 @@ export default function DreamSketchBoard({
                             color: label.color,
                             fontSize: `${Math.max(12, label.fontSize * 0.7)}px`,
                             transform: "translate(-10%, -70%)",
+                            touchAction: "none",
                           }}
                         >
                           {label.text}
@@ -748,7 +880,7 @@ export default function DreamSketchBoard({
                   <button
                     type="button"
                     onClick={handleRemove}
-                    disabled={!hasSketch || disabled}
+                    disabled={!hasSketch}
                     className="rounded-xl border border-red-300/25 bg-red-400/5 px-5 py-4 font-mono text-xs font-bold uppercase tracking-[0.16em] text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {copy.remove}
@@ -756,7 +888,7 @@ export default function DreamSketchBoard({
                   <button
                     type="button"
                     onClick={handleSave}
-                    disabled={saving || disabled}
+                    disabled={saving || openDisabled}
                     className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-5 py-4 font-mono text-xs font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {saving ? "..." : copy.save}
@@ -785,10 +917,14 @@ function SketchToolbar({
   setColor,
   labelDraft,
   setLabelDraft,
-  selectedLabel,
+  selectedText,
   onDeleteText,
   canvasMode,
   setCanvasMode,
+  backgroundMode,
+  setBackgroundMode,
+  showGrid,
+  setShowGrid,
   onUndo,
   onRedo,
   onClear,
@@ -799,7 +935,7 @@ function SketchToolbar({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2">
-        <ToolButton active={tool === "draw"} onClick={() => setTool("draw")}>
+        <ToolButton active={tool === "brush"} onClick={() => setTool("brush")}>
           {copy.draw}
         </ToolButton>
         <ToolButton active={tool === "eraser"} onClick={() => setTool("eraser")}>
@@ -808,7 +944,9 @@ function SketchToolbar({
         <ToolButton active={tool === "text"} onClick={() => setTool("text")}>
           {copy.addText}
         </ToolButton>
-        <ToolButton onClick={onPreview}>{copy.preview}</ToolButton>
+        <ToolButton active={tool === "select"} onClick={() => setTool("select")}>
+          {copy.selectText}
+        </ToolButton>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -818,11 +956,9 @@ function SketchToolbar({
         <ToolButton onClick={onRedo} disabled={redoDisabled}>
           {copy.redo}
         </ToolButton>
+        <ToolButton onClick={onPreview}>{copy.preview}</ToolButton>
         <ToolButton onClick={onClear} danger>
           {copy.clear}
-        </ToolButton>
-        <ToolButton onClick={onDeleteText} disabled={!selectedLabel} danger>
-          {copy.deleteText}
         </ToolButton>
       </div>
 
@@ -833,7 +969,7 @@ function SketchToolbar({
         <input
           type="range"
           min="2"
-          max="28"
+          max="36"
           value={brushSize}
           onChange={(event) => setBrushSize(Number(event.target.value))}
           className="w-full accent-cyan-300"
@@ -846,9 +982,9 @@ function SketchToolbar({
         </span>
         <input
           type="range"
-          min="0.2"
+          min="0.15"
           max="1"
-          step="0.1"
+          step="0.05"
           value={opacity}
           onChange={(event) => setOpacity(Number(event.target.value))}
           className="w-full accent-fuchsia-300"
@@ -876,52 +1012,81 @@ function SketchToolbar({
         </div>
       </div>
 
-      <label className="block">
-        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-          {copy.format}
+      <label className="block rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-3">
+        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-100">
+          {copy.labelText}
         </span>
-        <select
-          value={exportMimeType}
-          onChange={(event) => setExportMimeType(event.target.value)}
-          className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 font-mono text-xs text-cyan-50 outline-none"
+        <input
+          value={labelDraft}
+          onChange={(event) => setLabelDraft(event.target.value)}
+          className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-3 font-mono text-sm text-cyan-50 outline-none"
+        />
+        <span className="mt-2 block text-xs leading-relaxed text-slate-300">
+          {copy.placeText}
+        </span>
+        <button
+          type="button"
+          onClick={onDeleteText}
+          disabled={!selectedText}
+          className="mt-3 w-full rounded-xl border border-red-300/20 bg-red-400/5 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-100 disabled:cursor-not-allowed disabled:opacity-45"
         >
-          <option value="image/png">{copy.png}</option>
-          <option value="image/webp">{copy.webp}</option>
-        </select>
+          {copy.deleteText}
+        </button>
       </label>
 
-      <label className="block">
-        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-          {copy.canvasSize}
-        </span>
-        <select
-          value={canvasMode}
-          onChange={(event) => setCanvasMode(event.target.value)}
-          className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 font-mono text-xs text-cyan-50 outline-none"
-        >
-          {Object.keys(CANVAS_SIZES).map((mode) => (
-            <option key={mode} value={mode}>
-              {copy[mode]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      {tool === "text" && (
-        <label className="block rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-3">
-          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-100">
-            {copy.labelText}
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+            {copy.format}
           </span>
-          <input
-            value={labelDraft}
-            onChange={(event) => setLabelDraft(event.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-3 font-mono text-sm text-cyan-50 outline-none"
-          />
-          <span className="mt-2 block text-xs leading-relaxed text-slate-300">
-            {copy.placeText}
-          </span>
+          <select
+            value={exportMimeType}
+            onChange={(event) => setExportMimeType(event.target.value)}
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 font-mono text-xs text-cyan-50 outline-none"
+          >
+            <option value="image/png">{copy.png}</option>
+            <option value="image/webp">{copy.webp}</option>
+          </select>
         </label>
-      )}
+
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+            {copy.canvasSize}
+          </span>
+          <select
+            value={canvasMode}
+            onChange={(event) => setCanvasMode(event.target.value)}
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 font-mono text-xs text-cyan-50 outline-none"
+          >
+            {Object.keys(CANVAS_SIZES).map((mode) => (
+              <option key={mode} value={mode}>
+                {copy[mode]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <label className="block">
+        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+          {copy.background}
+        </span>
+        <select
+          value={backgroundMode}
+          onChange={(event) => setBackgroundMode(event.target.value)}
+          className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 font-mono text-xs text-cyan-50 outline-none"
+        >
+          <option value="dark">{copy.dark}</option>
+          <option value="white">{copy.white}</option>
+          <option value="transparent">{copy.transparent}</option>
+        </select>
+      </label>
+
+      <SketchToggle
+        checked={showGrid}
+        label={copy.showGrid}
+        onChange={setShowGrid}
+      />
     </div>
   );
 }
@@ -969,16 +1134,237 @@ function normalizeInitialSketch(initialSketches) {
     : null;
 }
 
-function drawTextLabels(context, labels) {
-  labels.forEach((label) => {
-    context.save();
-    context.font = `${Math.max(10, Number(label.fontSize || 24))}px ui-monospace, SFMono-Regular, Menlo, monospace`;
-    context.fillStyle = label.color || "#e0faff";
-    context.shadowColor = "rgba(0,0,0,.85)";
-    context.shadowBlur = 8;
-    context.fillText(label.text, Number(label.x || 0), Number(label.y || 0));
-    context.restore();
+function normalizeLayerData(layerData) {
+  if (!layerData || typeof layerData !== "object" || Array.isArray(layerData)) {
+    return {
+      version: LAYER_VERSION,
+      width: CANVAS_SIZES.phone.width,
+      height: CANVAS_SIZES.phone.height,
+      backgroundMode: "dark",
+      showGrid: true,
+      layers: [],
+    };
+  }
+
+  return {
+    version: layerData.version || LAYER_VERSION,
+    width: Number(layerData.width || CANVAS_SIZES.phone.width),
+    height: Number(layerData.height || CANVAS_SIZES.phone.height),
+    backgroundMode: ["dark", "white", "transparent"].includes(layerData.backgroundMode)
+      ? layerData.backgroundMode
+      : "dark",
+    showGrid: layerData.showGrid !== false,
+    layers: Array.isArray(layerData.layers)
+      ? layerData.layers.map(normalizeLayer).filter(Boolean)
+      : [],
+  };
+}
+
+function normalizeLayer(layer) {
+  if (!layer || typeof layer !== "object") return null;
+  if (layer.type === "text") {
+    const text = String(layer.text || "").trim().slice(0, 80);
+    if (!text) return null;
+    return {
+      id: String(layer.id || createClientId()).slice(0, 120),
+      type: "text",
+      text,
+      x: clamp(Number(layer.x || 0), 0, 2000),
+      y: clamp(Number(layer.y || 0), 0, 2000),
+      fontSize: clamp(Number(layer.fontSize || 24), 10, 80),
+      color: normalizeHexColor(layer.color, "#e0faff"),
+    };
+  }
+
+  if (layer.type !== "stroke") return null;
+  const points = Array.isArray(layer.points)
+    ? layer.points
+        .slice(0, MAX_STROKE_POINTS)
+        .map((point) => ({
+          x: clamp(Number(point?.x || 0), 0, 2000),
+          y: clamp(Number(point?.y || 0), 0, 2000),
+        }))
+    : [];
+
+  if (points.length === 0) return null;
+
+  return {
+    id: String(layer.id || createClientId()).slice(0, 120),
+    type: "stroke",
+    tool: layer.tool === "eraser" ? "eraser" : "brush",
+    color: normalizeHexColor(layer.color, "#67e8f9"),
+    size: clamp(Number(layer.size || 8), 1, 80),
+    opacity: clamp(Number(layer.opacity || 1), 0.05, 1),
+    points,
+  };
+}
+
+function getCanvasModeFromLayerData(layerData) {
+  const width = Number(layerData?.width || 0);
+  const height = Number(layerData?.height || 0);
+  const match = Object.entries(CANVAS_SIZES).find(
+    ([, size]) => Math.abs(size.width - width) <= 4 && Math.abs(size.height - height) <= 4
+  );
+
+  return match?.[0] || "phone";
+}
+
+function createStrokeLayer({ tool, color, size, opacity, points }) {
+  return {
+    id: createClientId(),
+    type: "stroke",
+    tool,
+    color,
+    size,
+    opacity,
+    points,
+  };
+}
+
+function createTextLayer({ text, x, y, fontSize, color }) {
+  return {
+    id: createClientId(),
+    type: "text",
+    text: text.slice(0, 80),
+    x,
+    y,
+    fontSize,
+    color,
+  };
+}
+
+function renderLayersToCanvas(options) {
+  const canvas = document.createElement("canvas");
+  canvas.width = options.canvasSize.width;
+  canvas.height = options.canvasSize.height;
+  const context = canvas.getContext("2d");
+  drawLayers(context, {
+    width: canvas.width,
+    height: canvas.height,
+    ...options,
   });
+  return canvas;
+}
+
+function drawLayers(
+  context,
+  { width, height, layers, baseImage, backgroundMode, showGrid, includeText }
+) {
+  context.clearRect(0, 0, width, height);
+  drawBackground(context, width, height, backgroundMode, showGrid);
+
+  if (baseImage) {
+    const fit = getContainedRect(baseImage.width, baseImage.height, width, height);
+    context.drawImage(baseImage, fit.x, fit.y, fit.width, fit.height);
+  }
+
+  layers.forEach((layer) => {
+    if (layer.type === "text") {
+      if (includeText) drawTextLayer(context, layer);
+      return;
+    }
+
+    drawStrokeLayer(context, layer, backgroundMode);
+  });
+}
+
+function drawBackground(context, width, height, backgroundMode, showGrid) {
+  const color = BACKGROUND_COLORS[backgroundMode] || BACKGROUND_COLORS.dark;
+  if (color !== "transparent") {
+    context.fillStyle = color;
+    context.fillRect(0, 0, width, height);
+  }
+
+  if (!showGrid) return;
+
+  context.save();
+  context.strokeStyle =
+    backgroundMode === "white" ? "rgba(15,23,42,.10)" : "rgba(125,249,255,.10)";
+  context.lineWidth = 1;
+  for (let x = 0; x <= width; x += 40) {
+    context.beginPath();
+    context.moveTo(x, 0);
+    context.lineTo(x, height);
+    context.stroke();
+  }
+  for (let y = 0; y <= height; y += 40) {
+    context.beginPath();
+    context.moveTo(0, y);
+    context.lineTo(width, y);
+    context.stroke();
+  }
+  context.restore();
+}
+
+function drawStrokeLayer(context, layer, backgroundMode) {
+  const points = layer.points || [];
+  if (points.length === 0) return;
+
+  context.save();
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.lineWidth = layer.size;
+  context.globalAlpha = layer.opacity;
+  if (layer.tool === "eraser" && backgroundMode === "transparent") {
+    context.globalCompositeOperation = "destination-out";
+    context.strokeStyle = "#000000";
+  } else {
+    context.globalCompositeOperation = "source-over";
+    context.strokeStyle =
+      layer.tool === "eraser"
+        ? backgroundMode === "white"
+          ? BACKGROUND_COLORS.white
+          : BACKGROUND_COLORS.dark
+        : layer.color;
+  }
+  context.beginPath();
+  context.moveTo(points[0].x, points[0].y);
+  points.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+  if (points.length === 1) {
+    context.lineTo(points[0].x + 0.01, points[0].y + 0.01);
+  }
+  context.stroke();
+  context.restore();
+}
+
+function drawTextLayer(context, label) {
+  context.save();
+  context.font = `${Math.max(10, Number(label.fontSize || 24))}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  context.fillStyle = label.color || "#e0faff";
+  context.shadowColor = "rgba(0,0,0,.85)";
+  context.shadowBlur = 8;
+  context.fillText(label.text, Number(label.x || 0), Number(label.y || 0));
+  context.restore();
+}
+
+function findTextLayerAtPoint(layers, point) {
+  return [...layers]
+    .reverse()
+    .find((layer) => {
+      if (layer.type !== "text") return false;
+      const width = Math.max(40, String(layer.text || "").length * layer.fontSize * 0.62);
+      const height = layer.fontSize * 1.4;
+      return (
+        point.x >= layer.x - 12 &&
+        point.x <= layer.x + width + 12 &&
+        point.y >= layer.y - height &&
+        point.y <= layer.y + 12
+      );
+    });
+}
+
+function normalizeLayersForStorage(layers) {
+  return layers.map(normalizeLayer).filter(Boolean);
+}
+
+function cloneLayers(layers) {
+  return JSON.parse(JSON.stringify(layers || []));
+}
+
+function shouldAddPoint(previous, next) {
+  if (!previous) return true;
+  const distance = Math.hypot(previous.x - next.x, previous.y - next.y);
+  return distance >= 1.5;
 }
 
 function getContainedRect(sourceWidth, sourceHeight, targetWidth, targetHeight) {
@@ -1007,16 +1393,13 @@ function canvasToBlob(canvas, mimeType) {
   });
 }
 
-function loadImage(url) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(image);
-    };
-    image.onerror = reject;
-    image.src = url;
-  });
+function normalizeHexColor(value, fallback) {
+  return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? String(value) : fallback;
+}
+
+function clamp(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.max(min, Math.min(max, value));
 }
 
 function createClientId() {
