@@ -8,6 +8,7 @@ import {
 import {
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
+  normalizeDreamSketches,
 } from "../lib/dreamImageService.js";
 import {
   getDreamDateStatus,
@@ -1323,8 +1324,13 @@ function normalizeDreamCard(row) {
     row.text ||
     "";
   const images = normalizeDreamImages(row);
+  const sketches = normalizeDreamSketches(row);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
-  const thumbnailUrl = getPrimaryDreamImageUrl(row);
+  const sketchThumbnailUrl =
+    sketches.find((sketch) => sketch.thumbnailUrl || sketch.imageUrl)?.thumbnailUrl ||
+    sketches.find((sketch) => sketch.imageUrl)?.imageUrl ||
+    "";
+  const thumbnailUrl = getPrimaryDreamImageUrl(row) || sketchThumbnailUrl;
   const dreamDate = row.publicDate || row.dateBucket || getVisibleDreamDate(row);
   const dreamDateStatus = row.publicDate || row.dateBucket ? "known" : getDreamDateStatus(row);
   const anomalyTags = Array.isArray(row.anomalyTags)
@@ -1493,6 +1499,8 @@ function normalizeDreamCard(row) {
     dreamImages: images,
     imageUrls,
     pictureUrls: imageUrls,
+    sketches,
+    publicSketches: sketches,
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,

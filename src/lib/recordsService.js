@@ -14,7 +14,9 @@ import { db, isFirebaseConfigured } from "./firebaseClient.js";
 import {
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
+  normalizeDreamSketches,
   uploadDreamImages,
+  uploadDreamSketches,
 } from "./dreamImageService.js";
 import { upsertSharedCustomTags } from "./customTagsService.js";
 import {
@@ -571,6 +573,7 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
     originalLanguage
   );
   const publicTags = sanitizePublicTags(record.tags);
+  const publicSketches = sanitizePublicSketches(record);
   const publicDate = getPublicDateFields(record);
   const sensitivityLevel = calculateSensitivityLevel(record);
   const pseudonym =
@@ -600,7 +603,46 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
 
   Object.assign(publicDream, publicTranslationFields);
 
+  if (publicSketches.length > 0) {
+    publicDream.publicSketches = publicSketches;
+  }
+
   return publicDream;
+}
+
+function sanitizePublicSketches(record = {}) {
+  const sketchConsent = normalizeSketchConsent(record.sketchConsent);
+
+  if (
+    record.includeSketchesWhenPublic !== true ||
+    sketchConsent.allowPublicDisplay !== true
+  ) {
+    return [];
+  }
+
+  return normalizeDreamSketches(record)
+    .filter((sketch) => sketch.publicAllowed && sketch.imageUrl)
+    .slice(0, 12)
+    .map((sketch) => ({
+      id: limitString(sketch.id, 120),
+      type: "dream_sketch",
+      imageUrl: limitString(sketch.imageUrl, 1200),
+      thumbnailUrl: limitString(sketch.thumbnailUrl || sketch.imageUrl, 1200),
+      width: Math.max(0, Number(sketch.width || 0)),
+      height: Math.max(0, Number(sketch.height || 0)),
+      mimeType: sketch.mimeType === "image/webp" ? "image/webp" : "image/png",
+      title: sketch.title ? limitString(sketch.title, 120) : null,
+      caption: sketch.caption ? limitString(sketch.caption, 280) : null,
+      textLabels: sanitizeSketchTextLabels(sketch.textLabels),
+      publicAllowed: true,
+      researchAllowed: Boolean(sketch.researchAllowed),
+      adultContent: Boolean(sketch.adultContent || record.adultContent),
+      sensitivityLevel:
+        sketch.sensitivityLevel == null
+          ? null
+          : Math.max(0, Math.min(4, Number(sketch.sensitivityLevel))),
+      altText: sketch.altText ? limitString(sketch.altText, 280) : null,
+    }));
 }
 
 function buildPublicRecorderTranslationFields(record, sharingMode, originalLanguage) {
@@ -1053,6 +1095,11 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     draft?.translations || draft?.translationVersions,
     originalLanguage
   );
+  const includeSketchesWhenPublic = Boolean(draft?.includeSketchesWhenPublic);
+  const sketchConsent = normalizeSketchConsent(draft?.sketchConsent, {
+    allowPublicDisplay: includeSketchesWhenPublic,
+    allowResearchUse: Boolean(draft?.sketchConsent?.allowResearchUse),
+  });
   const coreRecord = {
     id: recordRef.id,
     dream_id: recordRef.id,
@@ -1083,6 +1130,8 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     publicText,
     publicExcerpt,
     redactionStatus: privacyState.redactionStatus,
+    includeSketchesWhenPublic,
+    sketchConsent,
     ...languageFields,
     ...translationFields,
     dreamDate,
@@ -1141,6 +1190,8 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
 
   let images = [];
   let imageUploadError = null;
+  let sketches = [];
+  let sketchUploadError = null;
 
   try {
     images = await uploadDreamImages(draft?.imageFiles || [], {
@@ -1154,6 +1205,18 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     };
   }
 
+  try {
+    sketches = await uploadDreamSketches(draft?.sketchFiles || draft?.sketches || [], {
+      ownerId: currentUser.uid,
+      recordId: recordRef.id,
+    });
+  } catch (error) {
+    sketchUploadError = {
+      code: error?.code || "storage/upload-failed",
+      message: error?.message || "Sketch upload failed.",
+    };
+  }
+
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = imageUrls[0] || "";
   const optionalRecord = {
@@ -1164,6 +1227,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,
+    sketches,
     environmentTags,
     entityTags,
     anomalyTags,
@@ -1207,6 +1271,7 @@ export async function createDreamRecord(currentUser, draft, profile = null) {
     ...coreRecord,
     ...optionalRecord,
     imageUploadError,
+    sketchUploadError,
     metadataMergeError,
     customTagCatalogError,
   };
@@ -1406,6 +1471,7 @@ function normalizeRecordReference(record) {
       record?.is_adult
   );
   const images = normalizeDreamImages(record);
+  const sketches = normalizeDreamSketches(record);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(record);
   const publicDate = record?.publicDate || "";
@@ -1505,6 +1571,10 @@ function normalizeRecordReference(record) {
     dreamImages: images,
     imageUrls,
     pictureUrls: imageUrls,
+    sketches,
+    publicSketches: sketches,
+    includeSketchesWhenPublic: Boolean(record?.includeSketchesWhenPublic),
+    sketchConsent: normalizeSketchConsent(record?.sketchConsent),
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,
@@ -1777,6 +1847,40 @@ function normalizeOptionalTitle(title, dreamText) {
 
 function limitString(value, maxLength) {
   return String(value || "").trim().slice(0, maxLength);
+}
+
+function normalizeSketchConsent(value = {}, overrides = {}) {
+  const source =
+    value && typeof value === "object" && !Array.isArray(value) ? value : {};
+
+  return {
+    allowPrivateStorage:
+      overrides.allowPrivateStorage ?? source.allowPrivateStorage !== false,
+    allowPublicDisplay: Boolean(
+      overrides.allowPublicDisplay ?? source.allowPublicDisplay
+    ),
+    allowResearchUse: Boolean(
+      overrides.allowResearchUse ?? source.allowResearchUse
+    ),
+    allowAiAnalysis: Boolean(overrides.allowAiAnalysis ?? source.allowAiAnalysis),
+  };
+}
+
+function sanitizeSketchTextLabels(labels = []) {
+  if (!Array.isArray(labels)) return [];
+
+  return labels
+    .slice(0, 32)
+    .map((label) => ({
+      text: limitString(label?.text, 80),
+      x: Math.max(0, Number(label?.x || 0)),
+      y: Math.max(0, Number(label?.y || 0)),
+      fontSize: Math.max(10, Math.min(80, Number(label?.fontSize || 24))),
+      color: /^#[0-9a-f]{6}$/i.test(String(label?.color || ""))
+        ? String(label.color)
+        : "#e0faff",
+    }))
+    .filter((label) => label.text);
 }
 
 
@@ -2173,6 +2277,35 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
     )
       ? updates.redactionStatus
       : "none";
+  }
+
+  if ("includeSketchesWhenPublic" in updates) {
+    metadata.includeSketchesWhenPublic = Boolean(updates.includeSketchesWhenPublic);
+  }
+
+  if ("sketchConsent" in updates) {
+    metadata.sketchConsent = normalizeSketchConsent(updates.sketchConsent, {
+      allowPublicDisplay:
+        "includeSketchesWhenPublic" in metadata
+          ? Boolean(metadata.includeSketchesWhenPublic)
+          : Boolean(existingRecord.includeSketchesWhenPublic),
+    });
+  }
+
+  if ("sketches" in updates) {
+    metadata.sketches = normalizeDreamSketches({ sketches: updates.sketches });
+  }
+
+  if ("sketchFiles" in updates) {
+    const uploadedSketches = await uploadDreamSketches(updates.sketchFiles || [], {
+      ownerId: currentUser.uid,
+      recordId,
+    });
+
+    metadata.sketches = [
+      ...normalizeDreamSketches(existingRecord),
+      ...uploadedSketches,
+    ].slice(0, 12);
   }
 
   if ("recordIdentityMode" in updates) {

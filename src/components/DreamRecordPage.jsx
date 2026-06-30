@@ -14,6 +14,7 @@ import {
 import {
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
+  normalizeDreamSketches,
 } from "../lib/dreamImageService.js";
 import { fetchSharedCustomTags } from "../lib/customTagsService.js";
 import {
@@ -30,6 +31,7 @@ import {
   RECORD_TAGS,
   tagExists,
 } from "../lib/tagTaxonomy.js";
+import DreamSketchBoard from "./DreamSketchBoard.jsx";
 import LanguageMenu from "./LanguageMenu.jsx";
 
 const EDITABLE_TAG_SLUGS = new Set(
@@ -180,6 +182,7 @@ const DETAIL_COPY = {
       "Dream tags, statistics, and AI reflections are for self-exploration and research patterns only. They are not medical, psychological, or psychiatric diagnosis.",
     recordText: "Dream Record",
     pictureGallery: "Dream Pictures",
+    sketchGallery: "Dream Sketches",
     imageHiddenForGuest: "Pictures are hidden for guests. Sign in to view dream images.",
     emptyRecordBody: "No dream text has been archived for this record yet.",
     originalLanguage: "Original Language",
@@ -270,6 +273,7 @@ const DETAIL_COPY = {
       "夢境標籤、統計與 AI 反思只用於自我探索與研究模式觀察，並不是醫療、心理或精神科診斷。",
     recordText: "夢境紀錄",
     pictureGallery: "夢境圖片",
+    sketchGallery: "夢境草圖",
     imageHiddenForGuest: "訪客不顯示圖片。登入後可查看夢境影像。",
     emptyRecordBody: "此紀錄尚未歸檔夢境內文。",
     originalLanguage: "原始語言",
@@ -360,6 +364,7 @@ const DETAIL_COPY = {
       "Las etiquetas, estadísticas y reflexiones de IA sirven para autoexploración y patrones de investigación. No son diagnósticos médicos, psicológicos ni psiquiátricos.",
     recordText: "Registro del Sueño",
     pictureGallery: "Imágenes del sueño",
+    sketchGallery: "Bocetos del sueño",
     imageHiddenForGuest:
       "Las imágenes están ocultas para invitados. Inicia sesión para verlas.",
     emptyRecordBody: "Este registro aún no tiene texto de sueño archivado.",
@@ -464,6 +469,7 @@ export default function DreamRecordPage({
   const adultAllowed = !adultRecord || ageVerifiedAdult || adultConfirmed;
   const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
   const dreamImages = normalizedRecord.images || [];
+  const dreamSketches = normalizedRecord.sketches || [];
   const pageTitle = adultAllowed ? title : copy.adultRestrictedTitle;
   const tagGroups = useMemo(() => mergeRecorderTagGroups(sharedTags), [sharedTags]);
   const tagLookup = useMemo(
@@ -617,6 +623,110 @@ export default function DreamRecordPage({
       setStatus(error.message);
     } finally {
       setCollecting(false);
+    }
+  }
+
+  async function handleSaveSketch(sketch) {
+    if (!isOwner || !sketch) return;
+
+    setStatus("");
+
+    try {
+      const nextInclude = Boolean(
+        sketch.publicAllowed || normalizedRecord.includeSketchesWhenPublic
+      );
+      const nextConsent = {
+        ...(normalizedRecord.sketchConsent || {}),
+        allowPrivateStorage: true,
+        allowPublicDisplay: nextInclude,
+        allowResearchUse: Boolean(
+          sketch.researchAllowed || normalizedRecord.sketchConsent?.allowResearchUse
+        ),
+        allowAiAnalysis: false,
+      };
+
+      await updateOwnedRecordMetadata(currentUser, normalizedRecord.id, {
+        sketchFiles: [sketch],
+        includeSketchesWhenPublic: nextInclude,
+        sketchConsent: nextConsent,
+      });
+      setLocalRecord((current) => ({
+        ...current,
+        sketches: [...normalizeDreamSketches(current), sketch].slice(0, 12),
+        includeSketchesWhenPublic: nextInclude,
+        sketchConsent: nextConsent,
+      }));
+      setStatus(copy.metadataSaved);
+    } catch (error) {
+      setStatus(error.message);
+      throw error;
+    }
+  }
+
+  async function handleSketchPrivacyChange(nextSketch) {
+    if (!isOwner || !nextSketch?.id) return;
+
+    const sketches = normalizeDreamSketches(normalizedRecord).map((sketch) =>
+      sketch.id === nextSketch.id ? { ...sketch, ...nextSketch } : sketch
+    );
+    const nextInclude = sketches.some((sketch) => sketch.publicAllowed);
+    const nextConsent = {
+      ...(normalizedRecord.sketchConsent || {}),
+      allowPrivateStorage: true,
+      allowPublicDisplay: nextInclude,
+      allowResearchUse: sketches.some((sketch) => sketch.researchAllowed),
+      allowAiAnalysis: false,
+    };
+
+    setLocalRecord((current) => ({
+      ...current,
+      sketches,
+      includeSketchesWhenPublic: nextInclude,
+      sketchConsent: nextConsent,
+    }));
+
+    await updateOwnedRecordMetadata(currentUser, normalizedRecord.id, {
+      sketches,
+      includeSketchesWhenPublic: nextInclude,
+      sketchConsent: nextConsent,
+    }).catch((error) => {
+      setStatus(error.message);
+    });
+  }
+
+  async function handleRemoveSketch(sketchToRemove) {
+    if (!isOwner) return;
+
+    const sketches = normalizeDreamSketches(normalizedRecord).filter(
+      (sketch) => sketch.id !== sketchToRemove?.id
+    );
+    const nextInclude = sketches.some((sketch) => sketch.publicAllowed);
+    const nextConsent = {
+      ...(normalizedRecord.sketchConsent || {}),
+      allowPrivateStorage: true,
+      allowPublicDisplay: nextInclude,
+      allowResearchUse: sketches.some((sketch) => sketch.researchAllowed),
+      allowAiAnalysis: false,
+    };
+
+    setStatus("");
+
+    try {
+      await updateOwnedRecordMetadata(currentUser, normalizedRecord.id, {
+        sketches,
+        includeSketchesWhenPublic: nextInclude,
+        sketchConsent: nextConsent,
+      });
+      setLocalRecord((current) => ({
+        ...current,
+        sketches,
+        includeSketchesWhenPublic: nextInclude,
+        sketchConsent: nextConsent,
+      }));
+      setStatus(copy.metadataSaved);
+    } catch (error) {
+      setStatus(error.message);
+      throw error;
     }
   }
 
@@ -835,6 +945,27 @@ export default function DreamRecordPage({
                           {copy.imageHiddenForGuest}
                         </p>
                       )}
+                    </section>
+                  )}
+
+                  {dreamSketches.length > 0 && (
+                    <section className="mt-7 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-5 sm:p-6">
+                      <h2 className="cdo-panel-heading mb-4">
+                        {copy.sketchGallery}
+                      </h2>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {dreamSketches.map((sketch, index) => (
+                          <img
+                            key={sketch.id || sketch.imageUrl || index}
+                            src={sketch.thumbnailUrl || sketch.imageUrl}
+                            alt={sketch.altText || `${copy.sketchGallery} ${index + 1}`}
+                            className="aspect-[4/3] w-full rounded-xl border border-cyan-300/15 object-cover"
+                            onError={(event) => {
+                              event.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ))}
+                      </div>
                     </section>
                   )}
 
@@ -1108,6 +1239,17 @@ export default function DreamRecordPage({
                       className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                     />
                   </label>
+                  <div className="mt-5">
+                    <DreamSketchBoard
+                      language={language}
+                      initialSketches={dreamSketches}
+                      source="edit_page"
+                      defaultExpanded={false}
+                      onSaveSketch={handleSaveSketch}
+                      onSketchChange={handleSketchPrivacyChange}
+                      onRemoveSketch={handleRemoveSketch}
+                    />
+                  </div>
                   <label className="mt-5 flex min-h-12 items-center gap-4 rounded-2xl border border-white/10 bg-black/30 px-5 py-4">
                     <input
                       type="checkbox"
@@ -1318,6 +1460,7 @@ function normalizeDreamRecord(record) {
     record?.excerpt ||
     "";
   const images = normalizeDreamImages(record);
+  const sketches = normalizeDreamSketches(record);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
   const thumbnailUrl = getPrimaryDreamImageUrl(record);
   const dreamDate = record?.publicDate || record?.dateBucket || getVisibleDreamDate(record);
@@ -1362,6 +1505,23 @@ function normalizeDreamRecord(record) {
     dreamImages: images,
     imageUrls,
     pictureUrls: imageUrls,
+    sketches,
+    publicSketches: sketches,
+    includeSketchesWhenPublic: Boolean(record?.includeSketchesWhenPublic),
+    sketchConsent:
+      record?.sketchConsent && typeof record.sketchConsent === "object"
+        ? {
+            allowPrivateStorage: record.sketchConsent.allowPrivateStorage !== false,
+            allowPublicDisplay: Boolean(record.sketchConsent.allowPublicDisplay),
+            allowResearchUse: Boolean(record.sketchConsent.allowResearchUse),
+            allowAiAnalysis: Boolean(record.sketchConsent.allowAiAnalysis),
+          }
+        : {
+            allowPrivateStorage: true,
+            allowPublicDisplay: false,
+            allowResearchUse: false,
+            allowAiAnalysis: false,
+          },
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,

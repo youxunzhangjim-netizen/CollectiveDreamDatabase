@@ -24,6 +24,7 @@ import {
 import {
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
+  normalizeDreamSketches,
 } from "../lib/dreamImageService.js";
 import {
   getDreamDateStatus,
@@ -2135,8 +2136,13 @@ function normalizeRecordItem(item, index) {
   const textZh = item.dream_text_zh || item.textZh || item.excerpt_zh || item.excerpt || "";
   const textEs = item.dream_text_es || item.textEs || item.excerpt_es || item.excerpt || "";
   const images = normalizeDreamImages(item);
+  const sketches = normalizeDreamSketches(item);
   const imageUrls = images.map((image) => image.url).filter(Boolean);
-  const thumbnailUrl = getPrimaryDreamImageUrl(item);
+  const sketchThumbnailUrl =
+    sketches.find((sketch) => sketch.thumbnailUrl || sketch.imageUrl)?.thumbnailUrl ||
+    sketches.find((sketch) => sketch.imageUrl)?.imageUrl ||
+    "";
+  const thumbnailUrl = getPrimaryDreamImageUrl(item) || sketchThumbnailUrl;
   const dreamDate = getVisibleDreamDate(item);
   const dreamDateStatus = getDreamDateStatus(item);
   const tags = Array.isArray(item.tags) ? item.tags : [];
@@ -2199,6 +2205,18 @@ function normalizeRecordItem(item, index) {
     dreamImages: images,
     imageUrls,
     pictureUrls: imageUrls,
+    sketches,
+    publicSketches: sketches,
+    includeSketchesWhenPublic: Boolean(item.includeSketchesWhenPublic),
+    sketchConsent:
+      item.sketchConsent && typeof item.sketchConsent === "object"
+        ? item.sketchConsent
+        : {
+            allowPrivateStorage: true,
+            allowPublicDisplay: false,
+            allowResearchUse: false,
+            allowAiAnalysis: false,
+          },
     thumbnailUrl,
     thumbnail_url: thumbnailUrl,
     generated_image_url: thumbnailUrl,

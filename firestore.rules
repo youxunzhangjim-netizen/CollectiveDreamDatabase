@@ -379,7 +379,10 @@ service cloud.firestore {
         "importMatchKey",
         "sourceFileName",
         "sourceLineStart",
-        "sourceLineEnd"
+        "sourceLineEnd",
+        "storagePath",
+        "originalStoragePath",
+        "sketches"
       ]);
     }
 
@@ -430,7 +433,8 @@ service cloud.firestore {
           "publicTextEs",
           "publicExcerptEs",
           "translationLanguages",
-          "translationSource"
+          "translationSource",
+          "publicSketches"
         ])
         && noForbiddenPublicDreamFields(data)
         && data.keys().hasAll(["publicText", "publicLanguage", "originalLanguage", "sharingMode", "publicConsent", "adultContent"])
@@ -459,6 +463,7 @@ service cloud.firestore {
         && optionalList(data, "translationLanguages", 3)
         && (!data.keys().hasAny(["translationSource"])
           || data.translationSource == "recorder_provided")
+        && optionalList(data, "publicSketches", 12)
         && validSharingMode(data.sharingMode)
         && isPublicSharingMode(data.sharingMode)
         && publicDreamSourceRecordAllowsMirror(data, recordId)

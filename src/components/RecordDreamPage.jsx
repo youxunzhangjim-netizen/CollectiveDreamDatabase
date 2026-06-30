@@ -20,7 +20,10 @@ import { auth } from "../lib/firebaseClient.js";
 import { getLanguageName, LANGUAGE_OPTIONS, normalizeLanguage } from "../lib/language.js";
 import { fetchSharedCustomTags } from "../lib/customTagsService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
-import { createDreamRecord } from "../lib/recordsService.js";
+import {
+  createDreamRecord,
+  updateOwnedRecordMetadata,
+} from "../lib/recordsService.js";
 import {
   PRIVACY_SHARING_MODES,
   isPublicPrivacySharingMode,
@@ -33,6 +36,7 @@ import {
   RECORD_TAGS,
   tagExists,
 } from "../lib/tagTaxonomy.js";
+import DreamSketchBoard from "./DreamSketchBoard.jsx";
 import LanguageMenu from "./LanguageMenu.jsx";
 
 const DREAM_PERIOD_OPTIONS = ["morning", "afternoon", "evening", "night"];
@@ -160,6 +164,10 @@ const RECORD_COPY = {
       "Picture storage is not ready yet. Remove pictures or configure picture storage before publishing.",
     pictureUploadFailed:
       "The pictures could not be uploaded. Remove them or try again.",
+    sketchUploadFailed:
+      "The dream words were saved, but the sketch image could not upload. Retry the sketch or continue without it.",
+    retrySketchUpload: "Retry sketch upload",
+    continueWithoutSketch: "Continue without sketch",
     tagSectionTitle: "Dream tags",
     customTags: "Custom tags",
     customTagPlaceholder: "Add a missing tag to this type",
@@ -288,6 +296,10 @@ const RECORD_COPY = {
     pictureStorageUnavailable:
       "圖片儲存尚未準備好。請先移除圖片，或設定圖片儲存後再發布。",
     pictureUploadFailed: "圖片無法上傳。請移除圖片或稍後再試。",
+    sketchUploadFailed:
+      "夢境文字已儲存，但草圖影像無法上傳。你可以重試草圖，或先不包含草圖繼續。",
+    retrySketchUpload: "重試草圖上傳",
+    continueWithoutSketch: "不含草圖繼續",
     tagSectionTitle: "夢境標籤",
     customTags: "自訂標籤",
     customTagPlaceholder: "在此類型新增缺少的標籤",
@@ -412,6 +424,10 @@ const RECORD_COPY = {
       "El almacenamiento de imágenes aún no está listo. Quita las imágenes o configura el almacenamiento antes de publicar.",
     pictureUploadFailed:
       "No se pudieron subir las imágenes. Quítalas o inténtalo otra vez.",
+    sketchUploadFailed:
+      "El texto del sueño se guardó, pero el boceto no se pudo subir. Reintenta el boceto o continúa sin él.",
+    retrySketchUpload: "Reintentar boceto",
+    continueWithoutSketch: "Continuar sin boceto",
     tagSectionTitle: "Etiquetas del sueño",
     customTags: "Etiquetas personalizadas",
     customTagPlaceholder: "Añade una etiqueta faltante a este tipo",
@@ -530,6 +546,7 @@ export default function RecordDreamPage({
   const [adultContent, setAdultContent] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
   const [imageNotice, setImageNotice] = useState("");
+  const [sketchDrafts, setSketchDrafts] = useState([]);
   const [selectedTagSlugs, setSelectedTagSlugs] = useState([]);
   const [customTagDrafts, setCustomTagDrafts] = useState({});
   const [customTagEntries, setCustomTagEntries] = useState([]);
@@ -540,6 +557,8 @@ export default function RecordDreamPage({
   );
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [pendingSketchRecord, setPendingSketchRecord] = useState(null);
+  const [retryingSketch, setRetryingSketch] = useState(false);
   const [authMode, setAuthMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -696,6 +715,20 @@ export default function RecordDreamPage({
     setImageFiles((current) => current.filter((_, fileIndex) => fileIndex !== index));
   }
 
+  function buildSketchPrivacyDraft(sketches = sketchDrafts) {
+    const includeSketchesWhenPublic = sketches.some((sketch) => sketch?.publicAllowed);
+
+    return {
+      includeSketchesWhenPublic,
+      sketchConsent: {
+        allowPrivateStorage: true,
+        allowPublicDisplay: includeSketchesWhenPublic,
+        allowResearchUse: sketches.some((sketch) => sketch?.researchAllowed),
+        allowAiAnalysis: false,
+      },
+    };
+  }
+
   function getAuthErrorMessage(error, action) {
     if (!error?.code) return copy.authError;
 
@@ -778,6 +811,42 @@ export default function RecordDreamPage({
     await runAccountAction(authMode);
   }
 
+  async function retryPendingSketchUpload() {
+    if (!pendingSketchRecord?.id || sketchDrafts.length === 0) return;
+
+    setRetryingSketch(true);
+    setSubmitError("");
+
+    try {
+      const sketchPrivacyDraft = buildSketchPrivacyDraft();
+      const submissionUser = auth?.currentUser || currentUser;
+
+      await updateOwnedRecordMetadata(submissionUser, pendingSketchRecord.id, {
+        sketchFiles: sketchDrafts,
+        ...sketchPrivacyDraft,
+      });
+
+      onSubmitted?.({
+        ...pendingSketchRecord,
+        sketches: sketchDrafts,
+        ...sketchPrivacyDraft,
+        sketchUploadError: null,
+      });
+    } catch {
+      setSubmitError(copy.sketchUploadFailed);
+    } finally {
+      setRetryingSketch(false);
+    }
+  }
+
+  function continueWithoutPendingSketch() {
+    if (!pendingSketchRecord) return;
+    onSubmitted?.({
+      ...pendingSketchRecord,
+      sketchUploadError: null,
+    });
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setSubmitError("");
@@ -791,6 +860,7 @@ export default function RecordDreamPage({
     setSubmitting(true);
 
     try {
+      setPendingSketchRecord(null);
       let submissionUser = auth?.currentUser || currentUser;
 
       if (!submissionUser?.uid) {
@@ -812,6 +882,7 @@ export default function RecordDreamPage({
         }
       }
 
+      const sketchPrivacyDraft = buildSketchPrivacyDraft();
       const record = await createDreamRecord(
         submissionUser,
         {
@@ -827,6 +898,8 @@ export default function RecordDreamPage({
           ageAtDream,
           adultContent,
           imageFiles,
+          sketchFiles: sketchDrafts,
+          ...sketchPrivacyDraft,
           selectedTagSlugs,
           customTagLabels: customTagEntries,
           sharedTags,
@@ -841,6 +914,12 @@ export default function RecordDreamPage({
         },
         profile
       );
+
+      if (record.sketchUploadError && sketchDrafts.length > 0) {
+        setPendingSketchRecord(record);
+        setSubmitError(copy.sketchUploadFailed);
+        return;
+      }
 
       onSubmitted?.(record);
     } catch (error) {
@@ -1137,6 +1216,15 @@ export default function RecordDreamPage({
                 </div>
               </section>
 
+              <DreamSketchBoard
+                language={language}
+                initialSketches={sketchDrafts}
+                source="recording_page"
+                onSaveSketch={(sketch) => setSketchDrafts([sketch])}
+                onSketchChange={(sketch) => setSketchDrafts(sketch ? [sketch] : [])}
+                onRemoveSketch={() => setSketchDrafts([])}
+              />
+
               <section className="rounded-2xl border border-cyan-300/15 bg-black/25 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -1324,16 +1412,37 @@ export default function RecordDreamPage({
               </div>
 
               {submitError && (
-                <p className="rounded-2xl border border-red-300/25 bg-red-400/5 p-4 font-mono text-xs leading-5 text-red-100">
-                  {submitError}
-                </p>
+                <div className="rounded-2xl border border-red-300/25 bg-red-400/5 p-4">
+                  <p className="font-mono text-xs leading-5 text-red-100">
+                    {submitError}
+                  </p>
+                  {pendingSketchRecord && (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={retryPendingSketchUpload}
+                        disabled={retryingSketch}
+                        className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {retryingSketch ? "..." : copy.retrySketchUpload}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={continueWithoutPendingSketch}
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-100 transition hover:border-cyan-300/35 hover:text-cyan-100"
+                      >
+                        {copy.continueWithoutSketch}
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
             <div className="border-t border-white/10 bg-black/35 p-5">
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || Boolean(pendingSketchRecord)}
                 className="flex w-full items-center justify-center gap-3 rounded-2xl border border-cyan-300/35 bg-cyan-300 px-4 py-4 font-mono text-xs font-bold uppercase tracking-[0.22em] text-zinc-950 shadow-[0_0_28px_rgba(34,211,238,.18)] transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting && <LoadingSpinner dark />}
