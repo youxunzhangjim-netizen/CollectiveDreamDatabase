@@ -8,7 +8,7 @@ import {
 import {
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
-  normalizeDreamVisualAttachments,
+  normalizePublicDreamVisualAttachments,
   normalizeDreamSketches,
 } from "../lib/dreamImageService.js";
 import {
@@ -3386,9 +3386,9 @@ function ObservationCard({
   const displayTitle = guestAdultGate
     ? copy.adultRestrictedTitle
     : getDreamTitle(dream, language);
-  const visualAttachments = canSeeImages
-    ? normalizeDreamVisualAttachments(dream)
-    : [];
+  const visualAttachments = normalizePublicDreamVisualAttachments(dream, {
+    includeImages: canSeeImages,
+  });
   const canShowThumbnail = visualAttachments.length > 0;
   const recorderId = getRecorderId(dream);
   const canShowFollow =

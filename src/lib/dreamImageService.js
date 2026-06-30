@@ -18,6 +18,11 @@ const ALLOWED_DREAM_IMAGE_TYPES = new Set([
 ]);
 
 const ALLOWED_DREAM_SKETCH_TYPES = new Set(["image/png", "image/webp"]);
+const PUBLIC_SHARING_MODES = new Set([
+  "anonymous_public",
+  "pseudonym_public",
+  "redacted_public",
+]);
 
 export function validateDreamImageFile(file) {
   if (!file) return "missing";
@@ -272,6 +277,62 @@ export function normalizeDreamVisualAttachments(record) {
     .slice(0, MAX_DREAM_IMAGES);
 }
 
+export function normalizePublicDreamSketches(record) {
+  if (!isPublicReadableDream(record) || record?.publicConsent === false) return [];
+
+  const mirrorSketches = Array.isArray(record?.publicSketches)
+    ? record.publicSketches
+    : [];
+  const privateSketches =
+    record?.includeSketchesWhenPublic === true &&
+    record?.sketchConsent?.allowPublicDisplay === true &&
+    Array.isArray(record?.sketches)
+      ? record.sketches
+      : [];
+  const sketches = mirrorSketches.length > 0 ? mirrorSketches : privateSketches;
+
+  if (
+    sketches.length === 0 ||
+    (mirrorSketches.length === 0 && record?.includeSketchesWhenPublic !== true)
+  ) {
+    return [];
+  }
+
+  return normalizeDreamSketches({ sketches })
+    .filter((sketch) => sketch.publicAllowed === true)
+    .filter((sketch) => hasSafePublicUrl(sketch.thumbnailUrl || sketch.imageUrl))
+    .filter((sketch) => !sketch.storagePath && !sketch.layerStoragePath)
+    .slice(0, MAX_DREAM_IMAGES);
+}
+
+export function normalizePublicDreamVisualAttachments(record, { includeImages = true } = {}) {
+  const imageAttachments = includeImages
+    ? normalizeDreamImages(record).map((image, index) => ({
+        id: image.path || image.url || `dream-image-${index + 1}`,
+        kind: "image",
+        url: image.url,
+        thumbnailUrl: image.url,
+        alt: image.name || `Dream picture ${index + 1}`,
+        source: image,
+      }))
+    : [];
+  const sketchAttachments = normalizePublicDreamSketches(record).map(
+    (sketch, index) => ({
+      id: sketch.id || sketch.imageUrl || `dream-sketch-${index + 1}`,
+      kind: "sketch",
+      url: sketch.imageUrl,
+      thumbnailUrl: sketch.thumbnailUrl || sketch.imageUrl,
+      alt: sketch.altText || sketch.title || `Dream sketch ${index + 1}`,
+      caption: sketch.caption,
+      source: sketch,
+    })
+  );
+
+  return [...imageAttachments, ...sketchAttachments]
+    .filter((attachment) => attachment.thumbnailUrl || attachment.url)
+    .slice(0, MAX_DREAM_IMAGES);
+}
+
 export function normalizeDreamSketches(record) {
   const sketches = Array.isArray(record?.sketches)
     ? record.sketches
@@ -282,6 +343,21 @@ export function normalizeDreamSketches(record) {
   return sketches
     .map((sketch, index) => normalizeDreamSketch(sketch, index))
     .filter((sketch) => sketch.imageUrl || sketch.thumbnailUrl);
+}
+
+function isPublicReadableDream(record = {}) {
+  const sharingMode = record.sharingMode || record.sharing_mode || "";
+  const visibility = record.visibility || "";
+
+  if (visibility === "private" || visibility === "stats_only") return false;
+  if (record.isPublic === false) return false;
+
+  return PUBLIC_SHARING_MODES.has(sharingMode);
+}
+
+function hasSafePublicUrl(url) {
+  const value = String(url || "").trim();
+  return /^https:\/\//i.test(value);
 }
 
 export function getPrimaryDreamSketchUrl(record) {

@@ -15,6 +15,7 @@ import {
   MAX_DREAM_IMAGES,
   getPrimaryDreamImageUrl,
   normalizeDreamImages,
+  normalizePublicDreamSketches,
   normalizeDreamVisualAttachments,
   normalizeDreamSketches,
 } from "../lib/dreamImageService.js";
@@ -200,6 +201,29 @@ const DETAIL_COPY = {
     denyAdult: "Not now",
     metadataSaved: "Dream metadata saved",
     visualLimit: "This dream already has four pictures or sketches.",
+    sharedSketchNotice: "This sketch was shared by the dreamer.",
+    sketchManagerTitle: "Sketch manager",
+    sketchManagerHelp:
+      "Manage private sketches and choose which ones can appear if this dream is public.",
+    addNewSketch: "Add new sketch",
+    editSketch: "Edit sketch",
+    replaceSketch: "Replace image",
+    deleteSketch: "Delete sketch",
+    downloadSketch: "Download sketch",
+    sketchCaption: "Caption",
+    sketchAltText: "Alt text",
+    sketchPublicToggle: "Include this sketch when dream is public",
+    sketchResearchToggle: "Allow this sketch for research metadata",
+    sketchAdultToggle: "Mark sketch as adult content",
+    sketchSensitivity: "Sensitivity",
+    sketchSensitivityNone: "None",
+    sketchSensitivityLow: "Low",
+    sketchSensitivityMedium: "Medium",
+    sketchSensitivityHigh: "High",
+    sketchSensitivityRestricted: "Restricted",
+    saveSketchDetails: "Save sketch details",
+    layerEditable: "Layer edit available",
+    layerMissing: "No editable layer data",
     signInToCollect: "Sign in to collect this dream",
     recorderRulesTitle: "Recording Standards",
     recorderRulesCollapse: "Collapse",
@@ -290,6 +314,28 @@ const DETAIL_COPY = {
     denyAdult: "暫不閱讀",
     metadataSaved: "夢境資料已儲存",
     visualLimit: "這則夢境已經有四張圖片或草圖。",
+    sharedSketchNotice: "這張草圖由做夢者公開分享。",
+    sketchManagerTitle: "草圖管理",
+    sketchManagerHelp: "管理私人草圖，並選擇夢境公開時哪些草圖可以顯示。",
+    addNewSketch: "新增草圖",
+    editSketch: "編輯草圖",
+    replaceSketch: "替換影像",
+    deleteSketch: "刪除草圖",
+    downloadSketch: "下載草圖",
+    sketchCaption: "說明文字",
+    sketchAltText: "替代文字",
+    sketchPublicToggle: "夢境公開時包含這張草圖",
+    sketchResearchToggle: "允許這張草圖用於研究中繼資料",
+    sketchAdultToggle: "標記草圖為成人內容",
+    sketchSensitivity: "敏感程度",
+    sketchSensitivityNone: "無",
+    sketchSensitivityLow: "低",
+    sketchSensitivityMedium: "中",
+    sketchSensitivityHigh: "高",
+    sketchSensitivityRestricted: "限制",
+    saveSketchDetails: "儲存草圖資料",
+    layerEditable: "可編輯圖層",
+    layerMissing: "沒有可編輯圖層資料",
     signInToCollect: "登入後可收藏此夢境",
     recorderRulesTitle: "記錄標準",
     recorderRulesCollapse: "收合",
@@ -385,6 +431,29 @@ const DETAIL_COPY = {
     denyAdult: "Ahora no",
     metadataSaved: "Metadatos guardados",
     visualLimit: "Este sueño ya tiene cuatro imágenes o bocetos.",
+    sharedSketchNotice: "Este boceto fue compartido por quien soñó.",
+    sketchManagerTitle: "Gestor de bocetos",
+    sketchManagerHelp:
+      "Gestiona bocetos privados y elige cuáles pueden mostrarse si el sueño es público.",
+    addNewSketch: "Añadir boceto",
+    editSketch: "Editar boceto",
+    replaceSketch: "Reemplazar imagen",
+    deleteSketch: "Eliminar boceto",
+    downloadSketch: "Descargar boceto",
+    sketchCaption: "Leyenda",
+    sketchAltText: "Texto alternativo",
+    sketchPublicToggle: "Incluir este boceto cuando el sueño sea público",
+    sketchResearchToggle: "Permitir este boceto para metadatos de investigación",
+    sketchAdultToggle: "Marcar boceto como contenido adulto",
+    sketchSensitivity: "Sensibilidad",
+    sketchSensitivityNone: "Ninguna",
+    sketchSensitivityLow: "Baja",
+    sketchSensitivityMedium: "Media",
+    sketchSensitivityHigh: "Alta",
+    sketchSensitivityRestricted: "Restringida",
+    saveSketchDetails: "Guardar detalles",
+    layerEditable: "Capas editables disponibles",
+    layerMissing: "Sin datos de capas editables",
     signInToCollect: "Inicia sesión para coleccionar este sueño",
     recorderRulesTitle: "Reglas de registro",
     recorderRulesCollapse: "Contraer",
@@ -465,6 +534,7 @@ export default function DreamRecordPage({
   const [sharingSaving, setSharingSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [rulesExpanded, setRulesExpanded] = useState(true);
+  const [activeSketchId, setActiveSketchId] = useState("");
   const title = getDisplayRecordTitle(normalizedRecord, language);
   const body = getDisplayRecordText(normalizedRecord, language);
   const originalLanguage = normalizeLanguage(normalizedRecord.originalLanguage);
@@ -475,9 +545,17 @@ export default function DreamRecordPage({
   const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
   const dreamImages = normalizedRecord.images || [];
   const dreamSketches = normalizedRecord.sketches || [];
+  const publicDreamSketches = normalizePublicDreamSketches(normalizedRecord);
+  const displaySketches = isOwner ? dreamSketches : publicDreamSketches;
+  const activeSketch =
+    dreamSketches.find((sketch) => sketch.id === activeSketchId) || null;
+  const activeSketchesForBoard = useMemo(
+    () => (activeSketch ? [activeSketch] : []),
+    [activeSketch]
+  );
   const visualAttachments = normalizeDreamVisualAttachments(normalizedRecord);
   const sketchBoardAtLimit =
-    visualAttachments.length >= MAX_DREAM_IMAGES && dreamSketches.length === 0;
+    visualAttachments.length >= MAX_DREAM_IMAGES && !activeSketch;
   const pageTitle = adultAllowed ? title : copy.adultRestrictedTitle;
   const tagGroups = useMemo(() => mergeRecorderTagGroups(sharedTags), [sharedTags]);
   const tagLookup = useMemo(
@@ -534,6 +612,15 @@ export default function DreamRecordPage({
     setTagNotices({});
     setAdultConfirmed(false);
   }, [normalizedRecord]);
+
+  useEffect(() => {
+    if (
+      activeSketchId &&
+      !dreamSketches.some((sketch) => sketch.id === activeSketchId)
+    ) {
+      setActiveSketchId("");
+    }
+  }, [activeSketchId, dreamSketches]);
 
   useEffect(() => {
     if (!currentUser?.uid) return undefined;
@@ -640,16 +727,18 @@ export default function DreamRecordPage({
     setStatus("");
 
     try {
-      const nextInclude = Boolean(
-        sketch.publicAllowed || normalizedRecord.includeSketchesWhenPublic
-      );
+      const nextSketches = [
+        ...normalizeDreamSketches(normalizedRecord).filter(
+          (existingSketch) => existingSketch.id !== sketch.id
+        ),
+        sketch,
+      ];
+      const nextInclude = nextSketches.some((item) => item.publicAllowed);
       const nextConsent = {
         ...(normalizedRecord.sketchConsent || {}),
         allowPrivateStorage: true,
         allowPublicDisplay: nextInclude,
-        allowResearchUse: Boolean(
-          sketch.researchAllowed || normalizedRecord.sketchConsent?.allowResearchUse
-        ),
+        allowResearchUse: nextSketches.some((item) => item.researchAllowed),
         allowAiAnalysis: false,
       };
 
@@ -676,6 +765,7 @@ export default function DreamRecordPage({
           sketchConsent: nextConsent,
         };
       });
+      setActiveSketchId(sketch.id);
       setStatus(copy.metadataSaved);
     } catch (error) {
       setStatus(error.message);
@@ -743,11 +833,63 @@ export default function DreamRecordPage({
         includeSketchesWhenPublic: nextInclude,
         sketchConsent: nextConsent,
       }));
+      if (sketchToRemove?.id === activeSketchId) {
+        setActiveSketchId("");
+      }
       setStatus(copy.metadataSaved);
     } catch (error) {
       setStatus(error.message);
       throw error;
     }
+  }
+
+  async function handleUpdateSketchDetails(sketchId, patch) {
+    if (!isOwner || !sketchId) return;
+
+    const sketches = normalizeDreamSketches(normalizedRecord).map((sketch) =>
+      sketch.id === sketchId ? normalizeSketchForOwnerEdit({ ...sketch, ...patch }) : sketch
+    );
+    const nextInclude = sketches.some((sketch) => sketch.publicAllowed);
+    const nextConsent = {
+      ...(normalizedRecord.sketchConsent || {}),
+      allowPrivateStorage: true,
+      allowPublicDisplay: nextInclude,
+      allowResearchUse: sketches.some((sketch) => sketch.researchAllowed),
+      allowAiAnalysis: false,
+    };
+
+    setStatus("");
+
+    try {
+      const updatedRecord = await updateOwnedRecordMetadata(currentUser, normalizedRecord.id, {
+        sketches,
+        includeSketchesWhenPublic: nextInclude,
+        sketchConsent: nextConsent,
+      });
+      setLocalRecord((current) => ({
+        ...current,
+        ...(updatedRecord || {}),
+        sketches,
+        includeSketchesWhenPublic: nextInclude,
+        sketchConsent: nextConsent,
+      }));
+      setStatus(copy.metadataSaved);
+    } catch (error) {
+      setStatus(error.message);
+    }
+  }
+
+  function handleDownloadSketch(sketch) {
+    const url = sketch?.imageUrl || sketch?.thumbnailUrl;
+    if (!url) return;
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${normalizedRecord.id || "dream"}-${sketch.id || "sketch"}.png`;
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }
 
   async function handleSaveMetadata() {
@@ -968,22 +1110,43 @@ export default function DreamRecordPage({
                     </section>
                   )}
 
-                  {dreamSketches.length > 0 && (
+                  {displaySketches.length > 0 && (
                     <section className="mt-7 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-5 sm:p-6">
-                      <h2 className="cdo-panel-heading mb-4">
-                        {copy.sketchGallery}
-                      </h2>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {dreamSketches.map((sketch, index) => (
-                          <img
+                      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <h2 className="cdo-panel-heading">
+                          {copy.sketchGallery}
+                        </h2>
+                        {!isOwner && (
+                          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-100/75">
+                            {copy.sharedSketchNotice}
+                          </p>
+                        )}
+                      </div>
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        {displaySketches.map((sketch, index) => (
+                          <figure
                             key={sketch.id || sketch.imageUrl || index}
-                            src={sketch.thumbnailUrl || sketch.imageUrl}
-                            alt={sketch.altText || `${copy.sketchGallery} ${index + 1}`}
-                            className="aspect-[4/3] w-full rounded-xl border border-cyan-300/15 object-cover"
-                            onError={(event) => {
-                              event.currentTarget.style.display = "none";
-                            }}
-                          />
+                            className="overflow-hidden rounded-2xl border border-cyan-300/15 bg-black/25"
+                          >
+                            <img
+                              src={sketch.imageUrl || sketch.thumbnailUrl}
+                              alt={sketch.altText || `${copy.sketchGallery} ${index + 1}`}
+                              className="aspect-[4/3] w-full object-cover"
+                              onError={(event) => {
+                                event.currentTarget.closest("figure").style.display = "none";
+                              }}
+                            />
+                            {(sketch.caption || !isOwner) && (
+                              <figcaption className="space-y-2 p-4 text-sm leading-relaxed text-slate-300">
+                                {!isOwner && (
+                                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-100/75">
+                                    {copy.sharedSketchNotice}
+                                  </p>
+                                )}
+                                {sketch.caption && <p>{sketch.caption}</p>}
+                              </figcaption>
+                            )}
+                          </figure>
                         ))}
                       </div>
                     </section>
@@ -1260,9 +1423,20 @@ export default function DreamRecordPage({
                     />
                   </label>
                   <div className="mt-5">
+                    <SketchOwnerManager
+                      copy={copy}
+                      sketches={dreamSketches}
+                      activeSketchId={activeSketchId}
+                      onAddNew={() => setActiveSketchId("")}
+                      onEdit={(sketch) => setActiveSketchId(sketch.id)}
+                      onDelete={handleRemoveSketch}
+                      onDownload={handleDownloadSketch}
+                      onUpdate={handleUpdateSketchDetails}
+                    />
                     <DreamSketchBoard
+                      key={activeSketch?.id || "new-sketch"}
                       language={language}
-                      initialSketches={dreamSketches}
+                      initialSketches={activeSketchesForBoard}
                       source="edit_page"
                       defaultExpanded={false}
                       onSaveSketch={handleSaveSketch}
@@ -1349,6 +1523,248 @@ export default function DreamRecordPage({
   );
 }
 
+function SketchOwnerManager({
+  copy,
+  sketches,
+  activeSketchId,
+  onAddNew,
+  onEdit,
+  onDelete,
+  onDownload,
+  onUpdate,
+}) {
+  return (
+    <section className="mb-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.04] p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="cdo-panel-heading">{copy.sketchManagerTitle}</p>
+          <p className="mt-2 text-sm leading-relaxed text-slate-300">
+            {copy.sketchManagerHelp}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onAddNew}
+          className={[
+            "rounded-xl border px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] transition",
+            !activeSketchId
+              ? "border-cyan-300/40 bg-cyan-300 text-zinc-950"
+              : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:border-cyan-300/45",
+          ].join(" ")}
+        >
+          {copy.addNewSketch}
+        </button>
+      </div>
+
+      {sketches.length > 0 && (
+        <div className="mt-5 grid gap-4 xl:grid-cols-2">
+          {sketches.map((sketch, index) => (
+            <SketchOwnerCard
+              key={sketch.id || sketch.imageUrl || index}
+              copy={copy}
+              sketch={sketch}
+              active={activeSketchId === sketch.id}
+              index={index}
+              onEdit={() => onEdit(sketch)}
+              onDelete={() => onDelete(sketch)}
+              onDownload={() => onDownload(sketch)}
+              onUpdate={(patch) => onUpdate(sketch.id, patch)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SketchOwnerCard({
+  copy,
+  sketch,
+  active,
+  index,
+  onEdit,
+  onDelete,
+  onDownload,
+  onUpdate,
+}) {
+  const [caption, setCaption] = useState(sketch.caption || "");
+  const [altText, setAltText] = useState(sketch.altText || "");
+  const [sensitivityLevel, setSensitivityLevel] = useState(
+    sketch.sensitivityLevel == null ? "" : String(sketch.sensitivityLevel)
+  );
+
+  useEffect(() => {
+    setCaption(sketch.caption || "");
+    setAltText(sketch.altText || "");
+    setSensitivityLevel(
+      sketch.sensitivityLevel == null ? "" : String(sketch.sensitivityLevel)
+    );
+  }, [sketch]);
+
+  const hasLayerData = Boolean(sketch.layerData?.layers?.length);
+
+  function saveDetails() {
+    onUpdate({
+      caption,
+      altText,
+      sensitivityLevel:
+        sensitivityLevel === "" ? null : Math.max(0, Math.min(4, Number(sensitivityLevel))),
+    });
+  }
+
+  return (
+    <article
+      className={[
+        "overflow-hidden rounded-2xl border bg-black/25",
+        active ? "border-cyan-300/45 shadow-[0_0_24px_rgba(34,211,238,.14)]" : "border-white/10",
+      ].join(" ")}
+    >
+      <div className="grid gap-0 sm:grid-cols-[11rem_minmax(0,1fr)]">
+        <div className="bg-black">
+          {sketch.thumbnailUrl || sketch.imageUrl ? (
+            <img
+              src={sketch.thumbnailUrl || sketch.imageUrl}
+              alt={sketch.altText || `${copy.sketchGallery} ${index + 1}`}
+              className="aspect-[4/3] h-full w-full object-cover sm:aspect-auto"
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
+            />
+          ) : (
+            <div className="flex aspect-[4/3] items-center justify-center p-4 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+              {copy.sketchGallery}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onEdit}
+              disabled={!hasLayerData}
+              className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-100 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              {copy.editSketch}
+            </button>
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-fuchsia-100"
+            >
+              {copy.replaceSketch}
+            </button>
+            <button
+              type="button"
+              onClick={onDownload}
+              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-200"
+            >
+              {copy.downloadSketch}
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="rounded-full border border-red-300/25 bg-red-400/5 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-red-100"
+            >
+              {copy.deleteSketch}
+            </button>
+          </div>
+
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+            {hasLayerData ? copy.layerEditable : copy.layerMissing}
+          </p>
+
+          <div className="grid gap-3">
+            <label className="block">
+              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                {copy.sketchCaption}
+              </span>
+              <input
+                value={caption}
+                onChange={(event) => setCaption(event.target.value)}
+                className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-2 text-sm text-cyan-50 outline-none focus:border-cyan-300/50"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                {copy.sketchAltText}
+              </span>
+              <input
+                value={altText}
+                onChange={(event) => setAltText(event.target.value)}
+                className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-2 text-sm text-cyan-50 outline-none focus:border-cyan-300/50"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-2">
+            <SketchOwnerToggle
+              label={copy.sketchPublicToggle}
+              checked={Boolean(sketch.publicAllowed)}
+              onChange={(checked) => onUpdate({ publicAllowed: checked })}
+            />
+            <SketchOwnerToggle
+              label={copy.sketchResearchToggle}
+              checked={Boolean(sketch.researchAllowed)}
+              onChange={(checked) => onUpdate({ researchAllowed: checked })}
+            />
+            <SketchOwnerToggle
+              label={copy.sketchAdultToggle}
+              checked={Boolean(sketch.adultContent)}
+              onChange={(checked) => onUpdate({ adultContent: checked })}
+            />
+          </div>
+
+          <label className="block">
+            <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+              {copy.sketchSensitivity}
+            </span>
+            <select
+              value={sensitivityLevel}
+              onChange={(event) => {
+                setSensitivityLevel(event.target.value);
+                onUpdate({
+                  sensitivityLevel:
+                    event.target.value === "" ? null : Number(event.target.value),
+                });
+              }}
+              className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-2 text-sm text-cyan-50 outline-none focus:border-cyan-300/50"
+            >
+              <option value="">{copy.sketchSensitivityNone}</option>
+              <option value="1">{copy.sketchSensitivityLow}</option>
+              <option value="2">{copy.sketchSensitivityMedium}</option>
+              <option value="3">{copy.sketchSensitivityHigh}</option>
+              <option value="4">{copy.sketchSensitivityRestricted}</option>
+            </select>
+          </label>
+
+          <button
+            type="button"
+            onClick={saveDetails}
+            className="w-full rounded-xl border border-cyan-300/35 bg-cyan-300 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-cyan-200"
+          >
+            {copy.saveSketchDetails}
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function SketchOwnerToggle({ label, checked, onChange }) {
+  return (
+    <label className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+      <span className="text-sm leading-relaxed text-slate-300">{label}</span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="h-4 w-4 accent-cyan-300"
+      />
+    </label>
+  );
+}
+
 function SharingControlPanel({
   copy,
   sharingMode,
@@ -1421,6 +1837,23 @@ function SharingControlPanel({
       </div>
     </section>
   );
+}
+
+function normalizeSketchForOwnerEdit(sketch) {
+  const sensitivityValue =
+    sketch.sensitivityLevel == null || sketch.sensitivityLevel === ""
+      ? null
+      : Math.max(0, Math.min(4, Number(sketch.sensitivityLevel)));
+
+  return {
+    ...sketch,
+    caption: String(sketch.caption || "").trim().slice(0, 280) || null,
+    altText: String(sketch.altText || "").trim().slice(0, 280) || null,
+    publicAllowed: Boolean(sketch.publicAllowed),
+    researchAllowed: Boolean(sketch.researchAllowed),
+    adultContent: Boolean(sketch.adultContent),
+    sensitivityLevel: Number.isFinite(sensitivityValue) ? sensitivityValue : null,
+  };
 }
 
 function normalizeDreamRecord(record) {

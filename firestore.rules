@@ -440,6 +440,7 @@ service cloud.firestore {
           "thumbnailUrl",
           "thumbnail_url",
           "generated_image_url",
+          "includeSketchesWhenPublic",
           "publicSketches"
         ])
         && noForbiddenPublicDreamFields(data)
@@ -475,6 +476,7 @@ service cloud.firestore {
         && optionalString(data, "thumbnailUrl", 1200)
         && optionalString(data, "thumbnail_url", 1200)
         && optionalString(data, "generated_image_url", 1200)
+        && optionalBool(data, "includeSketchesWhenPublic")
         && optionalList(data, "publicSketches", 4)
         && validSharingMode(data.sharingMode)
         && isPublicSharingMode(data.sharingMode)

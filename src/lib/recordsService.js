@@ -616,6 +616,7 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
   }
 
   if (publicSketches.length > 0) {
+    publicDream.includeSketchesWhenPublic = true;
     publicDream.publicSketches = publicSketches;
   }
 
@@ -2445,13 +2446,24 @@ export async function updateOwnedRecordMetadata(currentUser, recordId, updates) 
 
   await setDoc(recordRef, metadata, { merge: true });
 
-  await syncPrivacyMirrorDocuments({
+  const sketchVisibilityChanged =
+    "sketches" in updates ||
+    "sketchFiles" in updates ||
+    "includeSketchesWhenPublic" in updates ||
+    "sketchConsent" in updates;
+  const syncPromise = syncPrivacyMirrorDocuments({
     firestore,
     currentUser,
     record: updatedRecord,
     profile: existingRecord,
     sharingMode: metadata.sharingMode || existingRecord.sharingMode,
-  }).catch(() => {});
+  });
+
+  if (sketchVisibilityChanged) {
+    await syncPromise;
+  } else {
+    await syncPromise.catch(() => {});
+  }
 
   if ("customTagLabels" in updates) {
     await upsertSharedCustomTags(currentUser, updates.customTagLabels || []).catch(
