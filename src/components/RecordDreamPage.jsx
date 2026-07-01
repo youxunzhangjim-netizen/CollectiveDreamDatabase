@@ -123,6 +123,21 @@ const RECORDER_TIME_COPY = {
   },
 };
 
+Object.assign(RECORDER_TIME_COPY.en, {
+  translationEmpty: "No version added yet.",
+  translationAdded: "Version added",
+});
+
+Object.assign(RECORDER_TIME_COPY.zh, {
+  translationEmpty: "尚未加入版本。",
+  translationAdded: "已加入版本",
+});
+
+Object.assign(RECORDER_TIME_COPY.es, {
+  translationEmpty: "No se ha añadido una versión.",
+  translationAdded: "Versión añadida",
+});
+
 const RECORD_COPY = {
   en: {
     documentTitle: "Record a Dream",
@@ -542,6 +557,7 @@ export default function RecordDreamPage({
   const [dreamSequence, setDreamSequence] = useState(1);
   const [originalLanguage, setOriginalLanguage] = useState(language || "zh");
   const [translations, setTranslations] = useState({});
+  const [expandedTranslationLanguages, setExpandedTranslationLanguages] = useState({});
   const [ageAtDream, setAgeAtDream] = useState("");
   const [adultContent, setAdultContent] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
@@ -677,6 +693,13 @@ export default function RecordDreamPage({
         ...(current[languageCode] || {}),
         [field]: value,
       },
+    }));
+  }
+
+  function toggleTranslationLanguage(languageCode) {
+    setExpandedTranslationLanguages((current) => ({
+      ...current,
+      [languageCode]: !current[languageCode],
     }));
   }
 
@@ -1185,40 +1208,85 @@ export default function RecordDreamPage({
                 <div className="mt-4 space-y-4">
                   {LANGUAGE_OPTIONS.filter(
                     (option) => option.value !== normalizeLanguage(originalLanguage)
-                  ).map((option) => (
-                    <div
-                      key={option.value}
-                      className="rounded-2xl border border-white/10 bg-black/25 p-4"
-                    >
-                      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                        {getLanguageName(option.value, language)}
-                      </p>
-                      <label className="block">
-                        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                          {timeCopy.translationTitle}
-                        </span>
-                        <input
-                          value={translations[option.value]?.title || ""}
-                          onChange={(event) =>
-                            updateTranslation(option.value, "title", event.target.value)
-                          }
-                          className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
-                        />
-                      </label>
-                      <label className="mt-3 block">
-                        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                          {timeCopy.translationText}
-                        </span>
-                        <textarea
-                          value={translations[option.value]?.dreamText || ""}
-                          onChange={(event) =>
-                            updateTranslation(option.value, "dreamText", event.target.value)
-                          }
-                          className="min-h-36 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-7 text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
-                        />
-                      </label>
-                    </div>
-                  ))}
+                  ).map((option) => {
+                    const draft = translations[option.value] || {};
+                    const expanded = Boolean(expandedTranslationLanguages[option.value]);
+                    const hasDraft = Boolean(
+                      String(draft.title || "").trim() ||
+                        String(draft.dreamText || "").trim()
+                    );
+                    const summary =
+                      draft.dreamText || draft.title || timeCopy.translationEmpty;
+
+                    return (
+                      <div
+                        key={option.value}
+                        className="rounded-2xl border border-white/10 bg-black/25 p-3 sm:p-4"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleTranslationLanguage(option.value)}
+                          aria-expanded={expanded}
+                          className="flex w-full items-start justify-between gap-3 text-left"
+                        >
+                          <span className="min-w-0">
+                            <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                              {getLanguageName(option.value, language)}
+                            </span>
+                            <span
+                              className="mt-2 block overflow-hidden text-sm leading-6 text-slate-300"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                              }}
+                            >
+                              {summary}
+                            </span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2">
+                            {hasDraft && (
+                              <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-cyan-100">
+                                {timeCopy.translationAdded}
+                              </span>
+                            )}
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] font-mono text-cyan-100">
+                              {expanded ? "v" : ">"}
+                            </span>
+                          </span>
+                        </button>
+
+                        {expanded && (
+                          <div className="mt-4">
+                            <label className="block">
+                              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                                {timeCopy.translationTitle}
+                              </span>
+                              <input
+                                value={draft.title || ""}
+                                onChange={(event) =>
+                                  updateTranslation(option.value, "title", event.target.value)
+                                }
+                                className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                              />
+                            </label>
+                            <label className="mt-3 block">
+                              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                                {timeCopy.translationText}
+                              </span>
+                              <textarea
+                                value={draft.dreamText || ""}
+                                onChange={(event) =>
+                                  updateTranslation(option.value, "dreamText", event.target.value)
+                                }
+                                className="min-h-32 w-full resize-y rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3 font-mono text-sm leading-7 text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
 
