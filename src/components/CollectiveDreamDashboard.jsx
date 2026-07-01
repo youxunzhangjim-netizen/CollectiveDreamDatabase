@@ -99,9 +99,6 @@ const CATEGORY_DOT_STYLES = {
 const DEFAULT_TAGS = Object.values(RECORD_TAGS);
 const PAGE_SIZE = 20;
 const MIN_PRIVACY_GROUP_COUNT = 3;
-const REPORT_SUGGESTION_MAILTO =
-  "mailto:collectivedreamdatabase@gmail.com?subject=Collective%20Dream%20Observatory%20Report%20or%20Suggestion";
-
 const UI_COPY = {
   en: {
     documentTitle: "Collective Dream Observatory",
@@ -2352,7 +2349,15 @@ function TopNav({
   const accountLabel = getAccountNavLabel(currentUser, viewerProfile, copy);
 
   function openReportSuggestion() {
-    window.location.href = REPORT_SUGGESTION_MAILTO;
+    window.dispatchEvent(
+      new CustomEvent("cdo:open-feedback", {
+        detail: {
+          category: "feature_suggestion",
+          severity: "medium",
+          source: "top_nav_report_button",
+        },
+      })
+    );
   }
 
   return (

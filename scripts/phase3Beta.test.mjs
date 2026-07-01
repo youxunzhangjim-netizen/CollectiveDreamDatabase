@@ -122,7 +122,9 @@ assert.ok(feedbackSource.includes("submitFeedback"));
 assert.ok(feedbackSource.includes("privacy concerns"));
 assert.ok(feedbackSource.includes("translation issues"));
 assert.ok(feedbackSource.includes("Please avoid pasting private dream text"));
-assert.ok(feedbackSource.includes("fixed bottom-"));
+assert.ok(feedbackSource.includes("cdo:open-feedback"));
+assert.ok(feedbackSource.includes("REPORT_CONTACT_MAILTO"));
+assert.ok(feedbackSource.includes("Email support instead"));
 assert.ok(feedbackSource.includes("sm:items-center"));
 
 assert.ok(betaAdminSource.includes("fetchBetaDashboardStats"));

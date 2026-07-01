@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FEEDBACK_CATEGORIES,
   FEEDBACK_SEVERITIES,
   submitFeedback,
   trackSafeAnalyticsEvent,
 } from "../lib/betaService.js";
+
+const REPORT_CONTACT_MAILTO =
+  "mailto:collectivedreamdatabase@gmail.com?subject=Collective%20Dream%20Observatory%20Report%20or%20Suggestion";
 
 const COPY = {
   en: {
@@ -19,6 +22,8 @@ const COPY = {
     screenshot: "Private screenshot URL (optional)",
     screenshotHelp: "Screenshots are private unless you allow support access.",
     allowSupport: "Allow support team to view this screenshot",
+    emailContact: "Email support instead",
+    emailHelp: "For urgent privacy or account requests, you can also contact the support email directly.",
     submit: "Send feedback",
     close: "Close",
     sent: "Feedback sent. Thank you for helping the beta.",
@@ -50,6 +55,8 @@ const COPY = {
     screenshot: "私人截圖網址（選填）",
     screenshotHelp: "截圖預設為私人；只有你允許時支援團隊才可查看。",
     allowSupport: "允許支援團隊查看這張截圖",
+    emailContact: "改用電子郵件聯絡",
+    emailHelp: "若是緊急隱私或帳戶請求，也可以直接寄信給支援信箱。",
     submit: "送出回饋",
     close: "關閉",
     sent: "已送出回饋。謝謝你幫忙測試 Beta。",
@@ -82,6 +89,8 @@ const COPY = {
     screenshot: "URL privada de captura (opcional)",
     screenshotHelp: "Las capturas son privadas salvo que permitas acceso de soporte.",
     allowSupport: "Permitir que soporte vea esta captura",
+    emailContact: "Contactar por correo",
+    emailHelp: "Para solicitudes urgentes de privacidad o cuenta, también puedes escribir directamente a soporte.",
     submit: "Enviar feedback",
     close: "Cerrar",
     sent: "Feedback enviado. Gracias por ayudar con la beta.",
@@ -115,6 +124,27 @@ export default function FeedbackWidget({ currentUser = null, language = "zh" }) 
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    function handleOpenFeedback(event) {
+      const detail = event.detail || {};
+      if (FEEDBACK_CATEGORIES.includes(detail.category)) {
+        setCategory(detail.category);
+      }
+      if (FEEDBACK_SEVERITIES.includes(detail.severity)) {
+        setSeverity(detail.severity);
+      }
+      setOpen(true);
+      trackSafeAnalyticsEvent("app_opened", {
+        currentUser,
+        language,
+        metadata: { source: detail.source || "report_feedback_opened" },
+      }).catch(() => {});
+    }
+
+    window.addEventListener("cdo:open-feedback", handleOpenFeedback);
+    return () => window.removeEventListener("cdo:open-feedback", handleOpenFeedback);
+  }, [currentUser, language]);
+
   async function handleSubmit(event) {
     event.preventDefault();
     setBusy(true);
@@ -143,21 +173,6 @@ export default function FeedbackWidget({ currentUser = null, language = "zh" }) 
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => {
-          setOpen(true);
-          trackSafeAnalyticsEvent("app_opened", {
-            currentUser,
-            language,
-            metadata: { source: "feedback_widget_opened" },
-          });
-        }}
-        className="fixed bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] right-3 z-[61] rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-fuchsia-100 shadow-[0_0_28px_rgba(217,70,239,.18)] backdrop-blur transition hover:border-fuchsia-300/45 sm:bottom-4 sm:right-4"
-      >
-        {copy.button}
-      </button>
-
       {open && (
         <div
           className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 px-3 py-4 backdrop-blur sm:items-center"
@@ -178,6 +193,13 @@ export default function FeedbackWidget({ currentUser = null, language = "zh" }) 
                   {copy.title}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-300">{copy.subtitle}</p>
+                <a
+                  href={REPORT_CONTACT_MAILTO}
+                  className="mt-3 inline-flex rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/15"
+                >
+                  {copy.emailContact}
+                </a>
+                <p className="mt-2 text-xs leading-5 text-slate-400">{copy.emailHelp}</p>
               </div>
               <button
                 type="button"

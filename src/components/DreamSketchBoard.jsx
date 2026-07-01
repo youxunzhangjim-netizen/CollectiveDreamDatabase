@@ -1058,8 +1058,8 @@ export default function DreamSketchBoard({
       )}
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/90 p-0 text-zinc-100 backdrop-blur sm:p-2 lg:p-3">
-          <div className="mx-auto flex h-full max-w-[118rem] flex-col overflow-hidden border-cyan-300/20 bg-zinc-950 shadow-terminal sm:rounded-3xl sm:border lg:h-[calc(100dvh-1.5rem)] lg:max-h-[calc(100dvh-1.5rem)]">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/90 p-0 text-zinc-100 backdrop-blur sm:p-2 lg:p-4">
+          <div className="mx-auto flex min-h-full max-w-[118rem] flex-col overflow-hidden border-cyan-300/20 bg-zinc-950 shadow-terminal sm:rounded-3xl sm:border lg:min-h-[58rem]">
             <div className="shrink-0 flex items-start justify-between gap-3 border-b border-white/10 p-4 sm:p-5 lg:p-4">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-cyan-200/70">
@@ -1079,8 +1079,8 @@ export default function DreamSketchBoard({
               </button>
             </div>
 
-            <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(24rem,30rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(28rem,34rem)_minmax(0,1fr)]">
-              <div className="order-2 max-h-[42vh] overflow-y-auto border-t border-white/10 bg-black/35 p-3 sm:p-4 lg:order-1 lg:h-full lg:max-h-none lg:self-stretch lg:overflow-visible lg:rounded-br-2xl lg:border-r lg:border-t-0 lg:p-4">
+            <div className="grid min-h-0 flex-1 gap-0 lg:min-h-[52rem] lg:grid-cols-[minmax(17rem,22rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(19rem,24rem)_minmax(0,1fr)]">
+              <div className="order-2 max-h-[42vh] overflow-y-auto border-t border-white/10 bg-black/35 p-3 sm:p-4 lg:order-1 lg:min-h-[52rem] lg:max-h-none lg:self-stretch lg:overflow-visible lg:rounded-br-2xl lg:border-r lg:border-t-0 lg:p-4">
                 <SketchToolbar
                   copy={copy}
                   tool={tool}
@@ -1117,11 +1117,8 @@ export default function DreamSketchBoard({
                 />
               </div>
 
-              <div className="order-1 flex min-h-0 flex-col bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.12),transparent_42%),#05070a] lg:order-2">
-                <div className="hidden shrink-0 gap-3 border-b border-white/10 bg-zinc-950/95 p-3 lg:flex lg:flex-wrap lg:items-center lg:justify-end">
-                  <p className="min-w-[16rem] flex-1 text-sm leading-relaxed text-slate-300">
-                    {copy.privacy} {copy.publishTextOnly}
-                  </p>
+              <div className="order-1 flex min-h-[32rem] flex-col bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.12),transparent_42%),#05070a] lg:order-2 lg:min-h-[52rem]">
+                <div className="hidden shrink-0 justify-end gap-3 border-b border-white/10 bg-zinc-950/95 p-3 lg:flex lg:flex-wrap lg:items-center">
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
                     <button
                       type="button"
@@ -1143,8 +1140,8 @@ export default function DreamSketchBoard({
                     </button>
                   </div>
                 </div>
-                <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto overscroll-contain p-3 sm:p-4 lg:p-5">
-                  <div className="mx-auto flex w-full max-w-[72rem] justify-center">
+                <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto overscroll-contain p-3 sm:p-4 lg:p-5">
+                  <div className="mx-auto flex w-full max-w-[86rem] justify-center">
                     <div
                       className="relative inline-block max-w-full touch-none select-none align-top"
                       style={{ maxWidth: `${canvasSize.width}px` }}
@@ -1158,7 +1155,7 @@ export default function DreamSketchBoard({
                         onPointerMove={movePointer}
                         onPointerUp={endPointer}
                         onPointerCancel={endPointer}
-                        className="block h-auto max-h-[calc(100dvh-18rem)] w-auto max-w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)] sm:max-h-[calc(100dvh-16rem)] lg:max-h-[calc(100dvh-10.5rem)] xl:max-h-[calc(100dvh-9.5rem)]"
+                        className="block h-auto max-h-[calc(100dvh-18rem)] w-auto max-w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)] sm:max-h-[calc(100dvh-16rem)] lg:max-h-[44rem] xl:max-h-[48rem]"
                       />
                       {textLayers.map((label) => (
                         <button
@@ -1200,10 +1197,7 @@ export default function DreamSketchBoard({
                   )}
                 </div>
 
-                <div className="sticky bottom-0 grid gap-3 border-t border-white/10 bg-zinc-950/95 p-3 sm:grid-cols-[1fr_auto_auto] sm:p-4 lg:hidden">
-                  <p className="self-center text-sm leading-relaxed text-slate-300">
-                    {copy.privacy} {copy.publishTextOnly}
-                  </p>
+                <div className="sticky bottom-0 grid gap-3 border-t border-white/10 bg-zinc-950/95 p-3 sm:grid-cols-2 sm:p-4 lg:hidden">
                   <button
                     type="button"
                     onClick={handleRemove}
@@ -1267,7 +1261,7 @@ function SketchToolbar({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2 2xl:grid-cols-3">
         <ToolButton active={tool === "brush"} onClick={() => setTool("brush")}>
           {copy.draw}
         </ToolButton>
@@ -1309,7 +1303,7 @@ function SketchToolbar({
         </select>
       </label>
 
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 2xl:grid-cols-4">
         <ToolButton onClick={onUndo} disabled={undoDisabled}>
           {copy.undo}
         </ToolButton>
@@ -1400,7 +1394,7 @@ function SketchToolbar({
         </button>
       </label>
 
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 xl:grid-cols-3">
         <label className="block">
           <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
             {copy.format}
