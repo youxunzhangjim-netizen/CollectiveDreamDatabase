@@ -631,6 +631,7 @@ export default function RecordDreamPage({
   const [offlineDraftNotice, setOfflineDraftNotice] = useState("");
   const [offlineDraftBusyId, setOfflineDraftBusyId] = useState("");
   const [activeOfflineDraftId, setActiveOfflineDraftId] = useState("");
+  const activeOfflineDraftIdRef = useRef("");
   const accountBacked = Boolean(currentUser?.uid && !currentUser.isAnonymous);
   const timeCopy = RECORDER_TIME_COPY[normalizeLanguage(language)] || RECORDER_TIME_COPY.zh;
   const imagePreviews = useMemo(
@@ -997,8 +998,13 @@ export default function RecordDreamPage({
     if (!hasOfflineDraftContent(draft)) return null;
 
     try {
+      const draftId =
+        activeOfflineDraftIdRef.current ||
+        activeOfflineDraftId ||
+        createRecordingOfflineDraftId();
+      activeOfflineDraftIdRef.current = draftId;
       const entry = await saveOfflineDreamDraft(draft, {
-        id: activeOfflineDraftId,
+        id: draftId,
         ownerId: currentUser?.uid || auth?.currentUser?.uid || "",
         ownerKey: currentUser?.uid || auth?.currentUser?.uid || "guest-device",
         interfaceLanguage: language,
@@ -1044,6 +1050,7 @@ export default function RecordDreamPage({
         : PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC
     );
     setActiveOfflineDraftId(entry?.id || "");
+    activeOfflineDraftIdRef.current = entry?.id || "";
     setOfflineDraftNotice(offlineCopy.restored);
     textAreaRef.current?.focus();
   }
@@ -1084,6 +1091,10 @@ export default function RecordDreamPage({
         lastError: "",
       });
       await deleteOfflineDreamDraft(entry.id);
+      if (activeOfflineDraftIdRef.current === entry.id) {
+        activeOfflineDraftIdRef.current = "";
+        setActiveOfflineDraftId("");
+      }
       await refreshOfflineDrafts();
       onSubmitted?.(record);
     } catch (error) {
@@ -1103,7 +1114,10 @@ export default function RecordDreamPage({
 
   async function deleteLocalOfflineDraft(id) {
     await deleteOfflineDreamDraft(id);
-    if (activeOfflineDraftId === id) setActiveOfflineDraftId("");
+    if (activeOfflineDraftId === id || activeOfflineDraftIdRef.current === id) {
+      activeOfflineDraftIdRef.current = "";
+      setActiveOfflineDraftId("");
+    }
     await refreshOfflineDrafts();
   }
 
@@ -1111,6 +1125,7 @@ export default function RecordDreamPage({
     await clearOfflineDreamDrafts({
       ownerId: currentUser?.uid || auth?.currentUser?.uid || "",
     });
+    activeOfflineDraftIdRef.current = "";
     setActiveOfflineDraftId("");
     setOfflineDraftNotice(offlineCopy.cleared);
     await refreshOfflineDrafts();
@@ -2171,6 +2186,14 @@ function getPublishErrorMessage(error, copy) {
 
 function isOnlineNow() {
   return typeof navigator === "undefined" ? true : navigator.onLine;
+}
+
+function createRecordingOfflineDraftId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return `recording-draft-${crypto.randomUUID()}`;
+  }
+
+  return `recording-draft-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function reportPublishError(error) {
