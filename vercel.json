@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/record", "destination": "/index.html" },
+    { "source": "/import", "destination": "/index.html" },
+    { "source": "/explore", "destination": "/index.html" },
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/account", "destination": "/index.html" },
+    { "source": "/patterns", "destination": "/index.html" }
+  ]
+}

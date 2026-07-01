@@ -1049,13 +1049,13 @@ export default function DreamSketchBoard({
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 p-0 text-zinc-100 backdrop-blur sm:p-4">
-          <div className="mx-auto flex h-full max-w-7xl flex-col overflow-hidden border-cyan-300/20 bg-zinc-950 shadow-terminal sm:rounded-3xl sm:border lg:h-auto lg:max-h-[calc(100dvh-2rem)]">
-            <div className="flex items-start justify-between gap-3 border-b border-white/10 p-4 sm:p-5">
+          <div className="mx-auto flex h-full max-w-7xl flex-col overflow-hidden border-cyan-300/20 bg-zinc-950 shadow-terminal sm:rounded-3xl sm:border lg:h-[min(86dvh,54rem)] lg:max-h-[calc(100dvh-2rem)]">
+            <div className="shrink-0 flex items-start justify-between gap-3 border-b border-white/10 p-4 sm:p-5 lg:p-4">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-cyan-200/70">
                   {copy.title}
                 </p>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300">
+                <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-300">
                   {copy.subtitle}
                 </p>
               </div>
@@ -1069,8 +1069,8 @@ export default function DreamSketchBoard({
               </button>
             </div>
 
-            <div className="grid min-h-0 flex-1 gap-0 lg:flex-none lg:items-start lg:grid-cols-[minmax(14rem,16rem)_minmax(0,1fr)] xl:grid-cols-[minmax(15rem,17rem)_minmax(0,1fr)]">
-              <div className="order-2 max-h-[42vh] overflow-y-auto border-t border-white/10 bg-black/35 p-3 sm:p-4 lg:order-1 lg:max-h-[calc(100dvh-7.5rem)] lg:self-start lg:rounded-br-2xl lg:border-r lg:border-t-0 lg:p-3">
+            <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(17rem,20rem)_minmax(0,1fr)] xl:grid-cols-[minmax(18rem,21rem)_minmax(0,1fr)]">
+              <div className="order-2 max-h-[42vh] overflow-y-auto border-t border-white/10 bg-black/35 p-3 sm:p-4 lg:order-1 lg:h-full lg:max-h-none lg:self-stretch lg:rounded-br-2xl lg:border-r lg:border-t-0 lg:p-4">
                 <SketchToolbar
                   copy={copy}
                   tool={tool}
@@ -1107,9 +1107,9 @@ export default function DreamSketchBoard({
                 />
               </div>
 
-              <div className="order-1 flex min-h-0 flex-col bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.12),transparent_42%),#05070a] lg:order-2 lg:self-start">
-                <div className="hidden gap-3 border-b border-white/10 bg-zinc-950/95 p-3 lg:flex lg:flex-wrap lg:items-center lg:justify-end">
-                  <p className="min-w-[20rem] flex-1 text-sm leading-relaxed text-slate-300">
+              <div className="order-1 flex min-h-0 flex-col bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.12),transparent_42%),#05070a] lg:order-2">
+                <div className="hidden shrink-0 gap-3 border-b border-white/10 bg-zinc-950/95 p-3 lg:flex lg:flex-wrap lg:items-center lg:justify-end">
+                  <p className="min-w-[16rem] flex-1 text-sm leading-relaxed text-slate-300">
                     {copy.privacy} {copy.publishTextOnly}
                   </p>
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
@@ -1133,7 +1133,7 @@ export default function DreamSketchBoard({
                     </button>
                   </div>
                 </div>
-                <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto overscroll-contain p-3 sm:p-4 lg:flex-none lg:p-4">
+                <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto overscroll-contain p-3 sm:p-4 lg:p-4">
                   <div className="mx-auto flex w-full max-w-5xl justify-center">
                     <div
                       className="relative inline-block max-w-full touch-none select-none align-top"
@@ -1148,7 +1148,7 @@ export default function DreamSketchBoard({
                         onPointerMove={movePointer}
                         onPointerUp={endPointer}
                         onPointerCancel={endPointer}
-                        className="block h-auto max-h-[calc(100dvh-18rem)] w-auto max-w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)] sm:max-h-[calc(100dvh-16rem)] lg:max-h-[calc(100dvh-12.5rem)]"
+                        className="block h-auto max-h-[calc(100dvh-18rem)] w-auto max-w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)] sm:max-h-[calc(100dvh-16rem)] lg:max-h-[calc(min(86dvh,54rem)_-_9.25rem)]"
                       />
                       {textLayers.map((label) => (
                         <button

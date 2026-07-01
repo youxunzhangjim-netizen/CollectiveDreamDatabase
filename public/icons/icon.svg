@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Collective Dream Observatory">
+  <rect width="512" height="512" rx="96" fill="#030407"/>
+  <circle cx="256" cy="256" r="170" fill="#06151d" stroke="#22d3ee" stroke-width="18"/>
+  <circle cx="256" cy="256" r="104" fill="#0b1020" stroke="#d946ef" stroke-width="10" opacity=".9"/>
+  <path d="M148 270c34-82 182-82 216 0-34 82-182 82-216 0Z" fill="none" stroke="#a5f3fc" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="270" r="35" fill="#22d3ee"/>
+  <path d="M256 84v48M256 380v48M84 256h48M380 256h48" stroke="#67e8f9" stroke-width="16" stroke-linecap="round"/>
+  <path d="M142 142l30 30M370 142l-30 30M142 370l30-30M370 370l-30-30" stroke="#d946ef" stroke-width="12" stroke-linecap="round" opacity=".72"/>
+</svg>

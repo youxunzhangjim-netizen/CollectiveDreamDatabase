@@ -25,6 +25,15 @@ import {
   updateOwnedRecordMetadata,
 } from "../lib/recordsService.js";
 import {
+  OFFLINE_DRAFT_STATUS,
+  clearOfflineDreamDrafts,
+  deleteOfflineDreamDraft,
+  hasOfflineDraftContent,
+  listOfflineDreamDrafts,
+  saveOfflineDreamDraft,
+  updateOfflineDreamDraftStatus,
+} from "../lib/offlineDreamDraftService.js";
+import {
   PRIVACY_SHARING_MODES,
   isPublicPrivacySharingMode,
 } from "../lib/privacyDefaults.js";
@@ -38,6 +47,7 @@ import {
 } from "../lib/tagTaxonomy.js";
 import DreamSketchBoard from "./DreamSketchBoard.jsx";
 import LanguageMenu from "./LanguageMenu.jsx";
+import OfflineDraftsPanel from "./OfflineDraftsPanel.jsx";
 
 const DREAM_PERIOD_OPTIONS = ["morning", "afternoon", "evening", "night"];
 const DREAM_SEQUENCE_OPTIONS = [1, 2, 3, 4, 5, 6];
@@ -536,6 +546,36 @@ const RECORD_COPY = {
   },
 };
 
+const RECORD_OFFLINE_COPY = {
+  en: {
+    localSaved: "Saved locally. This draft is private on this device until you upload it.",
+    waiting: "Waiting for connection. You can upload this draft when you are online.",
+    ready: "Back online. Saved drafts are ready to upload.",
+    saveFailed: "The local draft could not be saved on this device.",
+    uploadFailed: "Upload failed — retry when the connection is stable.",
+    restored: "Local draft restored. Review it before uploading.",
+    cleared: "Local drafts cleared from this device.",
+  },
+  zh: {
+    localSaved: "已儲存在本機。上傳前，這份草稿只保存在此裝置。",
+    waiting: "正在等待連線。恢復網路後可以上傳這份草稿。",
+    ready: "已重新連線。本機草稿可以上傳了。",
+    saveFailed: "無法把草稿儲存在此裝置。",
+    uploadFailed: "上傳失敗 — 請在連線穩定後重試。",
+    restored: "已還原本機草稿。上傳前請再確認一次。",
+    cleared: "已清除此裝置上的本機草稿。",
+  },
+  es: {
+    localSaved: "Guardado localmente. Este borrador es privado en este dispositivo hasta que lo subas.",
+    waiting: "Esperando conexión. Puedes subir este borrador cuando vuelvas a estar en línea.",
+    ready: "Conexión restaurada. Los borradores guardados están listos para subir.",
+    saveFailed: "No se pudo guardar el borrador local en este dispositivo.",
+    uploadFailed: "Error al subir — reintenta cuando la conexión sea estable.",
+    restored: "Borrador local restaurado. Revísalo antes de subirlo.",
+    cleared: "Borradores locales borrados de este dispositivo.",
+  },
+};
+
 export default function RecordDreamPage({
   language = "zh",
   setLanguage = () => {},
@@ -546,6 +586,7 @@ export default function RecordDreamPage({
   onSubmitted,
 }) {
   const copy = RECORD_COPY[language] || RECORD_COPY.zh;
+  const offlineCopy = RECORD_OFFLINE_COPY[language] || RECORD_OFFLINE_COPY.zh;
   const textAreaRef = useRef(null);
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [dreamText, setDreamText] = useState("");
@@ -583,6 +624,13 @@ export default function RecordDreamPage({
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
   const [rulesExpanded, setRulesExpanded] = useState(true);
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine
+  );
+  const [offlineDrafts, setOfflineDrafts] = useState([]);
+  const [offlineDraftNotice, setOfflineDraftNotice] = useState("");
+  const [offlineDraftBusyId, setOfflineDraftBusyId] = useState("");
+  const [activeOfflineDraftId, setActiveOfflineDraftId] = useState("");
   const accountBacked = Boolean(currentUser?.uid && !currentUser.isAnonymous);
   const timeCopy = RECORDER_TIME_COPY[normalizeLanguage(language)] || RECORDER_TIME_COPY.zh;
   const imagePreviews = useMemo(
@@ -639,6 +687,72 @@ export default function RecordDreamPage({
   useEffect(() => {
     textAreaRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    refreshOfflineDrafts();
+
+    function handleOnline() {
+      setIsOnline(true);
+      setOfflineDraftNotice(offlineCopy.ready);
+      refreshOfflineDrafts();
+    }
+
+    function handleOffline() {
+      setIsOnline(false);
+      setOfflineDraftNotice(offlineCopy.waiting);
+    }
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [offlineCopy.ready, offlineCopy.waiting]);
+
+  useEffect(() => {
+    if (isOnline) return undefined;
+
+    const draft = buildRecordDraftPayload();
+    if (!hasOfflineDraftContent(draft)) return undefined;
+
+    const timer = window.setTimeout(() => {
+      saveCurrentOfflineDraft(OFFLINE_DRAFT_STATUS.SAVED_LOCALLY).catch(() => {});
+    }, 2200);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    isOnline,
+    dreamText,
+    title,
+    dreamDate,
+    dreamDateStatus,
+    dreamTime,
+    dreamPeriod,
+    dreamSequence,
+    originalLanguage,
+    translations,
+    ageAtDream,
+    adultContent,
+    imageFiles,
+    sketchDrafts,
+    selectedTagSlugs,
+    customTagEntries,
+    sharingMode,
+  ]);
+
+  useEffect(() => {
+    function handleSaveBeforeUpdate() {
+      const draft = buildRecordDraftPayload();
+      if (!hasOfflineDraftContent(draft)) return;
+      saveCurrentOfflineDraft(OFFLINE_DRAFT_STATUS.SAVED_LOCALLY).catch(() => {});
+    }
+
+    window.addEventListener("cdo:save-current-record-draft", handleSaveBeforeUpdate);
+    return () =>
+      window.removeEventListener("cdo:save-current-record-draft", handleSaveBeforeUpdate);
+  });
 
   useEffect(() => {
     if (
@@ -840,6 +954,212 @@ export default function RecordDreamPage({
     await runAccountAction(authMode);
   }
 
+  function buildRecordDraftPayload() {
+    return {
+      dreamText,
+      title,
+      dreamDate,
+      dreamDateStatus,
+      dreamTime,
+      dreamPeriod,
+      dreamSequence,
+      originalLanguage,
+      translations,
+      ageAtDream,
+      adultContent,
+      imageFiles,
+      sketchFiles: sketchDrafts,
+      selectedTagSlugs,
+      customTagLabels: customTagEntries,
+      sharedTags,
+      sharingMode,
+      publicReviewStatus: isPublicPrivacySharingMode(sharingMode) ? "approved" : "",
+      recordIdentityMode:
+        sharingMode === PRIVACY_SHARING_MODES.PSEUDONYM_PUBLIC
+          ? "pseudonym"
+          : "anonymous",
+    };
+  }
+
+  async function refreshOfflineDrafts() {
+    try {
+      const drafts = await listOfflineDreamDrafts({
+        ownerId: currentUser?.uid || auth?.currentUser?.uid || "",
+      });
+      setOfflineDrafts(drafts);
+    } catch {
+      setOfflineDrafts([]);
+    }
+  }
+
+  async function saveCurrentOfflineDraft(status = OFFLINE_DRAFT_STATUS.SAVED_LOCALLY) {
+    const draft = buildRecordDraftPayload();
+    if (!hasOfflineDraftContent(draft)) return null;
+
+    try {
+      const entry = await saveOfflineDreamDraft(draft, {
+        id: activeOfflineDraftId,
+        ownerId: currentUser?.uid || auth?.currentUser?.uid || "",
+        ownerKey: currentUser?.uid || auth?.currentUser?.uid || "guest-device",
+        interfaceLanguage: language,
+        status,
+        source: "recording_page",
+      });
+
+      setActiveOfflineDraftId(entry.id);
+      setOfflineDraftNotice(
+        status === OFFLINE_DRAFT_STATUS.WAITING_FOR_CONNECTION
+          ? offlineCopy.waiting
+          : offlineCopy.localSaved
+      );
+      await refreshOfflineDrafts();
+      return entry;
+    } catch {
+      setOfflineDraftNotice(offlineCopy.saveFailed);
+      return null;
+    }
+  }
+
+  function restoreOfflineDraft(entry) {
+    const draft = entry?.draft || {};
+
+    setDreamText(draft.dreamText || "");
+    setTitle(draft.title || "");
+    setDreamDate(draft.dreamDate || today);
+    setDreamDateStatus(draft.dreamDateStatus || (draft.dreamDate ? "known" : "unknown"));
+    setDreamTime(draft.dreamTime || "");
+    setDreamPeriod(draft.dreamPeriod || "");
+    setDreamSequence(draft.dreamSequence || 1);
+    setOriginalLanguage(normalizeLanguage(draft.originalLanguage || language));
+    setTranslations(draft.translations || {});
+    setAgeAtDream(draft.ageAtDream || "");
+    setAdultContent(Boolean(draft.adultContent));
+    setImageFiles(Array.from(draft.imageFiles || []));
+    setSketchDrafts(Array.from(draft.sketchFiles || []));
+    setSelectedTagSlugs(Array.from(draft.selectedTagSlugs || []));
+    setCustomTagEntries(Array.from(draft.customTagLabels || []));
+    setSharingMode(
+      Object.values(PRIVACY_SHARING_MODES).includes(draft.sharingMode)
+        ? draft.sharingMode
+        : PRIVACY_SHARING_MODES.ANONYMOUS_PUBLIC
+    );
+    setActiveOfflineDraftId(entry?.id || "");
+    setOfflineDraftNotice(offlineCopy.restored);
+    textAreaRef.current?.focus();
+  }
+
+  async function uploadOfflineDraft(entry) {
+    if (!entry?.id) return;
+
+    if (!isOnlineNow()) {
+      await updateOfflineDreamDraftStatus(
+        entry.id,
+        OFFLINE_DRAFT_STATUS.WAITING_FOR_CONNECTION
+      );
+      setOfflineDraftNotice(offlineCopy.waiting);
+      await refreshOfflineDrafts();
+      return;
+    }
+
+    setOfflineDraftBusyId(entry.id);
+    setSubmitError("");
+
+    try {
+      await updateOfflineDreamDraftStatus(entry.id, OFFLINE_DRAFT_STATUS.UPLOADING);
+      const record = await submitDraftPayload(entry.draft || {});
+      if (record.sketchUploadError && (entry.draft?.sketchFiles || []).length > 0) {
+        setPendingSketchRecord(record);
+        await updateOfflineDreamDraftStatus(
+          entry.id,
+          OFFLINE_DRAFT_STATUS.UPLOAD_FAILED,
+          { lastError: copy.sketchUploadFailed }
+        );
+        setSubmitError(copy.sketchUploadFailed);
+        await refreshOfflineDrafts();
+        return;
+      }
+
+      await updateOfflineDreamDraftStatus(entry.id, OFFLINE_DRAFT_STATUS.UPLOADED, {
+        uploadedAt: new Date().toISOString(),
+        lastError: "",
+      });
+      await deleteOfflineDreamDraft(entry.id);
+      await refreshOfflineDrafts();
+      onSubmitted?.(record);
+    } catch (error) {
+      const message = getPublishErrorMessage(error, copy) || offlineCopy.uploadFailed;
+      await updateOfflineDreamDraftStatus(
+        entry.id,
+        OFFLINE_DRAFT_STATUS.UPLOAD_FAILED,
+        { lastError: message }
+      );
+      setSubmitError(message);
+      setOfflineDraftNotice(offlineCopy.uploadFailed);
+      await refreshOfflineDrafts();
+    } finally {
+      setOfflineDraftBusyId("");
+    }
+  }
+
+  async function deleteLocalOfflineDraft(id) {
+    await deleteOfflineDreamDraft(id);
+    if (activeOfflineDraftId === id) setActiveOfflineDraftId("");
+    await refreshOfflineDrafts();
+  }
+
+  async function clearLocalOfflineDrafts() {
+    await clearOfflineDreamDrafts({
+      ownerId: currentUser?.uid || auth?.currentUser?.uid || "",
+    });
+    setActiveOfflineDraftId("");
+    setOfflineDraftNotice(offlineCopy.cleared);
+    await refreshOfflineDrafts();
+  }
+
+  async function submitDraftPayload(draftPayload) {
+    let submissionUser = auth?.currentUser || currentUser;
+
+    if (!submissionUser?.uid) {
+      const credential = await loginAnonymously();
+      submissionUser = credential.user;
+    }
+
+    if (!submissionUser.isAnonymous) {
+      await submissionUser.getIdToken(true).catch(() => {});
+    }
+
+    let profile = null;
+
+    if (!submissionUser.isAnonymous) {
+      try {
+        profile = await getOrCreateUserProfile(submissionUser);
+      } catch {
+        profile = null;
+      }
+    }
+
+    const sketchPrivacyDraft = buildSketchPrivacyDraft(draftPayload.sketchFiles || []);
+
+    return createDreamRecord(
+      submissionUser,
+      {
+        ...draftPayload,
+        ...sketchPrivacyDraft,
+        imageFiles: Array.from(draftPayload.imageFiles || []),
+        sketchFiles: Array.from(draftPayload.sketchFiles || []),
+        sharedTags: draftPayload.sharedTags || sharedTags,
+        publicReviewStatus: isPublicPrivacySharingMode(draftPayload.sharingMode)
+          ? "approved"
+          : "",
+        recordIdentityMode:
+          draftPayload.sharingMode === PRIVACY_SHARING_MODES.PSEUDONYM_PUBLIC
+            ? "pseudonym"
+            : "anonymous",
+      },
+      profile
+    );
+  }
+
   async function retryPendingSketchUpload() {
     if (!pendingSketchRecord?.id || sketchDrafts.length === 0) return;
 
@@ -890,59 +1210,14 @@ export default function RecordDreamPage({
 
     try {
       setPendingSketchRecord(null);
-      let submissionUser = auth?.currentUser || currentUser;
+      const draftPayload = buildRecordDraftPayload();
 
-      if (!submissionUser?.uid) {
-        const credential = await loginAnonymously();
-        submissionUser = credential.user;
+      if (!isOnlineNow()) {
+        await saveCurrentOfflineDraft(OFFLINE_DRAFT_STATUS.WAITING_FOR_CONNECTION);
+        return;
       }
 
-      if (!submissionUser.isAnonymous) {
-        await submissionUser.getIdToken(true).catch(() => {});
-      }
-
-      let profile = null;
-
-      if (!submissionUser.isAnonymous) {
-        try {
-          profile = await getOrCreateUserProfile(submissionUser);
-        } catch {
-          profile = null;
-        }
-      }
-
-      const sketchPrivacyDraft = buildSketchPrivacyDraft();
-      const record = await createDreamRecord(
-        submissionUser,
-        {
-          dreamText,
-          title,
-          dreamDate,
-          dreamDateStatus,
-          dreamTime,
-          dreamPeriod,
-          dreamSequence,
-          originalLanguage,
-          translations,
-          ageAtDream,
-          adultContent,
-          imageFiles,
-          sketchFiles: sketchDrafts,
-          ...sketchPrivacyDraft,
-          selectedTagSlugs,
-          customTagLabels: customTagEntries,
-          sharedTags,
-          sharingMode,
-          publicReviewStatus: isPublicPrivacySharingMode(sharingMode)
-            ? "approved"
-            : "",
-          recordIdentityMode:
-            sharingMode === PRIVACY_SHARING_MODES.PSEUDONYM_PUBLIC
-              ? "pseudonym"
-              : "anonymous",
-        },
-        profile
-      );
+      const record = await submitDraftPayload(draftPayload);
 
       if (record.sketchUploadError && sketchDrafts.length > 0) {
         setPendingSketchRecord(record);
@@ -1667,6 +1942,22 @@ export default function RecordDreamPage({
               )}
             </section>
 
+            {offlineDraftNotice && (
+              <p className="rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4 font-mono text-xs leading-6 text-cyan-100">
+                {offlineDraftNotice}
+              </p>
+            )}
+
+            <OfflineDraftsPanel
+              language={language}
+              drafts={offlineDrafts}
+              busyId={offlineDraftBusyId}
+              onRestore={restoreOfflineDraft}
+              onUpload={uploadOfflineDraft}
+              onDelete={deleteLocalOfflineDraft}
+              onClear={clearLocalOfflineDrafts}
+            />
+
             <section className="rounded-3xl border border-white/10 bg-black/45 p-5 backdrop-blur">
               <div className="flex items-center justify-between gap-3">
                 <p className="font-mono text-xs uppercase tracking-[0.26em] text-fuchsia-200/70">
@@ -1876,6 +2167,10 @@ function getPublishErrorMessage(error, copy) {
   }
 
   return copy.publishError;
+}
+
+function isOnlineNow() {
+  return typeof navigator === "undefined" ? true : navigator.onLine;
 }
 
 function reportPublishError(error) {

@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
+import { useRegisterSW } from "virtual:pwa-register/react";
 import AuthPanel from "./components/AuthPanel.jsx";
 import CollectiveDreamDashboard from "./components/CollectiveDreamDashboard.jsx";
 import DreamRecordPage from "./components/DreamRecordPage.jsx";
 import Footer from "./components/Footer.jsx";
 import ImportDreamDiaryPage from "./components/ImportDreamDiaryPage.jsx";
+import OfflineStatusBanner from "./components/OfflineStatusBanner.jsx";
+import PWAInstallPrompt from "./components/PWAInstallPrompt.jsx";
+import PWAUpdatePrompt from "./components/PWAUpdatePrompt.jsx";
 import RecordDreamPage from "./components/RecordDreamPage.jsx";
 import UserDashboard from "./components/UserDashboard.jsx";
 import { useAuth } from "./hooks/useAuth.js";
@@ -24,15 +28,27 @@ import {
   getOrCreateUserProfile,
   savePreferredLanguage,
 } from "./lib/profileService.js";
+import {
+  clearOfflineDreamDrafts,
+  listOfflineDreamDrafts,
+} from "./lib/offlineDreamDraftService.js";
 import { fetchRecordById } from "./lib/recordsService.js";
 
 export default function App() {
   const [language, setLanguageState] = useState(getLanguageFromStorage);
   const [appearance, setAppearance] = useState(getAppearanceFromStorage);
-  const [activeView, setActiveView] = useState("database");
+  const [activeView, setActiveView] = useState(getInitialViewFromPathname);
   const [lastListView, setLastListView] = useState("database");
   const [selectedRecord, setSelectedRecord] = useState(null);
   const { currentUser, loading: authLoading } = useAuth();
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegisterError(error) {
+      console.warn("[CollectiveDreamObservatory PWA]", error);
+    },
+  });
 
   useEffect(() => {
     document.documentElement.lang = getHtmlLang(language);
@@ -111,6 +127,21 @@ export default function App() {
   }
 
   async function handleSignOut() {
+    try {
+      const localDrafts = await listOfflineDreamDrafts({
+        ownerId: currentUser?.uid || "",
+      });
+
+      if (localDrafts.length > 0) {
+        const keepDrafts = window.confirm(getSignOutDraftWarning(language));
+        if (!keepDrafts) {
+          await clearOfflineDreamDrafts({ ownerId: currentUser?.uid || "" });
+        }
+      }
+    } catch {
+      // Sign-out should still work if IndexedDB is unavailable.
+    }
+
     await logout();
     setSelectedRecord(null);
     setActiveView("auth");
@@ -153,6 +184,17 @@ export default function App() {
           appearance={appearance}
           setAppearance={handleAppearanceChange}
         />
+        <OfflineStatusBanner language={language} />
+        <PWAUpdatePrompt
+          language={language}
+          visible={needRefresh}
+          onUpdate={() => {
+            window.dispatchEvent(new CustomEvent("cdo:save-current-record-draft"));
+            updateServiceWorker(true);
+          }}
+          onDismiss={() => setNeedRefresh(false)}
+        />
+        <PWAInstallPrompt language={language} />
         {content}
         <Footer language={language} />
       </>
@@ -244,6 +286,31 @@ export default function App() {
         onOpenImporter={() => setActiveView("import")}
       />
   );
+}
+
+function getInitialViewFromPathname() {
+  if (typeof window === "undefined") return "database";
+
+  const pathname = window.location.pathname.toLowerCase();
+  if (pathname.startsWith("/record")) return "record";
+  if (pathname.startsWith("/import")) return "import";
+  if (pathname.startsWith("/dashboard")) return "dashboard";
+  if (pathname.startsWith("/account")) return "dashboard";
+  if (pathname.startsWith("/explore")) return "database";
+  if (pathname.startsWith("/patterns")) return "database";
+  return "database";
+}
+
+function getSignOutDraftWarning(language) {
+  if (language === "es") {
+    return "Hay borradores locales guardados en este dispositivo. Aceptar los mantiene; Cancelar los borra antes de cerrar sesión.";
+  }
+
+  if (language === "zh") {
+    return "此裝置有本機夢境草稿。按「確定」會保留；按「取消」會先清除再登出。";
+  }
+
+  return "Local dream drafts are stored on this device. OK keeps them; Cancel clears them before signing out.";
 }
 
 function AppearanceToggle({ language, appearance, setAppearance }) {

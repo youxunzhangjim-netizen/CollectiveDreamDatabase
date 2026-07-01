@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Collective Dream Observatory maskable icon">
+  <rect width="512" height="512" fill="#030407"/>
+  <circle cx="256" cy="256" r="188" fill="#06151d" stroke="#22d3ee" stroke-width="18"/>
+  <circle cx="256" cy="256" r="116" fill="#0b1020" stroke="#d946ef" stroke-width="10" opacity=".9"/>
+  <path d="M144 270c35-84 189-84 224 0-35 84-189 84-224 0Z" fill="none" stroke="#a5f3fc" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="270" r="36" fill="#22d3ee"/>
+  <path d="M256 76v52M256 384v52M76 256h52M384 256h52" stroke="#67e8f9" stroke-width="16" stroke-linecap="round"/>
+  <path d="M136 136l34 34M376 136l-34 34M136 376l34-34M376 376l-34-34" stroke="#d946ef" stroke-width="12" stroke-linecap="round" opacity=".72"/>
+</svg>
