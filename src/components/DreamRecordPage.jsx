@@ -42,6 +42,7 @@ import {
   reportDream as submitDreamReport,
   reportPublicRecorder,
 } from "../lib/moderationService.js";
+import { trackSafeAnalyticsEvent } from "../lib/betaService.js";
 
 const EDITABLE_TAG_SLUGS = new Set(
   RECORDER_TAG_GROUPS.flatMap((group) => group.slugs)
@@ -780,6 +781,10 @@ export default function DreamRecordPage({
         : "";
 
     try {
+      trackSafeAnalyticsEvent("report_dream_clicked", {
+        currentUser,
+        language,
+      }).catch(() => {});
       await submitDreamReport(currentUser, normalizedRecord, {
         reason: "other",
         note,
@@ -802,6 +807,11 @@ export default function DreamRecordPage({
         : "";
 
     try {
+      trackSafeAnalyticsEvent("report_dream_clicked", {
+        currentUser,
+        language,
+        metadata: { source: "recorder_report" },
+      }).catch(() => {});
       await reportPublicRecorder(currentUser, normalizedRecord, {
         reason: "other",
         note,
@@ -826,6 +836,10 @@ export default function DreamRecordPage({
     }
 
     try {
+      trackSafeAnalyticsEvent("block_user_clicked", {
+        currentUser,
+        language,
+      }).catch(() => {});
       await blockPublicRecorder(currentUser, recorderKey, {
         source: "dream_detail",
         displayName: getRecordAuthorName(normalizedRecord, copy),
@@ -1584,6 +1598,7 @@ export default function DreamRecordPage({
                     <DreamSketchBoard
                       key={activeSketch?.id || "new-sketch"}
                       language={language}
+                      currentUser={currentUser}
                       initialSketches={activeSketchesForBoard}
                       source="edit_page"
                       defaultExpanded={false}

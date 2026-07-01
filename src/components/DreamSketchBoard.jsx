@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { trackSafeAnalyticsEvent } from "../lib/betaService.js";
 
 const CANVAS_SIZES = {
   phone: { width: 720, height: 1080 },
@@ -307,6 +308,7 @@ Object.assign(SKETCH_COPY.es, {
 
 export default function DreamSketchBoard({
   language = "zh",
+  currentUser = null,
   initialSketches = [],
   source = "recording_page",
   defaultExpanded,
@@ -796,6 +798,11 @@ export default function DreamSketchBoard({
       };
 
       await onSaveSketch(sketchPayload);
+      trackSafeAnalyticsEvent("sketch_created", {
+        currentUser,
+        language,
+        metadata: { source },
+      }).catch(() => {});
       if (sketch?.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(sketch.previewUrl);
       setSketch(sketchPayload);
       setDirty(false);

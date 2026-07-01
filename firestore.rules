@@ -67,6 +67,72 @@ service cloud.firestore {
       ];
     }
 
+    function validFeedbackCategory(category) {
+      return category in [
+        "bug_report",
+        "privacy_concern",
+        "translation_issue",
+        "feature_suggestion",
+        "confusing_ui",
+        "import_problem",
+        "moderation_issue"
+      ];
+    }
+
+    function validFeedbackSeverity(severity) {
+      return severity in ["low", "medium", "high", "critical"];
+    }
+
+    function validFeedbackStatus(status) {
+      return status in ["new", "reviewing", "fixed", "closed"];
+    }
+
+    function validAnalyticsEventName(eventName) {
+      return eventName in [
+        "app_opened",
+        "pwa_installed",
+        "record_page_opened",
+        "dream_saved_private",
+        "dream_saved_stats_only",
+        "dream_shared_anonymous",
+        "dream_shared_pseudonym",
+        "dream_unpublished",
+        "diary_import_started",
+        "diary_import_completed",
+        "offline_draft_saved",
+        "offline_draft_uploaded",
+        "sketch_created",
+        "public_archive_opened",
+        "collective_patterns_opened",
+        "my_dream_map_opened",
+        "research_export_started",
+        "report_dream_clicked",
+        "block_user_clicked",
+        "account_deletion_started",
+        "account_deletion_completed"
+      ];
+    }
+
+    function validChecklistStatus(status) {
+      return status in ["not_started", "in_progress", "verified", "blocked"];
+    }
+
+    function validChecklistId(itemId) {
+      return itemId in [
+        "pwa_install_verified",
+        "offline_draft_verified",
+        "private_dream_verified",
+        "stats_only_verified",
+        "public_sharing_verified",
+        "report_block_verified",
+        "delete_export_verified",
+        "import_verified",
+        "mobile_layout_verified",
+        "research_export_privacy_verified",
+        "translations_reviewed"
+      ];
+    }
+
     function validVisibility(visibility) {
       return visibility in ["private", "public", "stats_only"];
     }
@@ -216,6 +282,11 @@ service cloud.firestore {
         && optionalNumber(data, "sensitivityAutoSkipThreshold", 1, 4)
         && optionalString(data, "privacyDefaultsUpdatedBy", 128)
         && optionalTimestampOrString(data, "privacyDefaultsUpdatedAt", 80)
+        && optionalBool(data, "betaOnboardingCompleted")
+        && optionalString(data, "betaOnboardingVersion", 80)
+        && optionalTimestampOrString(data, "betaOnboardingCompletedAt", 80)
+        && (!data.keys().hasAny(["isAdmin"]) || isAdmin())
+        && (!data.keys().hasAny(["role"]) || isAdmin())
         && optionalTimestampOrString(data, "createdAt", 80)
         && optionalTimestampOrString(data, "updatedAt", 80)
         && optionalBool(data, "privacyOnboardingCompleted")
@@ -710,6 +781,283 @@ service cloud.firestore {
         && optionalString(data, "authDeletionError", 300)
         && optionalTimestampOrString(data, "createdAt", 80)
         && optionalTimestampOrString(data, "updatedAt", 80);
+    }
+
+    function validBetaConfigData(data) {
+      return data.keys().hasOnly([
+          "id",
+          "enabled",
+          "allowPublicPages",
+          "onboardingVersion",
+          "updatedBy",
+          "updatedAt"
+        ])
+        && data.id == "public"
+        && data.enabled is bool
+        && optionalBool(data, "allowPublicPages")
+        && optionalString(data, "onboardingVersion", 80)
+        && optionalString(data, "updatedBy", 128)
+        && optionalTimestampOrString(data, "updatedAt", 80);
+    }
+
+    function validBetaInviteData(data, codeHash) {
+      return data.keys().hasOnly([
+          "codeHash",
+          "active",
+          "label",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.codeHash == codeHash
+        && requiredString(data, "codeHash", 2, 120)
+        && data.active is bool
+        && optionalString(data, "label", 120)
+        && optionalString(data, "createdBy", 128)
+        && optionalTimestampOrString(data, "createdAt", 80)
+        && optionalTimestampOrString(data, "updatedAt", 80);
+    }
+
+    function validBetaAllowedEmailData(data, emailHash) {
+      return data.keys().hasOnly([
+          "emailHash",
+          "active",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.emailHash == emailHash
+        && requiredString(data, "emailHash", 2, 120)
+        && data.active is bool
+        && optionalString(data, "createdBy", 128)
+        && optionalTimestampOrString(data, "createdAt", 80)
+        && optionalTimestampOrString(data, "updatedAt", 80);
+    }
+
+    function validBetaAccessData(data, userId) {
+      return data.keys().hasOnly([
+          "userId",
+          "granted",
+          "grantSource",
+          "emailHash",
+          "codeHash",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.userId == userId
+        && data.granted is bool
+        && data.grantSource in ["invite_code", "allowed_email", "admin"]
+        && optionalString(data, "emailHash", 120)
+        && optionalString(data, "codeHash", 120)
+        && optionalTimestampOrString(data, "createdAt", 80)
+        && optionalTimestampOrString(data, "updatedAt", 80);
+    }
+
+    function betaAccessGrantIsValid(data) {
+      return data.grantSource == "admin"
+        || (data.grantSource == "invite_code"
+          && data.keys().hasAny(["codeHash"])
+          && exists(/databases/$(database)/documents/BetaInviteCodes/$(data.codeHash))
+          && get(/databases/$(database)/documents/BetaInviteCodes/$(data.codeHash)).data.active == true)
+        || (data.grantSource == "allowed_email"
+          && data.keys().hasAny(["emailHash"])
+          && exists(/databases/$(database)/documents/BetaAllowedEmails/$(data.emailHash))
+          && get(/databases/$(database)/documents/BetaAllowedEmails/$(data.emailHash)).data.active == true);
+    }
+
+    function noForbiddenSupportOrAnalyticsFields(data) {
+      return !data.keys().hasAny([
+        "dreamText",
+        "dream_text",
+        "privateText",
+        "privateTitle",
+        "privateNotes",
+        "rawText",
+        "diaryRawText",
+        "importRawText",
+        "imageUrl",
+        "storagePath",
+        "privateStoragePath",
+        "sketchImageUrl",
+        "sketchStoragePath",
+        "email"
+      ]);
+    }
+
+    function validFeedbackData(data, feedbackId) {
+      return data.keys().hasOnly([
+          "feedbackId",
+          "userId",
+          "userIdHash",
+          "pageRoute",
+          "language",
+          "deviceType",
+          "browserInfo",
+          "pwaStandalone",
+          "category",
+          "severity",
+          "message",
+          "screenshotUrl",
+          "screenshotPrivate",
+          "allowSupportAccess",
+          "createdAt",
+          "updatedAt",
+          "status",
+          "internalNotes"
+        ])
+        && noForbiddenSupportOrAnalyticsFields(data)
+        && data.feedbackId == feedbackId
+        && requiredString(data, "feedbackId", 1, 128)
+        && requiredString(data, "userId", 1, 128)
+        && optionalString(data, "userIdHash", 120)
+        && optionalString(data, "pageRoute", 200)
+        && validLanguage(data.language)
+        && data.deviceType in ["mobile", "tablet", "desktop", "server"]
+        && optionalString(data, "browserInfo", 240)
+        && data.pwaStandalone is bool
+        && validFeedbackCategory(data.category)
+        && validFeedbackSeverity(data.severity)
+        && requiredString(data, "message", 4, 4000)
+        && optionalString(data, "screenshotUrl", 1200)
+        && optionalBool(data, "screenshotPrivate")
+        && optionalBool(data, "allowSupportAccess")
+        && optionalTimestampOrString(data, "createdAt", 80)
+        && optionalTimestampOrString(data, "updatedAt", 80)
+        && validFeedbackStatus(data.status)
+        && optionalString(data, "internalNotes", 2000);
+    }
+
+    function feedbackCreateOwnerIsValid(data) {
+      return data.userId == "anonymous"
+        || (isSignedIn() && data.userId == request.auth.uid);
+    }
+
+    function validAnalyticsMetadata(data) {
+      return !data.keys().hasAny(["metadata"])
+        || data.metadata == null
+        || (data.metadata is map
+          && data.metadata.keys().hasOnly([
+            "sharingMode",
+            "source",
+            "status",
+            "category",
+            "severity",
+            "count",
+            "recordSource",
+            "draftStatus",
+            "hasSketch",
+            "hasImages",
+            "importedCount",
+            "failedCount",
+            "format"
+          ]));
+    }
+
+    function validAnalyticsData(data, eventId) {
+      return data.keys().hasOnly([
+          "id",
+          "eventName",
+          "userIdHash",
+          "anonymousSessionId",
+          "timestamp",
+          "route",
+          "language",
+          "deviceType",
+          "browserInfo",
+          "pwaStandalone",
+          "appVersion",
+          "metadata"
+        ])
+        && noForbiddenSupportOrAnalyticsFields(data)
+        && data.id == eventId
+        && validAnalyticsEventName(data.eventName)
+        && optionalString(data, "userIdHash", 120)
+        && optionalString(data, "anonymousSessionId", 120)
+        && optionalTimestampOrString(data, "timestamp", 80)
+        && optionalString(data, "route", 200)
+        && validLanguage(data.language)
+        && data.deviceType in ["mobile", "tablet", "desktop", "server"]
+        && optionalString(data, "browserInfo", 240)
+        && data.pwaStandalone is bool
+        && optionalString(data, "appVersion", 80)
+        && validAnalyticsMetadata(data);
+    }
+
+    function validBetaChecklistData(data, itemId) {
+      return data.keys().hasOnly([
+          "id",
+          "status",
+          "notes",
+          "updatedBy",
+          "updatedAt"
+        ])
+        && data.id == itemId
+        && validChecklistId(itemId)
+        && validChecklistStatus(data.status)
+        && optionalString(data, "notes", 1000)
+        && optionalString(data, "updatedBy", 128)
+        && optionalTimestampOrString(data, "updatedAt", 80);
+    }
+
+    match /BetaConfig/{configId} {
+      allow get, list: if configId == "public";
+      allow create, update: if isAdmin()
+        && configId == "public"
+        && validBetaConfigData(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /BetaInviteCodes/{codeHash} {
+      allow get: if isSignedIn() || isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isAdmin()
+        && validBetaInviteData(request.resource.data, codeHash);
+      allow delete: if isAdmin();
+    }
+
+    match /BetaAllowedEmails/{emailHash} {
+      allow get: if isSignedIn() || isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isAdmin()
+        && validBetaAllowedEmailData(request.resource.data, emailHash);
+      allow delete: if isAdmin();
+    }
+
+    match /BetaAccess/{userId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow create, update: if (isAdmin()
+          && validBetaAccessData(request.resource.data, userId))
+        || (isSignedIn()
+          && request.auth.uid == userId
+          && validBetaAccessData(request.resource.data, userId)
+          && request.resource.data.granted == true
+          && betaAccessGrantIsValid(request.resource.data));
+      allow delete: if isAdmin();
+    }
+
+    match /Feedback/{feedbackId} {
+      allow create: if validFeedbackData(request.resource.data, feedbackId)
+        && request.resource.data.status == "new"
+        && !request.resource.data.keys().hasAny(["internalNotes"])
+        && feedbackCreateOwnerIsValid(request.resource.data);
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin()
+        && validFeedbackData(request.resource.data, feedbackId);
+      allow delete: if isAdmin();
+    }
+
+    match /ProductAnalytics/{eventId} {
+      allow create: if validAnalyticsData(request.resource.data, eventId);
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    match /BetaChecklist/{itemId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && validBetaChecklistData(request.resource.data, itemId);
+      allow delete: if isAdmin();
     }
 
     match /PublicDreams/{recordId} {

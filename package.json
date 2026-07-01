@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test:privacy": "node scripts/privacyDefaults.test.mjs",
     "test:phase2": "node scripts/phase2Readiness.test.mjs",
+    "test:phase3": "node scripts/phase3Beta.test.mjs",
     "test:sketch": "node scripts/dreamSketchBoard.test.mjs",
     "test:tags": "node scripts/tagLocalization.test.mjs",
     "test:pwa": "node scripts/pwaAssets.test.mjs",

@@ -42,6 +42,7 @@ import {
   EXPORT_DETAIL_LEVELS,
 } from "../lib/researchExportService.js";
 import { getOrCreateUserProfile } from "../lib/profileService.js";
+import { trackSafeAnalyticsEvent } from "../lib/betaService.js";
 import {
   getCategoryLabel as getTaxonomyCategoryLabel,
   getTagLabel,
@@ -1213,6 +1214,10 @@ export default function CollectiveDreamDashboard({
         : "";
 
     try {
+      trackSafeAnalyticsEvent("report_dream_clicked", {
+        currentUser,
+        language,
+      }).catch(() => {});
       await submitDreamReport(currentUser, dream, {
         reason: "other",
         note,

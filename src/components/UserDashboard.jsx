@@ -52,7 +52,9 @@ import {
 import BulkSharingModal from "./BulkSharingModal.jsx";
 import LanguageMenu from "./LanguageMenu.jsx";
 import { setAccountPassword } from "../lib/authService.js";
+import { trackSafeAnalyticsEvent } from "../lib/betaService.js";
 import AccountReadinessPanel from "./AccountReadinessPanel.jsx";
+import BetaAdminPanel from "./BetaAdminPanel.jsx";
 
 const DASHBOARD_COPY = {
   en: {
@@ -1727,6 +1729,8 @@ export default function UserDashboard({
           onAccountDeleted={onAccountDeleted}
         />
 
+        <BetaAdminPanel language={language} user={user} profile={profile} />
+
         {profileDraft && (
           <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/65 p-5 shadow-[0_0_36px_rgba(34,211,238,.08)] backdrop-blur sm:p-7">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -1899,7 +1903,14 @@ export default function UserDashboard({
                     <div className="grid gap-3">
                       <button
                         type="button"
-                        onClick={() => exportPersonalDreamsCsv(observations, { language, detailLevel: exportDetail })}
+                        onClick={() => {
+                          trackSafeAnalyticsEvent("research_export_started", {
+                            currentUser: user,
+                            language,
+                            metadata: { format: "csv", count: observations.length },
+                          }).catch(() => {});
+                          exportPersonalDreamsCsv(observations, { language, detailLevel: exportDetail });
+                        }}
                         disabled={observations.length === 0}
                         className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-cyan-100 transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50 sm:tracking-[0.18em]"
                       >
@@ -1907,7 +1918,14 @@ export default function UserDashboard({
                       </button>
                       <button
                         type="button"
-                        onClick={() => exportPersonalDreamsJson(observations, { language, detailLevel: exportDetail })}
+                        onClick={() => {
+                          trackSafeAnalyticsEvent("research_export_started", {
+                            currentUser: user,
+                            language,
+                            metadata: { format: "json", count: observations.length },
+                          }).catch(() => {});
+                          exportPersonalDreamsJson(observations, { language, detailLevel: exportDetail });
+                        }}
                         disabled={observations.length === 0}
                         className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-fuchsia-100 transition hover:border-fuchsia-300/45 disabled:cursor-not-allowed disabled:opacity-50 sm:tracking-[0.18em]"
                       >

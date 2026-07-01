@@ -37,6 +37,7 @@ import {
   PRIVACY_SHARING_MODES,
   isPublicPrivacySharingMode,
 } from "../lib/privacyDefaults.js";
+import { trackSafeAnalyticsEvent } from "../lib/betaService.js";
 import {
   getCategoryLabel,
   getTagLabel,
@@ -1018,6 +1019,11 @@ export default function RecordDreamPage({
           ? offlineCopy.waiting
           : offlineCopy.localSaved
       );
+      trackSafeAnalyticsEvent("offline_draft_saved", {
+        currentUser,
+        language,
+        metadata: { draftStatus: status },
+      }).catch(() => {});
       await refreshOfflineDrafts();
       return entry;
     } catch {
@@ -1096,6 +1102,10 @@ export default function RecordDreamPage({
         setActiveOfflineDraftId("");
       }
       await refreshOfflineDrafts();
+      trackSafeAnalyticsEvent("offline_draft_uploaded", {
+        currentUser,
+        language,
+      }).catch(() => {});
       onSubmitted?.(record);
     } catch (error) {
       const message = getPublishErrorMessage(error, copy) || offlineCopy.uploadFailed;
@@ -1582,6 +1592,7 @@ export default function RecordDreamPage({
 
               <DreamSketchBoard
                 language={language}
+                currentUser={currentUser}
                 initialSketches={sketchDrafts}
                 source="recording_page"
                 onSaveSketch={(sketch) => setSketchDrafts([sketch])}

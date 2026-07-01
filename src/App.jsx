@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import AuthPanel from "./components/AuthPanel.jsx";
+import BetaGate from "./components/BetaGate.jsx";
+import BetaOnboarding from "./components/BetaOnboarding.jsx";
 import CollectiveDreamDashboard from "./components/CollectiveDreamDashboard.jsx";
 import DreamRecordPage from "./components/DreamRecordPage.jsx";
+import FeedbackWidget from "./components/FeedbackWidget.jsx";
 import Footer from "./components/Footer.jsx";
 import ImportDreamDiaryPage from "./components/ImportDreamDiaryPage.jsx";
 import LegalInfoPage from "./components/LegalInfoPage.jsx";
@@ -34,6 +37,10 @@ import {
   listOfflineDreamDrafts,
 } from "./lib/offlineDreamDraftService.js";
 import { fetchRecordById } from "./lib/recordsService.js";
+import {
+  fetchBetaState,
+  trackSafeAnalyticsEvent,
+} from "./lib/betaService.js";
 
 export default function App() {
   const [language, setLanguageState] = useState(getLanguageFromStorage);
@@ -42,6 +49,14 @@ export default function App() {
   const [legalPage, setLegalPage] = useState(getInitialLegalPageFromPathname);
   const [lastListView, setLastListView] = useState("database");
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [appProfile, setAppProfile] = useState(null);
+  const [betaState, setBetaState] = useState({
+    config: { enabled: false },
+    access: null,
+    allowed: true,
+    reason: "loading",
+  });
+  const [betaLoading, setBetaLoading] = useState(true);
   const { currentUser, loading: authLoading } = useAuth();
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -62,6 +77,7 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser?.uid) {
+      setAppProfile(null);
       return undefined;
     }
 
@@ -73,6 +89,7 @@ export default function App() {
         const storedLanguage = getStoredLanguagePreference();
 
         if (ignore) return;
+        setAppProfile(profile);
 
         if (isSupportedLanguage(storedLanguage)) {
           setLanguageState(storedLanguage);
@@ -97,6 +114,63 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
+    let ignore = false;
+
+    async function syncBetaState() {
+      setBetaLoading(true);
+      try {
+        const nextState = await fetchBetaState(currentUser, appProfile);
+        if (!ignore) setBetaState(nextState);
+      } catch {
+        if (!ignore) {
+          setBetaState({
+            config: { enabled: false },
+            access: null,
+            allowed: true,
+            reason: "unavailable",
+          });
+        }
+      } finally {
+        if (!ignore) setBetaLoading(false);
+      }
+    }
+
+    syncBetaState();
+
+    return () => {
+      ignore = true;
+    };
+  }, [
+    currentUser?.uid,
+    currentUser?.email,
+    appProfile?.isAdmin,
+    appProfile?.role,
+    appProfile?.betaAccessGranted,
+  ]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    trackSafeAnalyticsEvent("app_opened", { currentUser, language }).catch(() => {});
+    // Fire once after auth resolves so this stays product-level, not route-level.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    const eventByView = {
+      database: "public_archive_opened",
+      record: "record_page_opened",
+      import: "diary_import_started",
+      dashboard: "my_dream_map_opened",
+    };
+    const eventName = eventByView[activeView];
+    if (!eventName) return;
+
+    trackSafeAnalyticsEvent(eventName, { currentUser, language }).catch(() => {});
+  }, [activeView, authLoading, currentUser, language]);
+
+  useEffect(() => {
     if (currentUser && !currentUser.isAnonymous && activeView === "auth") {
       setActiveView("dashboard");
     }
@@ -108,6 +182,11 @@ export default function App() {
 
   function handleAuthenticated() {
     setActiveView("dashboard");
+  }
+
+  async function refreshBetaState() {
+    const nextState = await fetchBetaState(currentUser, appProfile);
+    setBetaState(nextState);
   }
 
   function handleAccountDeleted() {
@@ -183,7 +262,41 @@ export default function App() {
     }
   }
 
+  function openImporter() {
+    trackSafeAnalyticsEvent("diary_import_started", { currentUser, language }).catch(() => {});
+    setActiveView("import");
+  }
+
+  function trackDreamSave(record = {}) {
+    const sharingMode = record.sharingMode || record.requestedSharingMode || "private";
+    const eventName =
+      sharingMode === "stats_only"
+        ? "dream_saved_stats_only"
+        : sharingMode === "anonymous_public" || sharingMode === "redacted_public"
+          ? "dream_shared_anonymous"
+          : sharingMode === "pseudonym_public"
+            ? "dream_shared_pseudonym"
+            : "dream_saved_private";
+
+    trackSafeAnalyticsEvent(eventName, {
+      currentUser,
+      language,
+      metadata: {
+        sharingMode,
+        hasImages: Boolean(record.imageUrls?.length || record.images?.length),
+        hasSketch: Boolean(record.sketches?.length),
+      },
+    }).catch(() => {});
+  }
+
   function renderShell(content) {
+    const showBetaOnboarding =
+      Boolean(currentUser?.uid) &&
+      betaState?.allowed &&
+      betaState?.config?.enabled &&
+      appProfile &&
+      appProfile.betaOnboardingCompleted !== true;
+
     return (
       <>
         <AppearanceToggle
@@ -202,6 +315,19 @@ export default function App() {
           onDismiss={() => setNeedRefresh(false)}
         />
         <PWAInstallPrompt language={language} />
+        <FeedbackWidget language={language} currentUser={currentUser} />
+        {showBetaOnboarding && (
+          <BetaOnboarding
+            language={language}
+            currentUser={currentUser}
+            onDone={() =>
+              setAppProfile((current) => ({
+                ...(current || {}),
+                betaOnboardingCompleted: true,
+              }))
+            }
+          />
+        )}
         {content}
         <Footer language={language} />
       </>
@@ -212,6 +338,26 @@ export default function App() {
     return renderShell(<AuthLoadingScreen language={language} />);
   }
 
+  if (betaLoading && activeView !== "legal" && activeView !== "auth") {
+    return renderShell(<AuthLoadingScreen language={language} />);
+  }
+
+  if (
+    betaState?.config?.enabled &&
+    betaState?.allowed !== true &&
+    activeView !== "legal" &&
+    activeView !== "auth"
+  ) {
+    return renderShell(
+      <BetaGate
+        language={language}
+        currentUser={currentUser}
+        onOpenAuth={() => setActiveView("auth")}
+        onRedeemed={refreshBetaState}
+      />
+    );
+  }
+
   if (activeView === "database") {
     return renderShell(
       <CollectiveDreamDashboard
@@ -220,7 +366,7 @@ export default function App() {
           currentUser={currentUser}
           onOpenAuth={() => setActiveView(currentUser ? "dashboard" : "auth")}
           onOpenRecorder={() => setActiveView("record")}
-          onOpenImporter={() => setActiveView("import")}
+          onOpenImporter={openImporter}
           onOpenRecord={(record) => openDreamRecord(record, "database")}
         />
     );
@@ -247,7 +393,14 @@ export default function App() {
           onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
           onOpenAuth={() => setActiveView("auth")}
           onOpenRecorder={() => setActiveView("record")}
-          onImported={(record) => openDreamRecord(record, "import")}
+          onImported={(record) => {
+            trackSafeAnalyticsEvent("diary_import_completed", {
+              currentUser,
+              language,
+              metadata: { importedCount: 1 },
+            }).catch(() => {});
+            openDreamRecord(record, "import");
+          }}
         />
     );
   }
@@ -260,8 +413,11 @@ export default function App() {
           currentUser={currentUser}
           onOpenDatabase={() => setActiveView("database")}
           onOpenDashboard={() => setActiveView(currentUser ? "dashboard" : "auth")}
-          onOpenImporter={() => setActiveView("import")}
-          onSubmitted={(record) => openDreamRecord(record, "record")}
+          onOpenImporter={openImporter}
+          onSubmitted={(record) => {
+            trackDreamSave(record);
+            openDreamRecord(record, "record");
+          }}
         />
     );
   }
@@ -288,7 +444,7 @@ export default function App() {
           onSignOut={handleSignOut}
           onOpenDatabase={() => setActiveView("database")}
           onOpenRecorder={() => setActiveView("record")}
-          onOpenImporter={() => setActiveView("import")}
+          onOpenImporter={openImporter}
           onOpenRecord={(record) => openDreamRecord(record, "dashboard")}
           onAccountDeleted={handleAccountDeleted}
         />
@@ -302,7 +458,7 @@ export default function App() {
         onAuthenticated={handleAuthenticated}
         onOpenDatabase={() => setActiveView("database")}
         onOpenRecorder={() => setActiveView("record")}
-        onOpenImporter={() => setActiveView("import")}
+        onOpenImporter={openImporter}
       />
   );
 }

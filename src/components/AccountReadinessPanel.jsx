@@ -11,6 +11,7 @@ import {
   MODERATION_STATUSES,
   updateModerationReportStatus,
 } from "../lib/moderationService.js";
+import { trackSafeAnalyticsEvent } from "../lib/betaService.js";
 
 const COPY = {
   en: {
@@ -203,7 +204,15 @@ export default function AccountReadinessPanel({
     if (!window.confirm(copy.confirmDeleteAccount)) return;
 
     await runAction("deleteAccount", async () => {
+      await trackSafeAnalyticsEvent("account_deletion_started", {
+        currentUser: user,
+        language,
+      });
       await deleteAccountAndData(user);
+      await trackSafeAnalyticsEvent("account_deletion_completed", {
+        currentUser: user,
+        language,
+      });
       setNotice(copy.accountDeleted);
       onAccountDeleted();
     });

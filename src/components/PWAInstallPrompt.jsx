@@ -6,6 +6,7 @@ import {
   markInstallPromptDismissed,
   shouldShowInstallPrompt,
 } from "../lib/pwaInstallService.js";
+import { trackSafeAnalyticsEvent } from "../lib/betaService.js";
 
 const INSTALL_COPY = {
   en: {
@@ -53,6 +54,7 @@ export default function PWAInstallPrompt({ language = "zh" }) {
       setInstalled(true);
       setVisible(false);
       markInstallPromptDismissed();
+      trackSafeAnalyticsEvent("pwa_installed", { language }).catch(() => {});
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -75,7 +77,10 @@ export default function PWAInstallPrompt({ language = "zh" }) {
     }
 
     deferredPrompt.prompt();
-    await deferredPrompt.userChoice.catch(() => null);
+    const choice = await deferredPrompt.userChoice.catch(() => null);
+    if (choice?.outcome === "accepted") {
+      trackSafeAnalyticsEvent("pwa_installed", { language }).catch(() => {});
+    }
     setDeferredPrompt(null);
     markInstallPromptDismissed();
     setVisible(false);
