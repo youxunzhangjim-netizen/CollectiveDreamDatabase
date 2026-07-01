@@ -141,6 +141,32 @@ Optional Capacitor sync:
 npx cap sync
 ```
 
+## Android closed testing
+
+Android app identity:
+
+- App name: **Collective Dream Observatory**
+- Package id: `app.collectivedream.observatory`
+- Web directory: `dist`
+
+Useful commands:
+
+```bash
+npm run test:android
+npm run android:sync
+npm run android:open
+npm run android:build:debug
+npm run android:build:release-note
+```
+
+Store-readiness files:
+
+- `ANDROID_RELEASE_GUIDE.md`
+- `ANDROID_CLOSED_TESTING_CHECKLIST.md`
+- `ANDROID_PLAY_STORE_DATA_SAFETY_DRAFT.md`
+
+Closed testing note: new Google Play developer accounts may need at least 12 testers for 14 continuous days before production access review.
+
 ## Research and ethics notes
 
 - Do not describe dream tags or AI reflections as diagnosis.

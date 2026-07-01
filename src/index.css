@@ -32,6 +32,29 @@ span {
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
+
+  html[data-native-platform="android"] body {
+    min-height: 100dvh;
+    padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+  }
+
+  html[data-native-platform="android"] main {
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+}
+
+html[data-native-platform="android"] {
+  overscroll-behavior-y: contain;
+}
+
+html[data-native-platform="android"] input,
+html[data-native-platform="android"] textarea,
+html[data-native-platform="android"] select {
+  scroll-margin-bottom: 8rem;
+}
+
+html[data-native-platform="android"] .cdo-mobile-scroll-nav {
+  -webkit-overflow-scrolling: touch;
 }
 
 :root[data-appearance="morning"] {

@@ -1,5 +1,16 @@
 {
-  "appId": "com.collectivedreamdatabase.app",
+  "appId": "app.collectivedream.observatory",
   "appName": "Collective Dream Observatory",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 900,
+      "backgroundColor": "#030407",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    }
+  }
 }

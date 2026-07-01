@@ -36,6 +36,7 @@ import {
   clearOfflineDreamDrafts,
   listOfflineDreamDrafts,
 } from "./lib/offlineDreamDraftService.js";
+import { getNativePlatform, isNativeAppShell } from "./lib/nativeApp.js";
 import { fetchRecordById } from "./lib/recordsService.js";
 import {
   fetchBetaState,
@@ -74,6 +75,17 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.appearance = appearance;
   }, [appearance]);
+
+  useEffect(() => {
+    const platform = getNativePlatform();
+    if (isNativeAppShell()) {
+      document.documentElement.dataset.nativePlatform = platform;
+      document.documentElement.classList.add("cdo-native-shell");
+    } else {
+      delete document.documentElement.dataset.nativePlatform;
+      document.documentElement.classList.remove("cdo-native-shell");
+    }
+  }, []);
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -496,6 +508,7 @@ function getLegalPageFromPathname(pathname = "") {
   if (normalized.startsWith("/diagnosis")) return "diagnosis";
   if (normalized.startsWith("/support")) return "support";
   if (normalized.startsWith("/contact")) return "support";
+  if (normalized.startsWith("/account/delete")) return "account-deletion";
   if (normalized.startsWith("/account-deletion")) return "account-deletion";
 
   return "";

@@ -15,11 +15,49 @@
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
             android:exported="true">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="collectivedreamdatabase.com" android:pathPrefix="/record" />
+                <data android:scheme="https" android:host="collectivedreamdatabase.com" android:pathPrefix="/import" />
+                <data android:scheme="https" android:host="collectivedreamdatabase.com" android:pathPrefix="/explore" />
+                <data android:scheme="https" android:host="collectivedreamdatabase.com" android:pathPrefix="/patterns" />
+                <data android:scheme="https" android:host="collectivedreamdatabase.com" android:pathPrefix="/dashboard" />
+                <data android:scheme="https" android:host="collectivedreamdatabase.com" android:pathPrefix="/privacy" />
+                <data android:scheme="https" android:host="collectivedreamdatabase.com" android:pathPrefix="/terms" />
+                <data android:scheme="https" android:host="collectivedreamdatabase.com" android:pathPrefix="/support" />
+                <data android:scheme="https" android:host="collectivedreamdatabase.com" android:pathPrefix="/account/delete" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.collectivedreamdatabase.com" android:pathPrefix="/record" />
+                <data android:scheme="https" android:host="www.collectivedreamdatabase.com" android:pathPrefix="/import" />
+                <data android:scheme="https" android:host="www.collectivedreamdatabase.com" android:pathPrefix="/explore" />
+                <data android:scheme="https" android:host="www.collectivedreamdatabase.com" android:pathPrefix="/patterns" />
+                <data android:scheme="https" android:host="www.collectivedreamdatabase.com" android:pathPrefix="/dashboard" />
+                <data android:scheme="https" android:host="www.collectivedreamdatabase.com" android:pathPrefix="/privacy" />
+                <data android:scheme="https" android:host="www.collectivedreamdatabase.com" android:pathPrefix="/terms" />
+                <data android:scheme="https" android:host="www.collectivedreamdatabase.com" android:pathPrefix="/support" />
+                <data android:scheme="https" android:host="www.collectivedreamdatabase.com" android:pathPrefix="/account/delete" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="app.collectivedream.observatory" android:host="open" />
             </intent-filter>
 
         </activity>

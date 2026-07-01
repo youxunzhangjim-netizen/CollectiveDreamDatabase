@@ -1,3 +1,5 @@
+import { isNativeAppShell } from "../lib/nativeApp.js";
+
 const UPDATE_COPY = {
   en: {
     title: "A new version is available.",
@@ -27,7 +29,7 @@ export default function PWAUpdatePrompt({
 }) {
   const copy = UPDATE_COPY[language] || UPDATE_COPY.zh;
 
-  if (!visible) return null;
+  if (!visible || isNativeAppShell()) return null;
 
   return (
     <aside className="fixed left-1/2 top-[calc(env(safe-area-inset-top)+.75rem)] z-[64] w-[min(34rem,calc(100vw-1.5rem))] -translate-x-1/2 rounded-2xl border border-fuchsia-300/25 bg-zinc-950/92 p-4 text-zinc-100 shadow-[0_0_38px_rgba(217,70,239,.18)] backdrop-blur">

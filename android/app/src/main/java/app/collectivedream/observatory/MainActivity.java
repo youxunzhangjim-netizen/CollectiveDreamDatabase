@@ -1,4 +1,4 @@
-package com.collectivedreamdatabase.app;
+package app.collectivedream.observatory;
 
 import com.getcapacitor.BridgeActivity;
 

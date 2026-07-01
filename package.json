@@ -10,11 +10,16 @@
     "test:privacy": "node scripts/privacyDefaults.test.mjs",
     "test:phase2": "node scripts/phase2Readiness.test.mjs",
     "test:phase3": "node scripts/phase3Beta.test.mjs",
+    "test:android": "node scripts/androidReadiness.test.mjs",
     "test:sketch": "node scripts/dreamSketchBoard.test.mjs",
     "test:tags": "node scripts/tagLocalization.test.mjs",
     "test:pwa": "node scripts/pwaAssets.test.mjs",
     "icons:pwa": "node scripts/generatePwaIcons.mjs",
-    "tags:audit": "node scripts/curateCurrentCustomTags.mjs"
+    "tags:audit": "node scripts/curateCurrentCustomTags.mjs",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android",
+    "android:build:debug": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:build:release-note": "node scripts/androidReleaseNote.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",

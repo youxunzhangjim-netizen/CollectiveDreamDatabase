@@ -1,8 +1,11 @@
+import { isNativeAppShell } from "./nativeApp.js";
+
 const INSTALL_DISMISSED_KEY = "cdo-pwa-install-dismissed-at";
 const INSTALL_DISMISS_DAYS = 14;
 
 export function isStandaloneDisplay() {
   if (typeof window === "undefined") return false;
+  if (isNativeAppShell()) return true;
 
   return (
     window.matchMedia?.("(display-mode: standalone)")?.matches ||
@@ -22,7 +25,7 @@ export function isIosSafari() {
 }
 
 export function shouldShowInstallPrompt() {
-  if (typeof window === "undefined" || isStandaloneDisplay()) return false;
+  if (typeof window === "undefined" || isNativeAppShell() || isStandaloneDisplay()) return false;
 
   const dismissedAt = Number(window.localStorage.getItem(INSTALL_DISMISSED_KEY) || 0);
   if (!Number.isFinite(dismissedAt) || dismissedAt <= 0) return true;
