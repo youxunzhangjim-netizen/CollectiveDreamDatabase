@@ -243,9 +243,8 @@ const RECORD_COPY = {
       "The archive is not reachable right now. Try again in a moment.",
     publishInvalidData:
       "One record field needs adjustment before saving.",
-    accountEditable:
-      "The selected sharing choice is applied on this first save. Account records can be edited, deleted, unpublished, or changed later.",
-    anonymousLocked: "The selected sharing choice is applied on this first save. To edit or delete later, keep this browser session or log in before publishing.",
+    accountEditable: "Account records can be changed later.",
+    anonymousLocked: "Log in before saving if you want to edit this record later.",
     authTitle: "Optional account link",
     authText: "You can log in or create an account without leaving this draft. After login, publishing will attach this dream to that account automatically.",
     loginTab: "Login",
@@ -371,8 +370,8 @@ const RECORD_COPY = {
     publishAuthMismatch: "你的帳戶狀態還在同步。請再按一次儲存。",
     publishUnavailable: "資料庫目前無法連線。請稍後再試。",
     publishInvalidData: "有一個紀錄欄位需要調整後才能儲存。",
-    accountEditable: "第一次儲存會直接套用目前選擇。帳戶紀錄之後仍可修改、刪除、取消公開或更改方式。",
-    anonymousLocked: "第一次儲存會直接套用目前選擇。若之後想修改或刪除，請保留這個瀏覽器工作階段，或在發布前登入。",
+    accountEditable: "連到帳戶的紀錄之後仍可修改。",
+    anonymousLocked: "若之後想修改，請在儲存前登入。",
     authTitle: "選用帳戶連結",
     authText: "你可以在不離開草稿的情況下登入或建立帳戶。登入後，發布會自動連到該帳戶。",
     loginTab: "登入",
@@ -504,9 +503,8 @@ const RECORD_COPY = {
       "El archivo no está disponible ahora. Inténtalo de nuevo en un momento.",
     publishInvalidData:
       "Un campo del registro necesita ajuste antes de guardar.",
-    accountEditable:
-      "La opción seleccionada se aplica en el primer guardado. Los registros de cuenta pueden editarse, eliminarse o cambiarse después.",
-    anonymousLocked: "La opción seleccionada se aplica en el primer guardado. Para editar o eliminar después, conserva esta sesión o inicia sesión antes de publicar.",
+    accountEditable: "Los registros de cuenta pueden cambiarse después.",
+    anonymousLocked: "Inicia sesión antes de guardar si quieres editar después.",
     authTitle: "Vincular cuenta opcional",
     authText: "Puedes iniciar sesión o crear una cuenta sin salir del borrador. Después de iniciar sesión, la publicación se conectará automáticamente a esa cuenta.",
     loginTab: "Entrar",
@@ -624,7 +622,7 @@ export default function RecordDreamPage({
   const [authLoading, setAuthLoading] = useState("");
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
-  const [rulesExpanded, setRulesExpanded] = useState(true);
+  const [rulesExpanded, setRulesExpanded] = useState(false);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine
   );
@@ -635,6 +633,15 @@ export default function RecordDreamPage({
   const activeOfflineDraftIdRef = useRef("");
   const accountBacked = Boolean(currentUser?.uid && !currentUser.isAnonymous);
   const timeCopy = RECORDER_TIME_COPY[normalizeLanguage(language)] || RECORDER_TIME_COPY.zh;
+  const hasTranslationDrafts = useMemo(
+    () =>
+      Object.values(translations).some(
+        (draft) =>
+          String(draft?.title || "").trim() ||
+          String(draft?.dreamText || "").trim()
+      ),
+    [translations]
+  );
   const imagePreviews = useMemo(
     () =>
       imageFiles.map((file) => ({
@@ -1498,13 +1505,22 @@ export default function RecordDreamPage({
                 </label>
               </div>
 
-              <section className="rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
-                <h2 className="cdo-panel-heading">
-                  {timeCopy.translationsTitle}
-                </h2>
-                <p className="cdo-body-copy mt-2">
-                  {timeCopy.translationsHelp}
-                </p>
+              <details className="group rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0">
+                    <span className="cdo-panel-heading block">
+                      {timeCopy.translationsTitle}
+                    </span>
+                    {hasTranslationDrafts && (
+                      <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-100">
+                        {timeCopy.translationAdded}
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] font-mono text-cyan-100 transition group-open:rotate-90">
+                    &gt;
+                  </span>
+                </summary>
                 <div className="mt-4 space-y-4">
                   {LANGUAGE_OPTIONS.filter(
                     (option) => option.value !== normalizeLanguage(originalLanguage)
@@ -1588,7 +1604,7 @@ export default function RecordDreamPage({
                     );
                   })}
                 </div>
-              </section>
+              </details>
 
               <DreamSketchBoard
                 language={language}
@@ -1779,22 +1795,12 @@ export default function RecordDreamPage({
                 </div>
               </section>
 
-              <p className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-zinc-300">
-                {accountBacked ? copy.accountEditable : copy.anonymousLocked}
-              </p>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <InfoNotice
-                  title={copy.privacyFirstTitle}
-                  text={copy.privacyFirstText}
-                  tone="cyan"
-                />
-                <InfoNotice
-                  title={copy.diagnosisReminderTitle}
-                  text={copy.diagnosisReminderText}
-                  tone="fuchsia"
-                />
-              </div>
+              <RecorderCompactNotes
+                copy={copy}
+                accountBacked={accountBacked}
+                rulesExpanded={rulesExpanded}
+                setRulesExpanded={setRulesExpanded}
+              />
 
               {submitError && (
                 <div className="rounded-2xl border border-red-300/25 bg-red-400/5 p-4">
@@ -1984,31 +1990,6 @@ export default function RecordDreamPage({
               onClear={clearLocalOfflineDrafts}
             />
 
-            <section className="rounded-3xl border border-white/10 bg-black/45 p-5 backdrop-blur">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-mono text-xs uppercase tracking-[0.26em] text-fuchsia-200/70">
-                  {copy.rulesTitle}
-                </p>
-                <button
-                  type="button"
-                  aria-expanded={rulesExpanded}
-                  onClick={() => setRulesExpanded((current) => !current)}
-                  className="shrink-0 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15"
-                >
-                  {rulesExpanded ? copy.rulesCollapse : copy.rulesExpand}
-                </button>
-              </div>
-              {rulesExpanded && (
-                <ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-300">
-                  {copy.rules.map((rule) => (
-                    <li key={rule} className="flex gap-2">
-                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
-                      <span>{rule}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
           </aside>
         </section>
       </div>
@@ -2029,18 +2010,47 @@ function SessionBadge({ copy, accountBacked }) {
   );
 }
 
-function InfoNotice({ title, text, tone = "cyan" }) {
-  const toneClass =
-    tone === "fuchsia"
-      ? "border-fuchsia-300/20 bg-fuchsia-300/5 text-fuchsia-100"
-      : "border-cyan-300/20 bg-cyan-300/5 text-cyan-100";
-
+function RecorderCompactNotes({
+  copy,
+  accountBacked,
+  rulesExpanded,
+  setRulesExpanded,
+}) {
   return (
-    <section className={`rounded-2xl border p-4 ${toneClass}`}>
-      <h3 className="cdo-card-heading">
-        {title}
-      </h3>
-      <p className="cdo-body-copy mt-2">{text}</p>
+    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-slate-300">
+      <p>{accountBacked ? copy.accountEditable : copy.anonymousLocked}</p>
+      <p className="mt-2 text-xs leading-5 text-slate-500">
+        {copy.privacyFirstText}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em]">
+        <button
+          type="button"
+          aria-expanded={rulesExpanded}
+          onClick={() => setRulesExpanded((current) => !current)}
+          className="text-cyan-100 underline-offset-4 transition hover:text-cyan-50 hover:underline"
+        >
+          {rulesExpanded ? copy.rulesCollapse : copy.rulesExpand}
+        </button>
+        <span className="text-slate-600" aria-hidden="true">
+          /
+        </span>
+        <span className="text-fuchsia-100">{copy.diagnosisReminderTitle}</span>
+      </div>
+      {rulesExpanded && (
+        <div className="mt-3 rounded-xl border border-cyan-300/10 bg-black/25 p-3">
+          <p className="text-xs leading-5 text-slate-400">
+            {copy.diagnosisReminderText}
+          </p>
+          <ul className="mt-3 grid gap-2 text-xs leading-5 text-slate-300 sm:grid-cols-2">
+            {copy.rules.slice(0, 6).map((rule) => (
+              <li key={rule} className="flex gap-2">
+                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-cyan-300" />
+                <span>{rule}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

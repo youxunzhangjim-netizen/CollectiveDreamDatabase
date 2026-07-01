@@ -4,7 +4,6 @@ import {
   isIosSafari,
   isStandaloneDisplay,
   markInstallPromptDismissed,
-  shouldShowInstallPrompt,
 } from "../lib/pwaInstallService.js";
 import { trackSafeAnalyticsEvent } from "../lib/betaService.js";
 
@@ -40,14 +39,11 @@ export default function PWAInstallPrompt({ language = "zh" }) {
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
-    if (isStandaloneDisplay() || !shouldShowInstallPrompt()) return undefined;
-
-    const timer = window.setTimeout(() => setVisible(true), 1800);
+    if (isStandaloneDisplay()) return undefined;
 
     function handleBeforeInstallPrompt(event) {
       event.preventDefault();
       setDeferredPrompt(event);
-      setVisible(true);
     }
 
     function handleInstalled() {
@@ -61,13 +57,12 @@ export default function PWAInstallPrompt({ language = "zh" }) {
     window.addEventListener("appinstalled", handleInstalled);
 
     return () => {
-      window.clearTimeout(timer);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleInstalled);
     };
   }, []);
 
-  if (!visible || installed || isStandaloneDisplay()) return null;
+  if (installed || isStandaloneDisplay()) return null;
 
   const manualInstruction = isIosSafari() ? instructions.ios : instructions.desktop;
 
@@ -89,6 +84,18 @@ export default function PWAInstallPrompt({ language = "zh" }) {
   function handleDismiss() {
     markInstallPromptDismissed();
     setVisible(false);
+  }
+
+  if (!visible) {
+    return (
+      <button
+        type="button"
+        onClick={() => setVisible(true)}
+        className="fixed bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] right-3 z-[61] rounded-full border border-cyan-300/25 bg-zinc-950/90 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,.16)] backdrop-blur transition hover:border-cyan-300/45 hover:bg-cyan-300/10 sm:bottom-4 sm:right-4"
+      >
+        {copy.install}
+      </button>
+    );
   }
 
   return (

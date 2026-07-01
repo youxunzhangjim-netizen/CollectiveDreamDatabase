@@ -538,10 +538,10 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
   return (
     <div
       className={[
-        "fixed bottom-3 left-3 z-50 flex items-center overflow-hidden rounded-xl border p-1 shadow-[0_0_24px_rgba(34,211,238,.16)] backdrop-blur sm:bottom-4 sm:left-4",
+        "fixed bottom-3 left-3 z-50 flex items-center overflow-hidden rounded-full border p-0.5 shadow-[0_0_20px_rgba(34,211,238,.14)] backdrop-blur sm:bottom-4 sm:left-4",
         morningMode
-          ? "border-cyan-700/20 bg-white/75"
-          : "border-cyan-300/30 bg-cyan-300/10",
+          ? "border-cyan-700/20 bg-white/80"
+          : "border-cyan-300/30 bg-zinc-950/85",
       ].join(" ")}
       role="group"
       aria-label={copy.label}
@@ -557,21 +557,51 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
             title={option === "morning" ? copy.morning : copy.night}
             onClick={() => setAppearance(option)}
             className={[
-              "min-h-8 min-w-14 rounded-lg px-3 font-mono text-xs font-bold transition sm:min-w-16",
+              "flex h-9 w-9 items-center justify-center rounded-full transition",
               active
                 ? option === "night"
-                  ? "bg-zinc-950 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,.22)]"
-                  : "bg-cyan-200 text-sky-950 shadow-[0_0_18px_rgba(34,211,238,.25)]"
+                  ? "bg-zinc-950 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,.22)]"
+                  : "bg-cyan-200 text-sky-950 shadow-[0_0_16px_rgba(34,211,238,.25)]"
                 : morningMode
                   ? "text-slate-600 hover:bg-cyan-100/70 hover:text-sky-800"
                   : "text-cyan-100 hover:bg-white/10 hover:text-cyan-50",
             ].join(" ")}
           >
-            {option === "morning" ? copy.morning : copy.night}
+            {option === "morning" ? <SunIcon /> : <CrescentIcon />}
+            <span className="sr-only">
+              {option === "morning" ? copy.morning : copy.night}
+            </span>
           </button>
         );
       })}
     </div>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none">
+      <circle cx="12" cy="12" r="4.25" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function CrescentIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none">
+      <path
+        d="M17.8 15.6A7.7 7.7 0 0 1 8.4 6.2a7.7 7.7 0 1 0 9.4 9.4Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
   );
 }
 
