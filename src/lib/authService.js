@@ -8,6 +8,7 @@ import {
   signInWithPopup,
   signInWithRedirect,
   signOut,
+  deleteUser,
   updatePassword,
 } from "firebase/auth";
 import {
@@ -94,4 +95,12 @@ export async function loginAnonymously() {
 
 export async function logout() {
   return signOut(requireAuthClient());
+}
+
+export async function deleteCurrentAccount(currentUser) {
+  if (!currentUser) {
+    throw new Error("A signed-in account is required.");
+  }
+
+  return deleteUser(currentUser);
 }

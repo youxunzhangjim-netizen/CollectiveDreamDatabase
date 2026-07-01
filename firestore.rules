@@ -43,6 +43,30 @@ service cloud.firestore {
       return choice in ["private", "stats_only", "anonymous_public", "dream_by_dream"];
     }
 
+    function validModerationStatus(status) {
+      return status in [
+        "pending_review",
+        "approved",
+        "hidden",
+        "removed",
+        "adult_review",
+        "sensitive_review"
+      ];
+    }
+
+    function validReportReason(reason) {
+      return reason in [
+        "privacy",
+        "harassment",
+        "adult_content",
+        "self_harm",
+        "violence",
+        "spam",
+        "copyright",
+        "other"
+      ];
+    }
+
     function validVisibility(visibility) {
       return visibility in ["private", "public", "stats_only"];
     }
@@ -135,7 +159,10 @@ service cloud.firestore {
     }
 
     function canReadPublicDreamMirror(data) {
-      return !recordRequiresAdult(data) || isAgeVerifiedAdult();
+      return (!data.keys().hasAny(["moderationStatus"])
+          || !(data.moderationStatus in ["hidden", "removed", "pending_review"])
+          || isAdmin())
+        && (!recordRequiresAdult(data) || isAgeVerifiedAdult());
     }
 
     function validAdultMetadata(data) {
@@ -441,7 +468,11 @@ service cloud.firestore {
           "thumbnail_url",
           "generated_image_url",
           "includeSketchesWhenPublic",
-          "publicSketches"
+          "publicSketches",
+          "moderationStatus",
+          "moderationUpdatedAt",
+          "reportCount",
+          "publicRecorderKey"
         ])
         && noForbiddenPublicDreamFields(data)
         && data.keys().hasAll(["publicText", "publicLanguage", "originalLanguage", "sharingMode", "publicConsent", "adultContent"])
@@ -479,6 +510,11 @@ service cloud.firestore {
         && optionalBool(data, "includeSketchesWhenPublic")
         && optionalList(data, "publicSketches", 4)
         && validPublicSketchList(data)
+        && (!data.keys().hasAny(["moderationStatus"])
+          || validModerationStatus(data.moderationStatus))
+        && optionalTimestampOrString(data, "moderationUpdatedAt", 80)
+        && optionalNumber(data, "reportCount", 0, 1000000)
+        && optionalString(data, "publicRecorderKey", 160)
         && validSharingMode(data.sharingMode)
         && isPublicSharingMode(data.sharingMode)
         && publicDreamSourceRecordAllowsMirror(data, recordId)
@@ -623,6 +659,59 @@ service cloud.firestore {
         && (!data.keys().hasAny(["userId"]) || data.userId == request.auth.uid);
     }
 
+    function validModerationReportData(data, reporterId) {
+      return data.keys().hasAll(["reporterId", "targetType", "reason", "status"])
+        && data.reporterId == reporterId
+        && data.targetType in ["dream", "user"]
+        && validReportReason(data.reason)
+        && validModerationStatus(data.status)
+        && optionalString(data, "id", 128)
+        && optionalString(data, "recordId", 128)
+        && optionalString(data, "publicRecorderKey", 160)
+        && optionalString(data, "publicTitle", 220)
+        && optionalString(data, "displayName", 160)
+        && optionalString(data, "note", 2000)
+        && optionalString(data, "moderatorNote", 2000)
+        && optionalString(data, "reporterAction", 80)
+        && (!data.keys().hasAny(["moderationStatus"])
+          || validModerationStatus(data.moderationStatus))
+        && optionalTimestampOrString(data, "createdAt", 80)
+        && optionalTimestampOrString(data, "updatedAt", 80);
+    }
+
+    function validHiddenRecordData(data, userId, recordId) {
+      return data.keys().hasAll(["ownerId", "recordId"])
+        && data.ownerId == userId
+        && data.recordId == recordId
+        && optionalString(data, "source", 80)
+        && (!data.keys().hasAny(["reason"]) || validReportReason(data.reason))
+        && optionalTimestampOrString(data, "createdAt", 80);
+    }
+
+    function validBlockedUserData(data, userId, recorderId) {
+      return data.keys().hasAll(["ownerId", "recorderKey"])
+        && data.ownerId == userId
+        && data.recorderKey == recorderId
+        && optionalString(data, "displayName", 160)
+        && optionalString(data, "source", 80)
+        && (!data.keys().hasAny(["reason"]) || validReportReason(data.reason))
+        && optionalTimestampOrString(data, "createdAt", 80);
+    }
+
+    function validAccountDeletionRequest(data, ownerId) {
+      return data.keys().hasAll(["ownerId", "status"])
+        && data.ownerId == ownerId
+        && (!data.keys().hasAny(["userId"]) || data.userId == ownerId)
+        && data.status in ["requested", "processing", "completed", "requires_recent_login", "cancelled"]
+        && optionalString(data, "id", 128)
+        && optionalString(data, "email", 254)
+        && optionalString(data, "note", 2000)
+        && optionalMap(data, "dreamDeletion")
+        && optionalString(data, "authDeletionError", 300)
+        && optionalTimestampOrString(data, "createdAt", 80)
+        && optionalTimestampOrString(data, "updatedAt", 80);
+    }
+
     match /PublicDreams/{recordId} {
       allow get, list: if canReadPublicDreamMirror(resource.data);
 
@@ -653,6 +742,29 @@ service cloud.firestore {
       allow update: if isSignedIn()
         && resource.data.ownerId == request.auth.uid
         && validOwnerAuditData(request.resource.data);
+    }
+
+    match /ModerationReports/{reportId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.reporterId == request.auth.uid);
+      allow create: if isSignedIn()
+        && validModerationReportData(request.resource.data, request.auth.uid);
+      allow update: if isAdmin()
+        && validModerationReportData(request.resource.data, resource.data.reporterId);
+      allow delete: if isAdmin();
+    }
+
+    match /AccountDeletionRequests/{requestId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+      allow create: if isSignedIn()
+        && validAccountDeletionRequest(request.resource.data, request.auth.uid);
+      allow update: if (isSignedIn()
+          && resource.data.ownerId == request.auth.uid
+          && validAccountDeletionRequest(request.resource.data, request.auth.uid))
+        || (isAdmin()
+          && validAccountDeletionRequest(request.resource.data, resource.data.ownerId));
+      allow delete: if isAdmin();
     }
 
     match /Records/{recordId} {
@@ -722,6 +834,22 @@ service cloud.firestore {
           && request.resource.data.recorderId == recorderId
           && optionalString(request.resource.data, "displayName", 120)
           && optionalString(request.resource.data, "email", 254);
+      }
+
+      match /hiddenRecords/{recordId} {
+        allow read, delete: if isSignedIn() && request.auth.uid == userId;
+
+        allow create, update: if isSignedIn()
+          && request.auth.uid == userId
+          && validHiddenRecordData(request.resource.data, userId, recordId);
+      }
+
+      match /blockedUsers/{recorderId} {
+        allow read, delete: if isSignedIn() && request.auth.uid == userId;
+
+        allow create, update: if isSignedIn()
+          && request.auth.uid == userId
+          && validBlockedUserData(request.resource.data, userId, recorderId);
       }
 
       match /collections/{collectionId} {

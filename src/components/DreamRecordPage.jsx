@@ -36,6 +36,12 @@ import {
 } from "../lib/tagTaxonomy.js";
 import DreamSketchBoard from "./DreamSketchBoard.jsx";
 import LanguageMenu from "./LanguageMenu.jsx";
+import {
+  blockPublicRecorder,
+  getPublicRecorderKey,
+  reportDream as submitDreamReport,
+  reportPublicRecorder,
+} from "../lib/moderationService.js";
 
 const EDITABLE_TAG_SLUGS = new Set(
   RECORDER_TAG_GROUPS.flatMap((group) => group.slugs)
@@ -231,6 +237,14 @@ const DETAIL_COPY = {
     layerEditable: "Layer edit available",
     layerMissing: "No editable layer data",
     signInToCollect: "Sign in to collect this dream",
+    reportDream: "Report dream",
+    reportRecorder: "Report recorder",
+    blockRecorder: "Block recorder",
+    reportPrompt: "Optional note for the moderation team",
+    reportSubmitted: "Report submitted. This dream is hidden from your public view.",
+    recorderReported: "Recorder reported and blocked from your view.",
+    recorderBlocked: "Recorder blocked from your view.",
+    signInToReport: "Use a guest or signed-in session to report or block.",
     recorderRulesTitle: "Recording Standards",
     recorderRulesCollapse: "Collapse",
     recorderRulesExpand: "Show standards",
@@ -348,6 +362,14 @@ const DETAIL_COPY = {
     layerEditable: "可編輯圖層",
     layerMissing: "沒有可編輯圖層資料",
     signInToCollect: "登入後可收藏此夢境",
+    reportDream: "回報夢境",
+    reportRecorder: "回報記錄者",
+    blockRecorder: "封鎖記錄者",
+    reportPrompt: "可選填給審核團隊的說明",
+    reportSubmitted: "已送出回報。這則夢已從你的公開視圖隱藏。",
+    recorderReported: "已回報記錄者，並從你的視圖封鎖。",
+    recorderBlocked: "已從你的視圖封鎖此記錄者。",
+    signInToReport: "請使用訪客或登入工作階段來回報或封鎖。",
     recorderRulesTitle: "記錄標準",
     recorderRulesCollapse: "收合",
     recorderRulesExpand: "展開標準",
@@ -472,6 +494,14 @@ const DETAIL_COPY = {
     layerEditable: "Capas editables disponibles",
     layerMissing: "Sin datos de capas editables",
     signInToCollect: "Inicia sesión para coleccionar este sueño",
+    reportDream: "Reportar sueño",
+    reportRecorder: "Reportar registrador",
+    blockRecorder: "Bloquear registrador",
+    reportPrompt: "Nota opcional para el equipo de moderación",
+    reportSubmitted: "Reporte enviado. Este sueño queda oculto en tu vista pública.",
+    recorderReported: "Registrador reportado y bloqueado en tu vista.",
+    recorderBlocked: "Registrador bloqueado en tu vista.",
+    signInToReport: "Usa una sesión invitada o cuenta para reportar o bloquear.",
     recorderRulesTitle: "Reglas de registro",
     recorderRulesCollapse: "Contraer",
     recorderRulesExpand: "Mostrar reglas",
@@ -735,6 +765,74 @@ export default function DreamRecordPage({
       setStatus(error.message);
     } finally {
       setCollecting(false);
+    }
+  }
+
+  async function handleReportDream() {
+    if (!currentUser?.uid) {
+      setStatus(copy.signInToReport);
+      return;
+    }
+
+    const note =
+      typeof window !== "undefined"
+        ? window.prompt(copy.reportPrompt, "") || ""
+        : "";
+
+    try {
+      await submitDreamReport(currentUser, normalizedRecord, {
+        reason: "other",
+        note,
+      });
+      setStatus(copy.reportSubmitted);
+    } catch (error) {
+      setStatus(error.message);
+    }
+  }
+
+  async function handleReportRecorder() {
+    if (!currentUser?.uid) {
+      setStatus(copy.signInToReport);
+      return;
+    }
+
+    const note =
+      typeof window !== "undefined"
+        ? window.prompt(copy.reportPrompt, "") || ""
+        : "";
+
+    try {
+      await reportPublicRecorder(currentUser, normalizedRecord, {
+        reason: "other",
+        note,
+      });
+      setStatus(copy.recorderReported);
+    } catch (error) {
+      setStatus(error.message);
+    }
+  }
+
+  async function handleBlockRecorder() {
+    if (!currentUser?.uid) {
+      setStatus(copy.signInToReport);
+      return;
+    }
+
+    const recorderKey = getPublicRecorderKey(normalizedRecord);
+
+    if (!recorderKey) {
+      setStatus(copy.signInToReport);
+      return;
+    }
+
+    try {
+      await blockPublicRecorder(currentUser, recorderKey, {
+        source: "dream_detail",
+        displayName: getRecordAuthorName(normalizedRecord, copy),
+      });
+      setStatus(copy.recorderBlocked);
+    } catch (error) {
+      setStatus(error.message);
     }
   }
 
@@ -1071,6 +1169,31 @@ export default function DreamRecordPage({
             >
               {collecting ? "..." : copy.collect}
             </button>
+            {!isOwner && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleReportDream}
+                  className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-300/45 hover:bg-amber-300/10 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
+                >
+                  {copy.reportDream}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReportRecorder}
+                  className="rounded-xl border border-fuchsia-300/20 bg-fuchsia-300/5 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-fuchsia-300/40 hover:bg-fuchsia-300/10 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
+                >
+                  {copy.reportRecorder}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBlockRecorder}
+                  className="rounded-xl border border-red-300/20 bg-red-400/5 px-3 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-100 transition hover:border-red-300/40 hover:bg-red-400/10 sm:px-4 sm:text-xs sm:tracking-[0.18em]"
+                >
+                  {copy.blockRecorder}
+                </button>
+              </>
+            )}
           </div>
         </header>
 
@@ -2080,6 +2203,13 @@ function normalizeDreamRecord(record) {
       "",
     creatorEmail: record?.recordIdentityMode === "account" ? record?.creatorEmail || "" : "",
     pseudoId: record?.pseudo_id || record?.pseudoId || record?.creatorId || "",
+    publicRecorderKey:
+      record?.publicRecorderKey ||
+      record?.recorderPublicKey ||
+      record?.recorderHash ||
+      record?.publicRecorderId ||
+      "",
+    moderationStatus: record?.moderationStatus || "approved",
     visibility: record?.visibility || (record?.isPublic === false ? "private" : "public"),
     isPublic: typeof record?.isPublic === "boolean" ? record.isPublic : record?.visibility === "public",
     sharingMode: getSharingModeFromRawRecord(record),

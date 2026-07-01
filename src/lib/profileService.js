@@ -1,4 +1,4 @@
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebaseClient.js";
 import { isSupportedLanguage } from "./language.js";
 import {
@@ -20,6 +20,29 @@ function requireFirestore() {
 function formatAuthJoinedAt(currentUser) {
   if (!currentUser?.metadata?.creationTime) return "2026-06-23";
   return new Date(currentUser.metadata.creationTime).toISOString().slice(0, 10);
+}
+
+const PRIVACY_PROFILE_FIELDS = [
+  "defaultSharingMode",
+  "defaultResearchConsent",
+  "defaultPublicConsent",
+  "defaultIncludeInResearchStats",
+  "defaultPseudonym",
+  "defaultApplyToImports",
+  "defaultApplyToSingleDreams",
+  "requireReviewBeforePublic",
+  "skipAdultContentForBulkPublic",
+  "skipHighSensitivityForBulkPublic",
+  "sensitivityAutoSkipThreshold",
+  "privacyOnboardingChoice",
+  "privacyOnboardingCompleted",
+  "privacySettings",
+];
+
+function includesPrivacyProfileChange(updates = {}) {
+  return PRIVACY_PROFILE_FIELDS.some((field) =>
+    Object.prototype.hasOwnProperty.call(updates, field)
+  );
 }
 
 export function createDefaultProfile(currentUser) {
@@ -159,6 +182,23 @@ export async function saveUserProfile(currentUser, updates) {
     },
     { merge: true }
   );
+
+  if (includesPrivacyProfileChange(updates)) {
+    await setDoc(doc(collection(requireFirestore(), "ConsentEvents")), {
+      ownerId: currentUser.uid,
+      userId: currentUser.uid,
+      type: "privacy_defaults_changed",
+      source: "account_profile",
+      sharingMode: privacySettings.defaultSharingMode,
+      publicConsent: privacySettings.defaultPublicConsent,
+      researchConsent: privacySettings.defaultResearchConsent,
+      includedInResearchStats: privacySettings.defaultIncludeInResearchStats,
+      defaultApplyToImports: privacySettings.defaultApplyToImports,
+      defaultApplyToSingleDreams: privacySettings.defaultApplyToSingleDreams,
+      requireReviewBeforePublic: privacySettings.requireReviewBeforePublic,
+      createdAt: serverTimestamp(),
+    }).catch(() => {});
+  }
 }
 
 export async function savePrivacyOnboardingChoice(currentUser, profile, choice) {

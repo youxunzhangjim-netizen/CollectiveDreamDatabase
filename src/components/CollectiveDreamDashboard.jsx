@@ -29,6 +29,11 @@ import {
   unfollowRecorderForUser,
 } from "../lib/recordsService.js";
 import {
+  fetchViewerModerationState,
+  filterRecordsForViewer,
+  reportDream as submitDreamReport,
+} from "../lib/moderationService.js";
+import {
   exportMethodologyMarkdown,
   exportPatternSummaryJson,
   exportResearchRecordsCsv,
@@ -292,6 +297,10 @@ const UI_COPY = {
     noResearchData: "Not enough signal yet",
     collectDream: "Collect",
     collectedDream: "Collected",
+    reportDream: "Report",
+    reportPrompt: "Optional note for the moderation team",
+    reportSubmitted: "Reported. This dream is now hidden from your view.",
+    signInToReport: "Use a guest or signed-in session to report content.",
     expandPanel: "Expand",
     collapsePanel: "Collapse",
     showTags: "Show tags",
@@ -501,6 +510,10 @@ const UI_COPY = {
     noResearchData: "訊號尚不足",
     collectDream: "收藏",
     collectedDream: "已收藏",
+    reportDream: "回報",
+    reportPrompt: "可選填給審核團隊的說明",
+    reportSubmitted: "已回報。這則夢已從你的視圖隱藏。",
+    signInToReport: "請使用訪客或登入工作階段來回報內容。",
     expandPanel: "展開",
     collapsePanel: "收合",
     showTags: "展開標籤",
@@ -715,6 +728,10 @@ const UI_COPY = {
     noResearchData: "Señal insuficiente",
     collectDream: "Coleccionar",
     collectedDream: "Coleccionado",
+    reportDream: "Reportar",
+    reportPrompt: "Nota opcional para el equipo de moderación",
+    reportSubmitted: "Reportado. Este sueño queda oculto en tu vista.",
+    signInToReport: "Usa una sesión invitada o cuenta para reportar contenido.",
     expandPanel: "Expandir",
     collapsePanel: "Contraer",
     showTags: "Ver etiquetas",
@@ -770,6 +787,7 @@ export default function CollectiveDreamDashboard({
   const [researchSignals, setResearchSignals] = useState([]);
   const [ownerCoverageRecords, setOwnerCoverageRecords] = useState([]);
   const [adultConfirmations, setAdultConfirmations] = useState({});
+  const [moderationNotice, setModerationNotice] = useState("");
   const copy = UI_COPY[language] || UI_COPY.zh;
   const canSeeImages = Boolean(currentUser?.uid && !currentUser.isAnonymous);
   const isAgeVerifiedAdult = Number(viewerProfile?.age || 0) >= 18;
@@ -791,6 +809,10 @@ export default function CollectiveDreamDashboard({
       let firestoreDreams = [];
       let safeResearchSignals = [];
       let sharedTags = [];
+      let viewerModerationState = {
+        hiddenRecordIds: new Set(),
+        blockedRecorderKeys: new Set(),
+      };
 
       try {
         firestoreDreams = await fetchPublicRecords({
@@ -804,20 +826,24 @@ export default function CollectiveDreamDashboard({
         includeAdult: canLoadAdultRecords,
       }).catch(() => []);
       sharedTags = await fetchSharedCustomTags().catch(() => []);
+      viewerModerationState = await fetchViewerModerationState(currentUser).catch(
+        () => viewerModerationState
+      );
 
       if (ignore) return;
 
       const sharedTagLookup = new Map(
         sharedTags.map((tagData) => [tagData.slug, tagData])
       );
-      const liveDreams = mergeDreamSets(firestoreDreams.map(normalizeDreamCard)).map(
-        (dream) => ({
+      const liveDreams = filterRecordsForViewer(
+        mergeDreamSets(firestoreDreams.map(normalizeDreamCard)).map((dream) => ({
           ...dream,
           tags: dream.tags.map((tagData) => ({
             ...tagData,
             ...(sharedTagLookup.get(tagData.slug) || {}),
           })),
-        })
+        })),
+        viewerModerationState
       );
 
       if (liveDreams.length === 0) {
@@ -847,7 +873,7 @@ export default function CollectiveDreamDashboard({
     return () => {
       ignore = true;
     };
-  }, [canLoadAdultRecords]);
+  }, [canLoadAdultRecords, currentUser?.uid]);
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -1173,6 +1199,33 @@ export default function CollectiveDreamDashboard({
     return true;
   }
 
+  async function handleReportDream(dream) {
+    setModerationNotice("");
+
+    if (!currentUser?.uid) {
+      setModerationNotice(copy.signInToReport);
+      return;
+    }
+
+    const note =
+      typeof window !== "undefined"
+        ? window.prompt(copy.reportPrompt, "") || ""
+        : "";
+
+    try {
+      await submitDreamReport(currentUser, dream, {
+        reason: "other",
+        note,
+      });
+      setDreams((current) =>
+        current.filter((item) => item.dream_id !== dream.dream_id)
+      );
+      setModerationNotice(copy.reportSubmitted);
+    } catch (error) {
+      setModerationNotice(error.message);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#030407] text-zinc-100 selection:bg-cyan-300/30 selection:text-cyan-50">
       <BackgroundField />
@@ -1200,6 +1253,12 @@ export default function CollectiveDreamDashboard({
           schemaStats={schemaStats}
           copy={copy}
         />
+
+        {moderationNotice && (
+          <div className="mt-5 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4 font-mono text-xs leading-6 text-cyan-100">
+            {moderationNotice}
+          </div>
+        )}
 
         <HomePathways
           copy={copy}
@@ -1264,6 +1323,7 @@ export default function CollectiveDreamDashboard({
           isAgeVerifiedAdult={isAgeVerifiedAdult}
           canAccessAdultDream={canAccessAdultDream}
           onToggleFollow={handleToggleFollow}
+          onReportDream={handleReportDream}
           onConfirmAdultDream={(dreamId) =>
             setAdultConfirmations((current) => ({ ...current, [dreamId]: true }))
           }
@@ -1496,6 +1556,13 @@ function normalizeDreamCard(row) {
     dream_sequence: normalizeDreamSequence(row.dreamSequence || row.dream_sequence),
     adultContent,
     minimumViewerAge: row.minimumViewerAge || row.minimum_viewer_age || (adultContent ? 18 : 0),
+    moderationStatus: row.moderationStatus || "approved",
+    publicRecorderKey:
+      row.publicRecorderKey ||
+      row.recorderPublicKey ||
+      row.recorderHash ||
+      row.publicRecorderId ||
+      "",
     images,
     dreamImages: images,
     imageUrls,
@@ -3281,6 +3348,7 @@ function ObservationGrid({
   canAccessAdultDream,
   onConfirmAdultDream,
   onToggleFollow,
+  onReportDream,
   onOpenRecord,
 }) {
   if (dreams.length === 0) {
@@ -3313,6 +3381,7 @@ function ObservationGrid({
           canAccessAdultDream={canAccessAdultDream}
           onConfirmAdultDream={onConfirmAdultDream}
           onToggleFollow={onToggleFollow}
+          onReportDream={onReportDream}
           onOpenRecord={onOpenRecord}
         />
       ))}
@@ -3375,6 +3444,7 @@ function ObservationCard({
   canAccessAdultDream,
   onConfirmAdultDream,
   onToggleFollow,
+  onReportDream,
   onOpenRecord,
 }) {
   const [collectStatus, setCollectStatus] = useState("");
@@ -3461,6 +3531,11 @@ function ObservationCard({
     } catch (error) {
       setFollowStatus(error.message || copy.followLimitReached);
     }
+  }
+
+  function handleReport(event) {
+    event.stopPropagation();
+    onReportDream?.(dream);
   }
 
   return (
@@ -3615,6 +3690,15 @@ function ObservationCard({
           >
             {collectStatus || copy.collectDream}
           </button>
+          {!guestAdultGate && (
+            <button
+              type="button"
+              onClick={handleReport}
+              className="mt-3 w-full rounded-xl border border-amber-300/20 bg-amber-300/5 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-amber-100 transition hover:border-amber-300/40 hover:bg-amber-300/10"
+            >
+              {copy.reportDream}
+            </button>
+          )}
         </div>
       </div>
     </article>

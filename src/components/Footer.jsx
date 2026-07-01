@@ -9,6 +9,15 @@ const FOOTER_COPY = {
     modalText:
       "Collective Dream Observatory stores user-generated dream records for private reflection, anonymous public reading, and research context. The platform is not responsible for user-generated content, private information submitted by users, or interpretations made from the records.",
     close: "Close",
+    links: [
+      ["Privacy", "/privacy"],
+      ["Terms", "/terms"],
+      ["Guidelines", "/guidelines"],
+      ["Removal", "/removal"],
+      ["Not diagnosis", "/diagnosis"],
+      ["Support", "/support"],
+      ["Delete account", "/account-deletion"],
+    ],
   },
   zh: {
     license:
@@ -18,6 +27,15 @@ const FOOTER_COPY = {
     modalText:
       "集體夢境觀測站儲存使用者產生的夢境紀錄，供私人回顧、匿名公開閱讀與研究脈絡使用。本平台不對使用者產生內容、使用者提交的私人資訊，或他人對紀錄做出的詮釋負責。",
     close: "關閉",
+    links: [
+      ["隱私", "/privacy"],
+      ["條款", "/terms"],
+      ["社群準則", "/guidelines"],
+      ["內容移除", "/removal"],
+      ["非診斷", "/diagnosis"],
+      ["支援", "/support"],
+      ["刪除帳戶", "/account-deletion"],
+    ],
   },
   es: {
     license:
@@ -27,6 +45,15 @@ const FOOTER_COPY = {
     modalText:
       "El Observatorio Colectivo de Sueños almacena registros generados por usuarios para reflexión privada, lectura pública anónima y contexto de investigación. La plataforma no se responsabiliza por contenido generado por usuarios, información privada enviada por usuarios ni interpretaciones realizadas a partir de los registros.",
     close: "Cerrar",
+    links: [
+      ["Privacidad", "/privacy"],
+      ["Términos", "/terms"],
+      ["Normas", "/guidelines"],
+      ["Retirada", "/removal"],
+      ["No diagnóstico", "/diagnosis"],
+      ["Soporte", "/support"],
+      ["Eliminar cuenta", "/account-deletion"],
+    ],
   },
 };
 
@@ -37,15 +64,28 @@ export default function Footer({ language = "zh" }) {
   return (
     <>
       <footer className="relative border-t border-white/10 bg-[#030407] px-4 py-5 text-zinc-500 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 text-xs leading-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-4xl">{copy.license}</p>
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="self-start rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/10 sm:self-auto"
-          >
-            {copy.terms}
-          </button>
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 text-xs leading-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <p className="max-w-4xl">{copy.license}</p>
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="self-start rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/10"
+            >
+              {copy.terms}
+            </button>
+          </div>
+          <nav className="flex flex-wrap gap-2" aria-label={copy.terms}>
+            {copy.links.map(([label, href]) => (
+              <a
+                key={href}
+                href={href}
+                className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-400 transition hover:border-cyan-300/30 hover:text-cyan-100"
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
         </div>
       </footer>
 

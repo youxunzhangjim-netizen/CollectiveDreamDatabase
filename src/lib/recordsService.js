@@ -65,6 +65,14 @@ export const PRIVACY_PRESETS = {
 };
 
 export const DREAM_PERIODS = ["morning", "afternoon", "evening", "night"];
+export const DREAM_MODERATION_STATUSES = [
+  "pending_review",
+  "approved",
+  "hidden",
+  "removed",
+  "adult_review",
+  "sensitive_review",
+];
 
 export function normalizeSharingMode(value) {
   return normalizePrivacySharingMode(value);
@@ -101,6 +109,22 @@ function getTimestampMillis(value) {
 
   const parsed = new Date(value).getTime();
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeDreamModerationStatus(value) {
+  return DREAM_MODERATION_STATUSES.includes(value) ? value : "approved";
+}
+
+function getDefaultModerationStatus(record = {}, sensitivityLevel = 0) {
+  if (record.moderationStatus) {
+    return normalizeDreamModerationStatus(record.moderationStatus);
+  }
+
+  if (record.publicReviewStatus === "pending_review") return "pending_review";
+  if (record.adultContent || Number(record.minimumViewerAge || 0) >= 18) return "adult_review";
+  if (Number(sensitivityLevel || 0) >= 3) return "sensitive_review";
+
+  return "approved";
 }
 
 export function calculateDreamSignalCoherence({
@@ -578,6 +602,16 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
   const publicSketches = sanitizePublicSketches(record, publicImages.length);
   const publicDate = getPublicDateFields(record);
   const sensitivityLevel = calculateSensitivityLevel(record);
+  const moderationStatus = getDefaultModerationStatus(record, sensitivityLevel);
+  const publicRecorderKey = stableHashString(
+    record.publicRecorderId ||
+      record.creatorId ||
+      record.ownerId ||
+      record.creatorDisplayName ||
+      record.id ||
+      record.dream_id ||
+      ""
+  );
   const pseudonym =
     normalizedMode === DREAM_SHARING_MODES.PSEUDONYM_PUBLIC
       ? profile.defaultPseudonym ||
@@ -601,6 +635,9 @@ export function buildPublicDreamDocument(record = {}, profile = {}, sharingMode 
     contentWarnings: getContentWarnings(record, sensitivityLevel),
     originalLanguage,
     sharingMode: normalizedMode,
+    moderationStatus,
+    reportCount: Math.max(0, Number(record.reportCount || 0)),
+    publicRecorderKey,
   };
 
   Object.assign(publicDream, publicTranslationFields);
@@ -1019,7 +1056,10 @@ export async function fetchPublicRecords({ includeAdult = false } = {}) {
     : query(publicDreamsCollection, where("adultContent", "==", false));
   const publicDreamsSnapshot = await getDocs(publicDreamsQuery);
   const publicDreams = mapRecordSnapshot(publicDreamsSnapshot).filter((record) =>
-    publicModes.includes(normalizeSharingMode(record.sharingMode))
+    publicModes.includes(normalizeSharingMode(record.sharingMode)) &&
+    !["hidden", "removed", "pending_review"].includes(
+      normalizeDreamModerationStatus(record.moderationStatus)
+    )
   );
 
   return publicDreams.sort(

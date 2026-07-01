@@ -5,6 +5,7 @@ import CollectiveDreamDashboard from "./components/CollectiveDreamDashboard.jsx"
 import DreamRecordPage from "./components/DreamRecordPage.jsx";
 import Footer from "./components/Footer.jsx";
 import ImportDreamDiaryPage from "./components/ImportDreamDiaryPage.jsx";
+import LegalInfoPage from "./components/LegalInfoPage.jsx";
 import OfflineStatusBanner from "./components/OfflineStatusBanner.jsx";
 import PWAInstallPrompt from "./components/PWAInstallPrompt.jsx";
 import PWAUpdatePrompt from "./components/PWAUpdatePrompt.jsx";
@@ -38,6 +39,7 @@ export default function App() {
   const [language, setLanguageState] = useState(getLanguageFromStorage);
   const [appearance, setAppearance] = useState(getAppearanceFromStorage);
   const [activeView, setActiveView] = useState(getInitialViewFromPathname);
+  const [legalPage, setLegalPage] = useState(getInitialLegalPageFromPathname);
   const [lastListView, setLastListView] = useState("database");
   const [selectedRecord, setSelectedRecord] = useState(null);
   const { currentUser, loading: authLoading } = useAuth();
@@ -106,6 +108,11 @@ export default function App() {
 
   function handleAuthenticated() {
     setActiveView("dashboard");
+  }
+
+  function handleAccountDeleted() {
+    setSelectedRecord(null);
+    setActiveView("auth");
   }
 
   function handleLanguageChange(nextLanguage) {
@@ -219,6 +226,17 @@ export default function App() {
     );
   }
 
+  if (activeView === "legal") {
+    return renderShell(
+      <LegalInfoPage
+        page={legalPage}
+        language={language}
+        setLanguage={handleLanguageChange}
+        onBack={() => setActiveView(lastListView || "database")}
+      />
+    );
+  }
+
   if (activeView === "import") {
     return renderShell(
       <ImportDreamDiaryPage
@@ -272,6 +290,7 @@ export default function App() {
           onOpenRecorder={() => setActiveView("record")}
           onOpenImporter={() => setActiveView("import")}
           onOpenRecord={(record) => openDreamRecord(record, "dashboard")}
+          onAccountDeleted={handleAccountDeleted}
         />
     );
   }
@@ -292,6 +311,7 @@ function getInitialViewFromPathname() {
   if (typeof window === "undefined") return "database";
 
   const pathname = window.location.pathname.toLowerCase();
+  if (getLegalPageFromPathname(pathname)) return "legal";
   if (pathname.startsWith("/record")) return "record";
   if (pathname.startsWith("/import")) return "import";
   if (pathname.startsWith("/dashboard")) return "dashboard";
@@ -299,6 +319,30 @@ function getInitialViewFromPathname() {
   if (pathname.startsWith("/explore")) return "database";
   if (pathname.startsWith("/patterns")) return "database";
   return "database";
+}
+
+function getInitialLegalPageFromPathname() {
+  if (typeof window === "undefined") return "privacy";
+
+  return getLegalPageFromPathname(window.location.pathname) || "privacy";
+}
+
+function getLegalPageFromPathname(pathname = "") {
+  const normalized = pathname.toLowerCase().replace(/\/+$/, "") || "/";
+
+  if (normalized.startsWith("/privacy")) return "privacy";
+  if (normalized.startsWith("/terms")) return "terms";
+  if (normalized.startsWith("/community-guidelines")) return "guidelines";
+  if (normalized.startsWith("/guidelines")) return "guidelines";
+  if (normalized.startsWith("/content-removal")) return "removal";
+  if (normalized.startsWith("/removal")) return "removal";
+  if (normalized.startsWith("/not-diagnosis")) return "diagnosis";
+  if (normalized.startsWith("/diagnosis")) return "diagnosis";
+  if (normalized.startsWith("/support")) return "support";
+  if (normalized.startsWith("/contact")) return "support";
+  if (normalized.startsWith("/account-deletion")) return "account-deletion";
+
+  return "";
 }
 
 function getSignOutDraftWarning(language) {

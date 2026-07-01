@@ -52,6 +52,7 @@ import {
 import BulkSharingModal from "./BulkSharingModal.jsx";
 import LanguageMenu from "./LanguageMenu.jsx";
 import { setAccountPassword } from "../lib/authService.js";
+import AccountReadinessPanel from "./AccountReadinessPanel.jsx";
 
 const DASHBOARD_COPY = {
   en: {
@@ -1103,6 +1104,7 @@ export default function UserDashboard({
   onOpenRecorder,
   onOpenImporter,
   onOpenRecord,
+  onAccountDeleted,
 }) {
   const copy = DASHBOARD_COPY[language] || DASHBOARD_COPY.zh;
   const [activeTab, setActiveTab] = useState("observations");
@@ -1714,6 +1716,15 @@ export default function UserDashboard({
           }
           onSetAccountPassword={handleSetAccountPassword}
           canSetAccountPassword={Boolean(user?.email && !user?.isAnonymous)}
+        />
+
+        <AccountReadinessPanel
+          language={language}
+          user={user}
+          profile={profile}
+          observations={observations}
+          onDreamsDeleted={() => setObservations([])}
+          onAccountDeleted={onAccountDeleted}
         />
 
         {profileDraft && (
