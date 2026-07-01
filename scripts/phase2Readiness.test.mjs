@@ -95,6 +95,7 @@ assert.ok(rulesSource.includes("noForbiddenPublicDreamFields"));
 assert.ok(exportSource.includes("sanitizeResearchSignalForExport"));
 assert.ok(exportSource.includes("Stats-only records contribute non-identifying metadata"));
 assert.ok(exportSource.includes("public_text"));
+assert.ok(exportSource.includes("^\\s*[=+\\-@]"));
 assert.ok(!exportSource.includes("privateText"));
 
 const privateRecord = {

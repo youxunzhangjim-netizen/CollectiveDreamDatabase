@@ -783,7 +783,12 @@ function toCsv(rows) {
 }
 
 function escapeCsvCell(value) {
-  const text = String(value ?? "");
+  let text = String(value ?? "");
+
+  if (/^\s*[=+\-@]/u.test(text)) {
+    text = `'${text}`;
+  }
+
   if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
   return text;
 }
