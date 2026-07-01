@@ -23,6 +23,8 @@ const BACKGROUND_COLORS = {
   transparent: "transparent",
 };
 
+const SHAPE_TOOLS = new Set(["rectangle", "triangle", "ellipse", "line"]);
+const FILL_TOLERANCE = 26;
 const MAX_HISTORY = 40;
 const MAX_STROKE_POINTS = 1600;
 const LAYER_VERSION = "dream-sketch-2026.1";
@@ -196,6 +198,13 @@ Object.assign(SKETCH_COPY.en, {
   altTextPlaceholder: "Briefly describe this sketch for accessibility",
   open: "Open sketch board",
   addText: "Add text",
+  fill: "Fill",
+  rectangle: "Rectangle",
+  triangle: "Triangle",
+  ellipse: "Circle / ellipse",
+  line: "Line",
+  shapeFill: "Fill shape interior",
+  frameThickness: "Brush / frame",
   clear: "Clear",
   save: "Save sketch",
   preview: "Preview sketch",
@@ -222,6 +231,13 @@ Object.assign(SKETCH_COPY.zh, {
   open: "開啟畫板",
   close: "關閉",
   addText: "加入文字",
+  fill: "填色",
+  rectangle: "矩形",
+  triangle: "三角形",
+  ellipse: "圓形／橢圓",
+  line: "直線",
+  shapeFill: "填滿形狀內部",
+  frameThickness: "筆刷／框線",
   labelText: "文字內容",
   placeText: "點一下畫布放置文字，或選取既有文字來編輯。",
   selectText: "選取文字",
@@ -277,6 +293,13 @@ Object.assign(SKETCH_COPY.es, {
   altTextPlaceholder: "Describe brevemente este boceto para accesibilidad",
   open: "Abrir tablero de dibujo",
   addText: "Añadir texto",
+  fill: "Rellenar",
+  rectangle: "Rectángulo",
+  triangle: "Triángulo",
+  ellipse: "Círculo / elipse",
+  line: "Línea",
+  shapeFill: "Rellenar interior",
+  frameThickness: "Pincel / marco",
   clear: "Borrar",
   save: "Guardar boceto",
   preview: "Vista previa",
@@ -323,6 +346,7 @@ export default function DreamSketchBoard({
   const [tool, setTool] = useState("brush");
   const [brushSize, setBrushSize] = useState(8);
   const [opacity, setOpacity] = useState(1);
+  const [shapeFillEnabled, setShapeFillEnabled] = useState(false);
   const [exportMimeType, setExportMimeType] = useState("image/png");
   const [color, setColor] = useState(PALETTE[1]);
   const [canvasMode, setCanvasMode] = useState(() =>
@@ -339,6 +363,7 @@ export default function DreamSketchBoard({
   const canvasRef = useRef(null);
   const baseImageRef = useRef(null);
   const activeStrokeRef = useRef(null);
+  const activeShapeRef = useRef(null);
   const dragTextRef = useRef(null);
 
   const canvasSize = CANVAS_SIZES[canvasMode] || CANVAS_SIZES.phone;
@@ -517,6 +542,40 @@ export default function DreamSketchBoard({
       return;
     }
 
+    if (tool === "fill") {
+      pushUndoSnapshot();
+      const fillLayer = createFillLayer({
+        x: point.x,
+        y: point.y,
+        color,
+        opacity,
+        tolerance: FILL_TOLERANCE,
+      });
+      setLayers((current) => [...current, fillLayer]);
+      setSelectedTextId("");
+      setDirty(true);
+      return;
+    }
+
+    if (SHAPE_TOOLS.has(tool)) {
+      pushUndoSnapshot();
+      const shape = createShapeLayer({
+        shape: tool,
+        start: point,
+        end: point,
+        color,
+        strokeWidth: brushSize,
+        opacity,
+        fillColor: shapeFillEnabled && tool !== "line" ? color : "",
+        fillOpacity: shapeFillEnabled && tool !== "line" ? Math.min(0.55, opacity) : 0,
+      });
+      activeShapeRef.current = { id: shape.id };
+      setLayers((current) => [...current, shape]);
+      setSelectedTextId("");
+      setDirty(true);
+      return;
+    }
+
     pushUndoSnapshot();
     const stroke = createStrokeLayer({
       tool: tool === "eraser" ? "eraser" : "brush",
@@ -551,6 +610,21 @@ export default function DreamSketchBoard({
       return;
     }
 
+    const activeShape = activeShapeRef.current;
+    if (activeShape) {
+      event.preventDefault();
+      const point = getCanvasPoint(event);
+      setLayers((current) =>
+        current.map((layer) =>
+          layer.id === activeShape.id && layer.type === "shape"
+            ? { ...layer, x2: point.x, y2: point.y }
+            : layer
+        )
+      );
+      setDirty(true);
+      return;
+    }
+
     const activeStroke = activeStrokeRef.current;
     if (!activeStroke) return;
     event.preventDefault();
@@ -575,6 +649,7 @@ export default function DreamSketchBoard({
   function endPointer(event) {
     event?.currentTarget?.releasePointerCapture?.(event.pointerId);
     activeStrokeRef.current = null;
+    activeShapeRef.current = null;
     dragTextRef.current = null;
   }
 
@@ -1004,6 +1079,8 @@ export default function DreamSketchBoard({
                   setBrushSize={setBrushSize}
                   opacity={opacity}
                   setOpacity={setOpacity}
+                  shapeFillEnabled={shapeFillEnabled}
+                  setShapeFillEnabled={setShapeFillEnabled}
                   exportMimeType={exportMimeType}
                   setExportMimeType={setExportMimeType}
                   color={color}
@@ -1031,6 +1108,29 @@ export default function DreamSketchBoard({
               </div>
 
               <div className="order-1 flex min-h-0 flex-col bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.12),transparent_42%),#05070a] lg:order-2">
+                <div className="hidden items-center gap-3 border-b border-white/10 bg-zinc-950/95 p-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_auto]">
+                  <p className="max-w-2xl text-sm leading-relaxed text-slate-300">
+                    {copy.privacy} {copy.publishTextOnly}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRemove}
+                    disabled={!hasSketch}
+                    aria-label={copy.remove}
+                    className="min-h-12 min-w-36 rounded-xl border border-red-300/25 bg-red-400/5 px-4 py-3 text-center font-mono text-[10px] font-bold uppercase leading-4 tracking-[0.14em] text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {copy.remove}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving || openDisabled}
+                    aria-label={copy.save}
+                    className="min-h-12 min-w-40 rounded-xl border border-cyan-300/35 bg-cyan-300 px-4 py-3 text-center font-mono text-[10px] font-bold uppercase leading-4 tracking-[0.14em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {saving ? "..." : copy.save}
+                  </button>
+                </div>
                 <div className="min-h-0 flex-1 overflow-auto overscroll-contain p-3 sm:p-5">
                   <div className="mx-auto w-full max-w-5xl">
                     <div
@@ -1088,7 +1188,7 @@ export default function DreamSketchBoard({
                   )}
                 </div>
 
-                <div className="sticky bottom-0 grid gap-3 border-t border-white/10 bg-zinc-950/95 p-3 sm:grid-cols-[1fr_auto_auto] sm:p-4">
+                <div className="sticky bottom-0 grid gap-3 border-t border-white/10 bg-zinc-950/95 p-3 sm:grid-cols-[1fr_auto_auto] sm:p-4 lg:hidden">
                   <p className="self-center text-sm leading-relaxed text-slate-300">
                     {copy.privacy} {copy.publishTextOnly}
                   </p>
@@ -1128,6 +1228,8 @@ function SketchToolbar({
   setBrushSize,
   opacity,
   setOpacity,
+  shapeFillEnabled,
+  setShapeFillEnabled,
   exportMimeType,
   setExportMimeType,
   color,
@@ -1158,11 +1260,29 @@ function SketchToolbar({
         <ToolButton active={tool === "eraser"} onClick={() => setTool("eraser")}>
           {copy.eraser}
         </ToolButton>
+        <ToolButton active={tool === "fill"} onClick={() => setTool("fill")}>
+          {copy.fill}
+        </ToolButton>
         <ToolButton active={tool === "text"} onClick={() => setTool("text")}>
           {copy.addText}
         </ToolButton>
         <ToolButton active={tool === "select"} onClick={() => setTool("select")}>
           {copy.selectText}
+        </ToolButton>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <ToolButton active={tool === "rectangle"} onClick={() => setTool("rectangle")}>
+          {copy.rectangle}
+        </ToolButton>
+        <ToolButton active={tool === "ellipse"} onClick={() => setTool("ellipse")}>
+          {copy.ellipse}
+        </ToolButton>
+        <ToolButton active={tool === "triangle"} onClick={() => setTool("triangle")}>
+          {copy.triangle}
+        </ToolButton>
+        <ToolButton active={tool === "line"} onClick={() => setTool("line")}>
+          {copy.line}
         </ToolButton>
       </div>
 
@@ -1181,7 +1301,7 @@ function SketchToolbar({
 
       <label className="block">
         <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-          {copy.brushSize}
+          {copy.frameThickness || copy.brushSize}
         </span>
         <input
           type="range"
@@ -1192,6 +1312,12 @@ function SketchToolbar({
           className="w-full accent-cyan-300"
         />
       </label>
+
+      <SketchToggle
+        checked={shapeFillEnabled}
+        label={copy.shapeFill}
+        onChange={setShapeFillEnabled}
+      />
 
       <label className="block">
         <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
@@ -1412,6 +1538,38 @@ function normalizeLayer(layer) {
     };
   }
 
+  if (layer.type === "fill") {
+    return {
+      id: String(layer.id || createClientId()).slice(0, 120),
+      type: "fill",
+      x: clamp(Number(layer.x || 0), 0, 2000),
+      y: clamp(Number(layer.y || 0), 0, 2000),
+      color: normalizeHexColor(layer.color, "#67e8f9"),
+      opacity: clamp(Number(layer.opacity || 1), 0.05, 1),
+      tolerance: clamp(Number(layer.tolerance || FILL_TOLERANCE), 0, 80),
+    };
+  }
+
+  if (layer.type === "shape") {
+    const shape = SHAPE_TOOLS.has(layer.shape) ? layer.shape : "rectangle";
+
+    return {
+      id: String(layer.id || createClientId()).slice(0, 120),
+      type: "shape",
+      shape,
+      x1: clamp(Number(layer.x1 || 0), 0, 2000),
+      y1: clamp(Number(layer.y1 || 0), 0, 2000),
+      x2: clamp(Number(layer.x2 || 0), 0, 2000),
+      y2: clamp(Number(layer.y2 || 0), 0, 2000),
+      color: normalizeHexColor(layer.color, "#67e8f9"),
+      strokeWidth: clamp(Number(layer.strokeWidth || layer.size || 4), 1, 80),
+      opacity: clamp(Number(layer.opacity || 1), 0.05, 1),
+      fillColor: shape !== "line" ? normalizeOptionalHexColor(layer.fillColor) : "",
+      fillOpacity:
+        shape !== "line" ? clamp(Number(layer.fillOpacity || 0), 0, 1) : 0,
+    };
+  }
+
   if (layer.type !== "stroke") return null;
   const points = Array.isArray(layer.points)
     ? layer.points
@@ -1469,6 +1627,44 @@ function createTextLayer({ text, x, y, fontSize, color }) {
   };
 }
 
+function createFillLayer({ x, y, color, opacity, tolerance }) {
+  return {
+    id: createClientId(),
+    type: "fill",
+    x,
+    y,
+    color,
+    opacity,
+    tolerance,
+  };
+}
+
+function createShapeLayer({
+  shape,
+  start,
+  end,
+  color,
+  strokeWidth,
+  opacity,
+  fillColor,
+  fillOpacity,
+}) {
+  return {
+    id: createClientId(),
+    type: "shape",
+    shape,
+    x1: start.x,
+    y1: start.y,
+    x2: end.x,
+    y2: end.y,
+    color,
+    strokeWidth,
+    opacity,
+    fillColor,
+    fillOpacity,
+  };
+}
+
 function renderLayersToCanvas(options) {
   const canvas = document.createElement("canvas");
   canvas.width = options.canvasSize.width;
@@ -1497,6 +1693,16 @@ function drawLayers(
   layers.forEach((layer) => {
     if (layer.type === "text") {
       if (includeText) drawTextLayer(context, layer);
+      return;
+    }
+
+    if (layer.type === "fill") {
+      drawFillLayer(context, layer, width, height);
+      return;
+    }
+
+    if (layer.type === "shape") {
+      drawShapeLayer(context, layer);
       return;
     }
 
@@ -1561,6 +1767,131 @@ function drawStrokeLayer(context, layer, backgroundMode) {
   }
   context.stroke();
   context.restore();
+}
+
+function drawShapeLayer(context, layer) {
+  const x = Math.min(layer.x1, layer.x2);
+  const y = Math.min(layer.y1, layer.y2);
+  const width = Math.abs(layer.x2 - layer.x1);
+  const height = Math.abs(layer.y2 - layer.y1);
+
+  context.save();
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.lineWidth = layer.strokeWidth;
+  context.strokeStyle = layer.color;
+
+  context.beginPath();
+  if (layer.shape === "line") {
+    context.moveTo(layer.x1, layer.y1);
+    context.lineTo(layer.x2, layer.y2);
+  } else if (layer.shape === "ellipse") {
+    context.ellipse(
+      x + width / 2,
+      y + height / 2,
+      Math.max(width / 2, 0.5),
+      Math.max(height / 2, 0.5),
+      0,
+      0,
+      Math.PI * 2
+    );
+  } else if (layer.shape === "triangle") {
+    context.moveTo(layer.x1 + (layer.x2 - layer.x1) / 2, layer.y1);
+    context.lineTo(layer.x2, layer.y2);
+    context.lineTo(layer.x1, layer.y2);
+    context.closePath();
+  } else {
+    context.rect(x, y, Math.max(width, 0.5), Math.max(height, 0.5));
+  }
+
+  if (layer.fillColor && layer.shape !== "line") {
+    context.save();
+    context.globalAlpha = layer.fillOpacity;
+    context.fillStyle = layer.fillColor;
+    context.fill();
+    context.restore();
+  }
+
+  context.globalAlpha = layer.opacity;
+  context.stroke();
+  context.restore();
+}
+
+function drawFillLayer(context, layer, width, height) {
+  const canvas = context.canvas;
+  const pixelWidth = canvas.width;
+  const pixelHeight = canvas.height;
+
+  if (!pixelWidth || !pixelHeight) return;
+
+  const seedX = clamp(
+    Math.round((Number(layer.x || 0) / width) * pixelWidth),
+    0,
+    pixelWidth - 1
+  );
+  const seedY = clamp(
+    Math.round((Number(layer.y || 0) / height) * pixelHeight),
+    0,
+    pixelHeight - 1
+  );
+  const fillColor = hexToRgb(layer.color || "#67e8f9");
+  const imageData = context.getImageData(0, 0, pixelWidth, pixelHeight);
+
+  applyFloodFill(imageData, seedX, seedY, {
+    ...fillColor,
+    opacity: clamp(Number(layer.opacity || 1), 0.05, 1),
+    tolerance: clamp(Number(layer.tolerance || FILL_TOLERANCE), 0, 80),
+  });
+  context.putImageData(imageData, 0, 0);
+}
+
+function applyFloodFill(imageData, startX, startY, fill) {
+  const { data, width, height } = imageData;
+  const startIndex = (startY * width + startX) * 4;
+  const target = {
+    r: data[startIndex],
+    g: data[startIndex + 1],
+    b: data[startIndex + 2],
+    a: data[startIndex + 3],
+  };
+
+  if (colorsWithinTolerance(target, { ...fill, a: 255 }, fill.tolerance)) return;
+
+  const stack = [[startX, startY]];
+
+  while (stack.length > 0) {
+    const [x, y] = stack.pop();
+    if (x < 0 || y < 0 || x >= width || y >= height) continue;
+
+    const index = (y * width + x) * 4;
+    const current = {
+      r: data[index],
+      g: data[index + 1],
+      b: data[index + 2],
+      a: data[index + 3],
+    };
+
+    if (!colorsWithinTolerance(current, target, fill.tolerance)) continue;
+
+    data[index] = Math.round(fill.r * fill.opacity + current.r * (1 - fill.opacity));
+    data[index + 1] = Math.round(fill.g * fill.opacity + current.g * (1 - fill.opacity));
+    data[index + 2] = Math.round(fill.b * fill.opacity + current.b * (1 - fill.opacity));
+    data[index + 3] = Math.max(current.a, Math.round(255 * fill.opacity));
+
+    stack.push([x + 1, y]);
+    stack.push([x - 1, y]);
+    stack.push([x, y + 1]);
+    stack.push([x, y - 1]);
+  }
+}
+
+function colorsWithinTolerance(a, b, tolerance) {
+  return (
+    Math.abs(a.r - b.r) <= tolerance &&
+    Math.abs(a.g - b.g) <= tolerance &&
+    Math.abs(a.b - b.b) <= tolerance &&
+    Math.abs(a.a - b.a) <= tolerance
+  );
 }
 
 function drawTextLayer(context, label) {
@@ -1631,6 +1962,20 @@ function canvasToBlob(canvas, mimeType) {
 
 function normalizeHexColor(value, fallback) {
   return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? String(value) : fallback;
+}
+
+function normalizeOptionalHexColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? String(value) : "";
+}
+
+function hexToRgb(value) {
+  const normalized = normalizeHexColor(value, "#67e8f9").slice(1);
+
+  return {
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16),
+  };
 }
 
 function clamp(value, min, max) {
