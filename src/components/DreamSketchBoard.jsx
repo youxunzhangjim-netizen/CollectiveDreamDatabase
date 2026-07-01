@@ -1069,8 +1069,8 @@ export default function DreamSketchBoard({
               </button>
             </div>
 
-            <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[18rem_minmax(0,1fr)]">
-              <div className="order-2 max-h-[44vh] overflow-y-auto border-t border-white/10 bg-black/35 p-4 lg:order-1 lg:max-h-none lg:border-r lg:border-t-0">
+            <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(14rem,16rem)_minmax(0,1fr)] xl:grid-cols-[minmax(15rem,17rem)_minmax(0,1fr)]">
+              <div className="order-2 max-h-[42vh] overflow-y-auto border-t border-white/10 bg-black/35 p-3 sm:p-4 lg:order-1 lg:max-h-none lg:border-r lg:border-t-0 lg:p-3">
                 <SketchToolbar
                   copy={copy}
                   tool={tool}
@@ -1108,33 +1108,35 @@ export default function DreamSketchBoard({
               </div>
 
               <div className="order-1 flex min-h-0 flex-col bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.12),transparent_42%),#05070a] lg:order-2">
-                <div className="hidden items-center gap-3 border-b border-white/10 bg-zinc-950/95 p-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_auto]">
-                  <p className="max-w-2xl text-sm leading-relaxed text-slate-300">
+                <div className="hidden gap-3 border-b border-white/10 bg-zinc-950/95 p-3 lg:flex lg:flex-wrap lg:items-center lg:justify-end">
+                  <p className="min-w-[20rem] flex-1 text-sm leading-relaxed text-slate-300">
                     {copy.privacy} {copy.publishTextOnly}
                   </p>
-                  <button
-                    type="button"
-                    onClick={handleRemove}
-                    disabled={!hasSketch}
-                    aria-label={copy.remove}
-                    className="min-h-12 min-w-36 rounded-xl border border-red-300/25 bg-red-400/5 px-4 py-3 text-center font-mono text-[10px] font-bold uppercase leading-4 tracking-[0.14em] text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {copy.remove}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={saving || openDisabled}
-                    aria-label={copy.save}
-                    className="min-h-12 min-w-40 rounded-xl border border-cyan-300/35 bg-cyan-300 px-4 py-3 text-center font-mono text-[10px] font-bold uppercase leading-4 tracking-[0.14em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {saving ? "..." : copy.save}
-                  </button>
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={handleRemove}
+                      disabled={!hasSketch}
+                      aria-label={copy.remove}
+                      className="min-h-11 min-w-32 rounded-xl border border-red-300/25 bg-red-400/5 px-4 py-3 text-center font-mono text-[10px] font-bold uppercase leading-4 tracking-[0.14em] text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {copy.remove}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving || openDisabled}
+                      aria-label={copy.save}
+                      className="min-h-11 min-w-36 rounded-xl border border-cyan-300/35 bg-cyan-300 px-4 py-3 text-center font-mono text-[10px] font-bold uppercase leading-4 tracking-[0.14em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {saving ? "..." : copy.save}
+                    </button>
+                  </div>
                 </div>
-                <div className="min-h-0 flex-1 overflow-auto overscroll-contain p-3 sm:p-5">
-                  <div className="mx-auto w-full max-w-5xl">
+                <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto overscroll-contain p-3 sm:p-4 lg:p-5">
+                  <div className="mx-auto flex w-full max-w-5xl justify-center">
                     <div
-                      className="relative mx-auto touch-none select-none"
+                      className="relative inline-block max-w-full touch-none select-none align-top"
                       style={{ maxWidth: `${canvasSize.width}px` }}
                       onPointerMove={movePointer}
                       onPointerUp={endPointer}
@@ -1146,7 +1148,7 @@ export default function DreamSketchBoard({
                         onPointerMove={movePointer}
                         onPointerUp={endPointer}
                         onPointerCancel={endPointer}
-                        className="block h-auto w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)]"
+                        className="block h-auto max-h-[calc(100dvh-18rem)] w-auto max-w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)] sm:max-h-[calc(100dvh-16rem)] lg:max-h-[calc(100dvh-12.5rem)]"
                       />
                       {textLayers.map((label) => (
                         <button

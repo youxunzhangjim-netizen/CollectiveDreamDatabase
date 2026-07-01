@@ -86,7 +86,9 @@ const privateSketch = {
   assert.match(sketchSource, /SHAPE_TOOLS/);
   assert.match(sketchSource, /shapeFillEnabled/);
   assert.match(sketchSource, /activeShapeRef/);
-  assert.match(sketchSource, /lg:grid lg:grid-cols-\[minmax\(0,1fr\)_auto_auto\]/);
+  assert.match(sketchSource, /lg:flex lg:flex-wrap/);
+  assert.match(sketchSource, /min-w-\[20rem\]/);
+  assert.match(sketchSource, /max-h-\[calc\(100dvh-12\.5rem\)\]/);
   assert.match(sketchSource, /lg:hidden/);
   assert.match(sketchSource, /tool === "fill"/);
   assert.match(sketchSource, /tool === "rectangle"/);
