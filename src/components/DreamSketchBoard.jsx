@@ -181,6 +181,7 @@ const SKETCH_COPY = {
 };
 
 Object.assign(SKETCH_COPY.en, {
+  geometric: "Shapes",
   title: "Sketch the dream",
   subtitle:
     "Draw a rough scene, symbol, map, creature, or place from the dream. It does not need to look good.",
@@ -212,6 +213,7 @@ Object.assign(SKETCH_COPY.en, {
 });
 
 Object.assign(SKETCH_COPY.zh, {
+  geometric: "幾何圖形",
   title: "畫下這個夢",
   subtitle:
     "你可以粗略畫下夢中的場景、符號、地圖、生物或地方。不需要畫得好，只要能幫你記住夢。",
@@ -276,6 +278,7 @@ Object.assign(SKETCH_COPY.zh, {
 });
 
 Object.assign(SKETCH_COPY.es, {
+  geometric: "Formas",
   title: "Dibuja este sueño",
   subtitle:
     "Dibuja una escena, símbolo, mapa, criatura o lugar del sueño. No tiene que verse perfecto; solo tiene que ayudarte a recordarlo.",
@@ -1056,7 +1059,7 @@ export default function DreamSketchBoard({
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 p-0 text-zinc-100 backdrop-blur sm:p-2 lg:p-3">
-          <div className="mx-auto flex h-full max-w-[96rem] flex-col overflow-hidden border-cyan-300/20 bg-zinc-950 shadow-terminal sm:rounded-3xl sm:border lg:h-[calc(100dvh-1.5rem)] lg:max-h-[calc(100dvh-1.5rem)]">
+          <div className="mx-auto flex h-full max-w-[118rem] flex-col overflow-hidden border-cyan-300/20 bg-zinc-950 shadow-terminal sm:rounded-3xl sm:border lg:h-[calc(100dvh-1.5rem)] lg:max-h-[calc(100dvh-1.5rem)]">
             <div className="shrink-0 flex items-start justify-between gap-3 border-b border-white/10 p-4 sm:p-5 lg:p-4">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-cyan-200/70">
@@ -1076,8 +1079,8 @@ export default function DreamSketchBoard({
               </button>
             </div>
 
-            <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(14.5rem,16rem)_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,18rem)_minmax(0,1fr)]">
-              <div className="order-2 max-h-[42vh] overflow-y-auto border-t border-white/10 bg-black/35 p-3 sm:p-4 lg:order-1 lg:h-full lg:max-h-none lg:self-stretch lg:rounded-br-2xl lg:border-r lg:border-t-0 lg:p-3 xl:p-4">
+            <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(24rem,30rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(28rem,34rem)_minmax(0,1fr)]">
+              <div className="order-2 max-h-[42vh] overflow-y-auto border-t border-white/10 bg-black/35 p-3 sm:p-4 lg:order-1 lg:h-full lg:max-h-none lg:self-stretch lg:overflow-visible lg:rounded-br-2xl lg:border-r lg:border-t-0 lg:p-4">
                 <SketchToolbar
                   copy={copy}
                   tool={tool}
@@ -1155,7 +1158,7 @@ export default function DreamSketchBoard({
                         onPointerMove={movePointer}
                         onPointerUp={endPointer}
                         onPointerCancel={endPointer}
-                        className="block h-auto max-h-[calc(100dvh-18rem)] w-auto max-w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)] sm:max-h-[calc(100dvh-16rem)] lg:max-h-[calc(100dvh-13rem)] xl:max-h-[calc(100dvh-12rem)]"
+                        className="block h-auto max-h-[calc(100dvh-18rem)] w-auto max-w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)] sm:max-h-[calc(100dvh-16rem)] lg:max-h-[calc(100dvh-10.5rem)] xl:max-h-[calc(100dvh-9.5rem)]"
                       />
                       {textLayers.map((label) => (
                         <button
@@ -1260,9 +1263,11 @@ function SketchToolbar({
   undoDisabled,
   redoDisabled,
 }) {
+  const activeShapeTool = SHAPE_TOOLS.has(tool) ? tool : "";
+
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2">
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
         <ToolButton active={tool === "brush"} onClick={() => setTool("brush")}>
           {copy.draw}
         </ToolButton>
@@ -1280,22 +1285,31 @@ function SketchToolbar({
         </ToolButton>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <ToolButton active={tool === "rectangle"} onClick={() => setTool("rectangle")}>
-          {copy.rectangle}
-        </ToolButton>
-        <ToolButton active={tool === "ellipse"} onClick={() => setTool("ellipse")}>
-          {copy.ellipse}
-        </ToolButton>
-        <ToolButton active={tool === "triangle"} onClick={() => setTool("triangle")}>
-          {copy.triangle}
-        </ToolButton>
-        <ToolButton active={tool === "line"} onClick={() => setTool("line")}>
-          {copy.line}
-        </ToolButton>
-      </div>
+      <label className="block rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+          {copy.geometric || copy.rectangle}
+        </span>
+        <select
+          value={activeShapeTool}
+          onChange={(event) => {
+            if (event.target.value) setTool(event.target.value);
+          }}
+          className={[
+            "w-full rounded-xl border px-3 py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] outline-none",
+            activeShapeTool
+              ? "border-cyan-300/40 bg-cyan-300 text-zinc-950"
+              : "border-cyan-300/15 bg-black/40 text-cyan-50",
+          ].join(" ")}
+        >
+          <option value="">{copy.geometric || copy.rectangle}</option>
+          <option value="rectangle">{copy.rectangle}</option>
+          <option value="ellipse">{copy.ellipse}</option>
+          <option value="triangle">{copy.triangle}</option>
+          <option value="line">{copy.line}</option>
+        </select>
+      </label>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <ToolButton onClick={onUndo} disabled={undoDisabled}>
           {copy.undo}
         </ToolButton>
@@ -1386,7 +1400,7 @@ function SketchToolbar({
         </button>
       </label>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
         <label className="block">
           <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
             {copy.format}
@@ -1417,22 +1431,22 @@ function SketchToolbar({
             ))}
           </select>
         </label>
-      </div>
 
-      <label className="block">
-        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-          {copy.background}
-        </span>
-        <select
-          value={backgroundMode}
-          onChange={(event) => setBackgroundMode(event.target.value)}
-          className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 font-mono text-xs text-cyan-50 outline-none"
-        >
-          <option value="dark">{copy.dark}</option>
-          <option value="white">{copy.white}</option>
-          <option value="transparent">{copy.transparent}</option>
-        </select>
-      </label>
+        <label className="block">
+          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+            {copy.background}
+          </span>
+          <select
+            value={backgroundMode}
+            onChange={(event) => setBackgroundMode(event.target.value)}
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-3 font-mono text-xs text-cyan-50 outline-none"
+          >
+            <option value="dark">{copy.dark}</option>
+            <option value="white">{copy.white}</option>
+            <option value="transparent">{copy.transparent}</option>
+          </select>
+        </label>
+      </div>
 
       <SketchToggle
         checked={showGrid}

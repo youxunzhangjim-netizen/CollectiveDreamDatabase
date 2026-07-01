@@ -29,6 +29,7 @@ const COPY = {
     emailPlaceholder: "tester@example.com",
     addEmail: "Add allowed email",
     dashboard: "Beta dashboard",
+    dashboardNote: "Counts are admin-only operational metrics. Active users and device/browser mix are approximate from recent safe analytics events.",
     feedback: "Feedback dashboard",
     checklist: "Beta checklist",
     refresh: "Refresh",
@@ -74,6 +75,7 @@ const COPY = {
     emailPlaceholder: "tester@example.com",
     addEmail: "加入允許清單",
     dashboard: "Beta 儀表板",
+    dashboardNote: "這些是僅限管理員查看的營運指標；活躍使用者與裝置／瀏覽器比例依近期安全分析事件估算。",
     feedback: "回饋儀表板",
     checklist: "Beta 檢查表",
     refresh: "重新整理",
@@ -119,6 +121,7 @@ const COPY = {
     emailPlaceholder: "tester@example.com",
     addEmail: "Añadir email permitido",
     dashboard: "Panel beta",
+    dashboardNote: "Son métricas operativas solo para admins. Usuarios activos y dispositivos/navegadores son aproximados con eventos seguros recientes.",
     feedback: "Panel de feedback",
     checklist: "Lista beta",
     refresh: "Actualizar",
@@ -393,6 +396,9 @@ export default function BetaAdminPanel({ language = "zh", user, profile }) {
 
         <div className="space-y-5">
           <AdminCard title={copy.dashboard}>
+            <p className="mb-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-3 text-xs leading-6 text-cyan-100">
+              {copy.dashboardNote}
+            </p>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {statRows.map((row) => (
                 <div key={row.label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">

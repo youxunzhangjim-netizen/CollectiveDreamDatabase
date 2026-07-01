@@ -114,6 +114,9 @@ assert.ok(onboardingSource.includes("你不需要公開夢境文字"));
 assert.ok(onboardingSource.includes("No necesitas publicar"));
 assert.ok(onboardingSource.includes("markBetaOnboardingComplete"));
 assert.ok(onboardingSource.includes("sm:grid-cols-3"));
+assert.ok(onboardingSource.includes("/privacy"));
+assert.ok(onboardingSource.includes("/terms"));
+assert.ok(onboardingSource.includes("/community-guidelines"));
 
 assert.ok(feedbackSource.includes("submitFeedback"));
 assert.ok(feedbackSource.includes("privacy concerns"));
@@ -131,6 +134,8 @@ assert.ok(betaAdminSource.includes("lg:flex-row"));
 assert.ok(betaAdminSource.includes("sm:grid-cols-2"));
 assert.ok(betaAdminSource.includes("deviceTypes"));
 assert.ok(betaAdminSource.includes("browserTypes"));
+assert.ok(betaAdminSource.includes("dashboardNote"));
+assert.ok(betaAdminSource.includes("approximate"));
 
 assert.ok(dashboardSource.includes("BetaAdminPanel"));
 assert.ok(dashboardSource.includes("research_export_started"));

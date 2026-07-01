@@ -16,6 +16,9 @@ const COPY = {
     private: "Keep everything private",
     stats: "Recommended: contribute anonymous statistics",
     choose: "Let me choose dream by dream",
+    privacy: "Privacy",
+    terms: "Terms",
+    guidelines: "Guidelines",
     continue: "Continue",
   },
   zh: {
@@ -32,6 +35,9 @@ const COPY = {
     private: "全部保持私人",
     stats: "推薦：匿名公開文字與統計",
     choose: "每則夢各自選擇",
+    privacy: "隱私政策",
+    terms: "服務條款",
+    guidelines: "社群規範",
     continue: "繼續",
   },
   es: {
@@ -48,6 +54,9 @@ const COPY = {
     private: "Mantener todo privado",
     stats: "Recomendado: contribuir estadísticas anónimas",
     choose: "Elegir sueño por sueño",
+    privacy: "Privacidad",
+    terms: "Términos",
+    guidelines: "Normas",
     continue: "Continuar",
   },
 };
@@ -119,6 +128,22 @@ export default function BetaOnboarding({
             </li>
           ))}
         </ul>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {[
+            [copy.privacy, "/privacy"],
+            [copy.terms, "/terms"],
+            [copy.guidelines, "/community-guidelines"],
+          ].map(([label, href]) => (
+            <a
+              key={href}
+              href={href}
+              className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 hover:border-cyan-300/40"
+            >
+              {label}
+            </a>
+          ))}
+        </div>
 
         <button
           type="button"
