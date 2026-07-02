@@ -11,6 +11,10 @@ mkdirSync(iconDir, { recursive: true });
 
 const source = decodePng(readFileSync(sourcePath));
 const outputs = [
+  ["observatory-icon-192.png", 192],
+  ["observatory-icon-512.png", 512],
+  ["observatory-maskable-icon-192.png", 192],
+  ["observatory-maskable-icon-512.png", 512],
   ["icon-192.png", 192],
   ["icon-512.png", 512],
   ["maskable-icon-192.png", 192],
@@ -26,6 +30,9 @@ const svg = renderEmbeddedSvg(readFileSync(join(iconDir, "icon-512.png")));
 writeFileSync(join(root, "public", "app-icon.svg"), svg);
 writeFileSync(join(iconDir, "icon.svg"), svg);
 writeFileSync(join(iconDir, "maskable-icon.svg"), svg);
+writeFileSync(join(iconDir, "observatory-icon.svg"), svg);
+writeFileSync(join(iconDir, "observatory-maskable-icon.svg"), svg);
+writeFileSync(join(root, "public", "favicon.ico"), encodeIco(readFileSync(join(iconDir, "observatory-icon-192.png"))));
 
 function decodePng(buffer) {
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -192,6 +199,25 @@ function renderEmbeddedSvg(pngBuffer) {
   <image href="data:image/png;base64,${base64}" width="512" height="512" preserveAspectRatio="xMidYMid meet"/>
 </svg>
 `;
+}
+
+function encodeIco(pngBuffer) {
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0);
+  header.writeUInt16LE(1, 2);
+  header.writeUInt16LE(1, 4);
+
+  const entry = Buffer.alloc(16);
+  entry[0] = 192;
+  entry[1] = 192;
+  entry[2] = 0;
+  entry[3] = 0;
+  entry.writeUInt16LE(1, 4);
+  entry.writeUInt16LE(32, 6);
+  entry.writeUInt32LE(pngBuffer.length, 8);
+  entry.writeUInt32LE(header.length + entry.length, 12);
+
+  return Buffer.concat([header, entry, pngBuffer]);
 }
 
 function encodePng(width, height, rgba) {

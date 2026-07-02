@@ -26,9 +26,10 @@ assert.ok(viteConfig.includes("url.origin === self.location.origin"));
 assert.ok(viteConfig.includes("navigateFallback"));
 assert.ok(viteConfig.includes("supabase"));
 
-assert.ok(indexHtml.includes('<link rel="manifest" href="/manifest.webmanifest"'));
+assert.ok(indexHtml.includes('<link rel="manifest" href="/manifest.webmanifest?v=observatory-icon-20260702"'));
 assert.ok(indexHtml.includes("apple-mobile-web-app-capable"));
 assert.ok(indexHtml.includes("Dream Observatory"));
+assert.ok(indexHtml.includes("/icons/observatory-icon-192.png"));
 
 assert.ok(app.includes("useRegisterSW"));
 assert.ok(app.includes("PWAInstallPrompt"));
@@ -45,10 +46,17 @@ assert.ok(!offlineService.includes("caches."));
 [
   "public/icons/icon.svg",
   "public/icons/maskable-icon.svg",
+  "public/icons/observatory-icon.svg",
+  "public/icons/observatory-maskable-icon.svg",
+  "public/icons/observatory-icon-192.png",
+  "public/icons/observatory-icon-512.png",
+  "public/icons/observatory-maskable-icon-192.png",
+  "public/icons/observatory-maskable-icon-512.png",
   "public/icons/icon-192.png",
   "public/icons/icon-512.png",
   "public/icons/maskable-icon-192.png",
   "public/icons/maskable-icon-512.png",
+  "public/favicon.ico",
   "public/offline.html",
   "PWA_SETUP.md",
 ].forEach((file) => {
@@ -56,6 +64,10 @@ assert.ok(!offlineService.includes("caches."));
 });
 
 [
+  "public/icons/observatory-icon-192.png",
+  "public/icons/observatory-icon-512.png",
+  "public/icons/observatory-maskable-icon-192.png",
+  "public/icons/observatory-maskable-icon-512.png",
   "public/icons/icon-192.png",
   "public/icons/icon-512.png",
   "public/icons/maskable-icon-192.png",
