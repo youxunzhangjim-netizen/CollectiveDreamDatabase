@@ -622,7 +622,7 @@ export default function RecordDreamPage({
   const [authLoading, setAuthLoading] = useState("");
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
-  const [rulesExpanded, setRulesExpanded] = useState(false);
+  const [rulesExpanded, setRulesExpanded] = useState(true);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine
   );
@@ -1795,13 +1795,6 @@ export default function RecordDreamPage({
                 </div>
               </section>
 
-              <RecorderCompactNotes
-                copy={copy}
-                accountBacked={accountBacked}
-                rulesExpanded={rulesExpanded}
-                setRulesExpanded={setRulesExpanded}
-              />
-
               {submitError && (
                 <div className="rounded-2xl border border-red-300/25 bg-red-400/5 p-4">
                   <p className="font-mono text-xs leading-5 text-red-100">
@@ -1974,6 +1967,12 @@ export default function RecordDreamPage({
               )}
             </section>
 
+            <RecorderCompactNotes
+              copy={copy}
+              rulesExpanded={rulesExpanded}
+              setRulesExpanded={setRulesExpanded}
+            />
+
             {offlineDraftNotice && (
               <p className="rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4 font-mono text-xs leading-6 text-cyan-100">
                 {offlineDraftNotice}
@@ -2012,37 +2011,38 @@ function SessionBadge({ copy, accountBacked }) {
 
 function RecorderCompactNotes({
   copy,
-  accountBacked,
   rulesExpanded,
   setRulesExpanded,
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-slate-300">
-      <p>{accountBacked ? copy.accountEditable : copy.anonymousLocked}</p>
-      <p className="mt-2 text-xs leading-5 text-slate-500">
-        {copy.privacyFirstText}
-      </p>
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em]">
+    <section className="rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4 text-sm leading-6 text-slate-300">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="cdo-card-heading">{copy.rulesTitle}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">
+            {copy.privacyFirstText}
+          </p>
+        </div>
         <button
           type="button"
           aria-expanded={rulesExpanded}
           onClick={() => setRulesExpanded((current) => !current)}
-          className="text-cyan-100 underline-offset-4 transition hover:text-cyan-50 hover:underline"
+          className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 underline underline-offset-4 transition hover:text-cyan-50"
         >
           {rulesExpanded ? copy.rulesCollapse : copy.rulesExpand}
         </button>
-        <span className="text-slate-600" aria-hidden="true">
-          /
-        </span>
-        <span className="text-fuchsia-100">{copy.diagnosisReminderTitle}</span>
       </div>
       {rulesExpanded && (
         <div className="mt-3 rounded-xl border border-cyan-300/10 bg-black/25 p-3">
           <p className="text-xs leading-5 text-slate-400">
+            <span className="font-mono font-bold uppercase tracking-[0.12em] text-fuchsia-100">
+              {copy.diagnosisReminderTitle}
+            </span>
+            {" "}
             {copy.diagnosisReminderText}
           </p>
-          <ul className="mt-3 grid gap-2 text-xs leading-5 text-slate-300 sm:grid-cols-2">
-            {copy.rules.slice(0, 6).map((rule) => (
+          <ul className="mt-3 grid gap-2 text-xs leading-5 text-slate-300">
+            {copy.rules.slice(0, 8).map((rule) => (
               <li key={rule} className="flex gap-2">
                 <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-cyan-300" />
                 <span>{rule}</span>

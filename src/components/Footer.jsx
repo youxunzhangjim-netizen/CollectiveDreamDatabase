@@ -3,56 +3,44 @@ import { useState } from "react";
 const FOOTER_COPY = {
   en: {
     license:
-      "Collective Dream Observatory hosts the Collective Dream Database research archive. Dream records are shared under the Creative Commons Attribution-NonCommercial (CC BY-NC) License unless otherwise specified by the author.",
-    terms: "Terms & Disclaimer",
+      "Dream records stay owned by their authors. Public archive records use CC BY-NC unless the author specifies otherwise.",
+    terms: "Disclaimer",
     modalTitle: "Terms & Disclaimer",
     modalText:
       "Collective Dream Observatory stores user-generated dream records for private reflection, anonymous public reading, and research context. The platform is not responsible for user-generated content, private information submitted by users, or interpretations made from the records.",
     close: "Close",
     links: [
-      ["Privacy", "/privacy"],
-      ["Terms", "/terms"],
-      ["Guidelines", "/guidelines"],
-      ["Removal", "/removal"],
-      ["Not diagnosis", "/diagnosis"],
+      ["Policy", "/privacy"],
+      ["Safety", "/guidelines"],
       ["Support", "/support"],
-      ["Delete account", "/account-deletion"],
     ],
   },
   zh: {
     license:
-      "集體夢境觀測站承載「集體夢境資料庫」研究檔案模組。除非作者另有指定，所有夢境紀錄皆以 Creative Commons Attribution-NonCommercial (CC BY-NC) 授權分享。",
-    terms: "條款與免責聲明",
+      "夢境文字歸記錄者所有。公開檔案庫預設以 CC BY-NC 分享，除非作者另有指定。",
+    terms: "免責聲明",
     modalTitle: "條款與免責聲明",
     modalText:
       "集體夢境觀測站儲存使用者產生的夢境紀錄，供私人回顧、匿名公開閱讀與研究脈絡使用。本平台不對使用者產生內容、使用者提交的私人資訊，或他人對紀錄做出的詮釋負責。",
     close: "關閉",
     links: [
-      ["隱私", "/privacy"],
-      ["條款", "/terms"],
-      ["社群準則", "/guidelines"],
-      ["內容移除", "/removal"],
-      ["非診斷", "/diagnosis"],
+      ["政策", "/privacy"],
+      ["安全", "/guidelines"],
       ["支援", "/support"],
-      ["刪除帳戶", "/account-deletion"],
     ],
   },
   es: {
     license:
-      "El Observatorio Colectivo de Sueños aloja la Base de Datos Colectiva de Sueños como archivo de investigación. Los registros se comparten bajo la licencia Creative Commons Attribution-NonCommercial (CC BY-NC), salvo que el autor especifique lo contrario.",
-    terms: "Términos y descargo",
+      "Los textos pertenecen a sus autores. Los registros públicos usan CC BY-NC salvo que el autor indique otra cosa.",
+    terms: "Descargo",
     modalTitle: "Términos y descargo",
     modalText:
       "El Observatorio Colectivo de Sueños almacena registros generados por usuarios para reflexión privada, lectura pública anónima y contexto de investigación. La plataforma no se responsabiliza por contenido generado por usuarios, información privada enviada por usuarios ni interpretaciones realizadas a partir de los registros.",
     close: "Cerrar",
     links: [
-      ["Privacidad", "/privacy"],
-      ["Términos", "/terms"],
-      ["Normas", "/guidelines"],
-      ["Retirada", "/removal"],
-      ["No diagnóstico", "/diagnosis"],
+      ["Política", "/privacy"],
+      ["Seguridad", "/guidelines"],
       ["Soporte", "/support"],
-      ["Eliminar cuenta", "/account-deletion"],
     ],
   },
 };
@@ -64,28 +52,33 @@ export default function Footer({ language = "zh" }) {
   return (
     <>
       <footer className="relative border-t border-white/10 bg-[#030407] px-4 py-4 text-zinc-500 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 text-xs leading-5">
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-            <p className="max-w-4xl">{copy.license}</p>
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 pl-24 text-xs leading-5 sm:pl-28 lg:items-end lg:pl-0 lg:text-right">
+          <div className="flex w-full flex-col gap-2 lg:max-w-4xl lg:flex-row lg:items-center lg:justify-end">
+            <p className="text-[11px] leading-5 text-zinc-500 lg:max-w-2xl">
+              {copy.license}
+            </p>
+            <nav
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 lg:justify-end"
+              aria-label={copy.modalTitle}
+            >
+              {copy.links.map(([label, href]) => (
+                <a
+                  key={href}
+                  href={href}
+                  className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-400 underline underline-offset-4 transition hover:text-cyan-100"
+                >
+                  {label}
+                </a>
+              ))}
+            </nav>
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="self-start font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 underline underline-offset-4 transition hover:text-cyan-50"
+              className="self-start font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 underline underline-offset-4 transition hover:text-cyan-50 lg:self-auto"
             >
               {copy.terms}
             </button>
           </div>
-          <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label={copy.terms}>
-            {copy.links.map(([label, href]) => (
-              <a
-                key={href}
-                href={href}
-                className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-400 underline-offset-4 transition hover:text-cyan-100 hover:underline"
-              >
-                {label}
-              </a>
-            ))}
-          </nav>
         </div>
       </footer>
 

@@ -534,28 +534,28 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
         ? { label: "Cambiar apariencia", morning: "Día", night: "Noche" }
         : { label: "Switch appearance", morning: "Day", night: "Night" };
   const morningMode = appearance === "morning";
+  const nextAppearance = morningMode ? "night" : "morning";
 
   return (
-    <div
+    <button
+      type="button"
+      title={`${copy.label}: ${morningMode ? copy.morning : copy.night}`}
+      aria-label={`${copy.label}: ${morningMode ? copy.morning : copy.night}`}
+      onClick={() => setAppearance(nextAppearance)}
       className={[
-        "fixed bottom-3 left-3 z-50 flex items-center overflow-hidden rounded-full border p-0.5 shadow-[0_0_20px_rgba(34,211,238,.14)] backdrop-blur sm:bottom-4 sm:left-4",
+        "fixed bottom-3 left-3 z-50 flex items-center overflow-hidden rounded-full border p-0.5 shadow-[0_0_20px_rgba(34,211,238,.14)] backdrop-blur transition sm:bottom-4 sm:left-4",
         morningMode
           ? "border-cyan-700/20 bg-white/80"
           : "border-cyan-300/30 bg-zinc-950/85",
       ].join(" ")}
-      role="group"
-      aria-label={copy.label}
     >
       {["morning", "night"].map((option) => {
         const active = appearance === option;
 
         return (
-          <button
+          <span
             key={option}
-            type="button"
-            aria-pressed={active}
-            title={option === "morning" ? copy.morning : copy.night}
-            onClick={() => setAppearance(option)}
+            aria-hidden="true"
             className={[
               "flex h-8 w-8 items-center justify-center rounded-full transition sm:h-9 sm:w-9",
               active
@@ -568,13 +568,10 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
             ].join(" ")}
           >
             {option === "morning" ? <SunIcon /> : <CrescentIcon />}
-            <span className="sr-only">
-              {option === "morning" ? copy.morning : copy.night}
-            </span>
-          </button>
+          </span>
         );
       })}
-    </div>
+    </button>
   );
 }
 
