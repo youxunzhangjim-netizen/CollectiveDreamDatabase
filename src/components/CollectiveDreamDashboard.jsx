@@ -107,12 +107,14 @@ const UI_COPY = {
     mobileDatabase: "Archive",
     mobileSubmit: "Submit",
     mobileReportSuggestion: "Report",
+    mobileInstallApp: "Install",
     globalDatabase: "Research Archive",
     submitObservation: "Record Dream",
     importDiary: "Import Diary",
     loginButton: "Login",
     accountButton: "Account",
     reportSuggestion: "Report",
+    installApp: "Install app",
     searchLabel: "Search dream observations",
     searchPlaceholder: "Search dreams, pseudo-IDs, emotions, anomalies...",
     languageLabel: "Switch interface language",
@@ -324,12 +326,14 @@ const UI_COPY = {
     mobileDatabase: "檔案庫",
     mobileSubmit: "提交",
     mobileReportSuggestion: "回報",
+    mobileInstallApp: "安裝",
     globalDatabase: "研究檔案庫",
     submitObservation: "記錄夢境",
     importDiary: "匯入日記",
     loginButton: "登入",
     accountButton: "帳戶",
     reportSuggestion: "回報",
+    installApp: "安裝 App",
     searchLabel: "搜尋夢境觀測",
     searchPlaceholder: "搜尋夢境、匿名 ID、情緒、異常現象...",
     languageLabel: "切換介面語言",
@@ -537,12 +541,14 @@ const UI_COPY = {
     mobileDatabase: "Archivo",
     mobileSubmit: "Enviar",
     mobileReportSuggestion: "Reporte",
+    mobileInstallApp: "Instalar",
     globalDatabase: "Archivo de investigación",
     submitObservation: "Registrar sueño",
     importDiary: "Importar diario",
     loginButton: "Iniciar sesión",
     accountButton: "Cuenta",
     reportSuggestion: "Reporte",
+    installApp: "Instalar app",
     searchLabel: "Buscar observaciones de sueños",
     searchPlaceholder: "Buscar sueños, pseudo-ID, emociones, anomalías...",
     languageLabel: "Cambiar idioma de la interfaz",
@@ -2360,6 +2366,10 @@ function TopNav({
     );
   }
 
+  function openInstallPrompt() {
+    window.dispatchEvent(new CustomEvent("cdo:open-install-prompt"));
+  }
+
   return (
     <nav className="sticky top-0 z-40 border-b border-cyan-300/10 bg-black/80 backdrop-blur-xl">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-2 px-3 py-2 sm:px-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center lg:px-8 lg:py-3 xl:grid-cols-[auto_minmax(0,1fr)_minmax(18rem,32rem)]">
@@ -2399,6 +2409,9 @@ function TopNav({
           <NavButton onClick={openReportSuggestion}>
             {copy.mobileReportSuggestion}
           </NavButton>
+          <NavButton onClick={openInstallPrompt}>
+            {copy.mobileInstallApp}
+          </NavButton>
         </div>
 
         <div className="hidden min-w-0 flex-wrap items-center justify-start gap-2 lg:flex xl:flex-nowrap xl:justify-center">
@@ -2414,6 +2427,9 @@ function TopNav({
           </NavButton>
           <NavButton onClick={openReportSuggestion}>
             {copy.reportSuggestion}
+          </NavButton>
+          <NavButton onClick={openInstallPrompt}>
+            {copy.installApp}
           </NavButton>
         </div>
 

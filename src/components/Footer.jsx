@@ -63,24 +63,24 @@ export default function Footer({ language = "zh" }) {
 
   return (
     <>
-      <footer className="relative border-t border-white/10 bg-[#030407] px-4 py-5 text-zinc-500 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 text-xs leading-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <footer className="relative border-t border-white/10 bg-[#030407] px-4 py-4 text-zinc-500 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 text-xs leading-5">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
             <p className="max-w-4xl">{copy.license}</p>
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="self-start rounded-full border border-cyan-300/20 bg-cyan-300/5 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/10"
+              className="self-start font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 underline underline-offset-4 transition hover:text-cyan-50"
             >
               {copy.terms}
             </button>
           </div>
-          <nav className="flex flex-wrap gap-2" aria-label={copy.terms}>
+          <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label={copy.terms}>
             {copy.links.map(([label, href]) => (
               <a
                 key={href}
                 href={href}
-                className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-400 transition hover:border-cyan-300/30 hover:text-cyan-100"
+                className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-400 underline-offset-4 transition hover:text-cyan-100 hover:underline"
               >
                 {label}
               </a>

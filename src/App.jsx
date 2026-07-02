@@ -557,7 +557,7 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
             title={option === "morning" ? copy.morning : copy.night}
             onClick={() => setAppearance(option)}
             className={[
-              "flex h-9 w-9 items-center justify-center rounded-full transition",
+              "flex h-8 w-8 items-center justify-center rounded-full transition sm:h-9 sm:w-9",
               active
                 ? option === "night"
                   ? "bg-zinc-950 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,.22)]"

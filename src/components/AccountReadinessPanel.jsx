@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   clearLocalDraftsForAccount,
-  deleteAccountAndData,
   deleteAllOwnedDreams,
   fetchConsentHistory,
   requestAccountDeletion,
@@ -11,7 +10,6 @@ import {
   MODERATION_STATUSES,
   updateModerationReportStatus,
 } from "../lib/moderationService.js";
-import { trackSafeAnalyticsEvent } from "../lib/betaService.js";
 
 const COPY = {
   en: {
@@ -135,7 +133,6 @@ export default function AccountReadinessPanel({
   profile,
   observations = [],
   onDreamsDeleted = () => {},
-  onAccountDeleted = () => {},
 }) {
   const copy = COPY[language] || COPY.zh;
   const [notice, setNotice] = useState("");
@@ -200,24 +197,6 @@ export default function AccountReadinessPanel({
     });
   }
 
-  async function handleDeleteAccount() {
-    if (!window.confirm(copy.confirmDeleteAccount)) return;
-
-    await runAction("deleteAccount", async () => {
-      await trackSafeAnalyticsEvent("account_deletion_started", {
-        currentUser: user,
-        language,
-      });
-      await deleteAccountAndData(user);
-      await trackSafeAnalyticsEvent("account_deletion_completed", {
-        currentUser: user,
-        language,
-      });
-      setNotice(copy.accountDeleted);
-      onAccountDeleted();
-    });
-  }
-
   async function handleLoadReports() {
     await runAction("reports", async () => {
       const nextReports = await fetchModerationReports();
@@ -250,26 +229,26 @@ export default function AccountReadinessPanel({
   }
 
   return (
-    <section className="mb-6 overflow-hidden rounded-3xl border border-cyan-300/15 bg-zinc-950/65 shadow-[0_0_36px_rgba(34,211,238,.08)] backdrop-blur">
-      <div className="border-b border-white/10 p-5 sm:p-6">
+    <section className="mb-5 overflow-hidden rounded-2xl border border-cyan-300/15 bg-zinc-950/65 shadow-[0_0_28px_rgba(34,211,238,.07)] backdrop-blur">
+      <div className="border-b border-white/10 p-4 sm:p-5">
         <p className="cdo-kicker">{copy.title}</p>
-        <p className="cdo-body-copy mt-3 max-w-4xl">{copy.subtitle}</p>
+        <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">{copy.subtitle}</p>
         {notice && (
-          <p className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-3 font-mono text-xs leading-6 text-cyan-100">
+          <p className="mt-3 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 font-mono text-xs leading-6 text-cyan-100">
             {notice}
           </p>
         )}
       </div>
 
-      <div className="grid gap-4 p-5 sm:p-6 xl:grid-cols-3">
-        <details open className="group rounded-2xl border border-white/10 bg-black/25 p-4">
+      <div className="grid items-start gap-3 p-4 sm:p-5 xl:grid-cols-3">
+        <details className="group rounded-xl border border-white/10 bg-black/25 p-3">
           <summary className="cursor-pointer list-none">
             <DisclosureTitle title={copy.dataRights} />
           </summary>
-          <p className="mt-3 text-sm leading-relaxed text-slate-300">
+          <p className="mt-2 text-xs leading-5 text-slate-400">
             {copy.dataRightsText}
           </p>
-          <div className="mt-4 grid gap-3">
+          <div className="mt-3 grid gap-2">
             <ActionButton disabled={busy === "drafts"} onClick={handleClearDrafts}>
               {copy.clearDrafts}
             </ActionButton>
@@ -283,13 +262,10 @@ export default function AccountReadinessPanel({
             <ActionButton disabled={busy === "requestDeletion"} onClick={handleRequestDeletion}>
               {copy.requestDeletion}
             </ActionButton>
-            <ActionButton danger disabled={busy === "deleteAccount"} onClick={handleDeleteAccount}>
-              {copy.deleteAccount}
-            </ActionButton>
           </div>
         </details>
 
-        <details className="group rounded-2xl border border-white/10 bg-black/25 p-4">
+        <details className="group rounded-xl border border-white/10 bg-black/25 p-3">
           <summary className="cursor-pointer list-none">
             <DisclosureTitle title={copy.consentHistory} />
           </summary>
@@ -297,11 +273,11 @@ export default function AccountReadinessPanel({
             type="button"
             onClick={handleLoadConsent}
             disabled={busy === "consent"}
-            className="mt-4 w-full rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/45 disabled:opacity-60"
+            className="mt-3 w-full rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 transition hover:border-cyan-300/45 disabled:opacity-60"
           >
             {copy.loadConsent}
           </button>
-          <div className="mt-4 max-h-72 space-y-2 overflow-y-auto pr-1">
+          <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
             {sortedConsents.length > 0 ? (
               sortedConsents.map((event) => (
                 <div key={event.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
@@ -320,7 +296,7 @@ export default function AccountReadinessPanel({
         </details>
 
         {isAdmin && (
-          <details className="group rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-4">
+          <details className="group rounded-xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-3">
             <summary className="cursor-pointer list-none">
               <DisclosureTitle title={copy.moderation} />
             </summary>
@@ -390,7 +366,7 @@ export default function AccountReadinessPanel({
 function DisclosureTitle({ title }) {
   return (
     <span className="flex items-center justify-between gap-3">
-      <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-cyan-100">
+      <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 sm:text-xs">
         {title}
       </span>
       <span className="text-cyan-200/70 transition group-open:rotate-180">v</span>
@@ -405,7 +381,7 @@ function ActionButton({ children, onClick, disabled, danger = false }) {
       onClick={onClick}
       disabled={disabled}
       className={[
-        "rounded-xl border px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] transition disabled:cursor-not-allowed disabled:opacity-50",
+        "rounded-lg border px-3 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed disabled:opacity-50",
         danger
           ? "border-red-300/25 bg-red-400/5 text-red-100 hover:border-red-300/45 hover:bg-red-400/10"
           : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:border-cyan-300/45 hover:bg-cyan-300/15",

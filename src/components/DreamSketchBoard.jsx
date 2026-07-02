@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { trackSafeAnalyticsEvent } from "../lib/betaService.js";
 
 const CANVAS_SIZES = {
@@ -1057,7 +1058,9 @@ export default function DreamSketchBoard({
         </p>
       )}
 
-      {modalOpen && (
+      {modalOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
         <div className="fixed inset-0 z-[90] overflow-hidden bg-black/95 p-0 text-zinc-100 backdrop-blur">
           <div className="mx-auto flex h-[100dvh] w-screen max-w-none flex-col overflow-hidden border-cyan-300/20 bg-zinc-950 shadow-terminal md:border">
             <div className="shrink-0 flex items-start justify-between gap-3 border-b border-white/10 p-3 sm:p-4">
@@ -1079,8 +1082,8 @@ export default function DreamSketchBoard({
               </button>
             </div>
 
-            <div className="grid min-h-0 flex-1 gap-0 md:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)]">
-              <div className="order-2 max-h-[44vh] overflow-y-auto border-t border-white/10 bg-black/35 p-3 sm:p-4 md:order-1 md:max-h-none md:min-h-0 md:self-stretch md:overflow-visible md:border-r md:border-t-0 md:p-3 lg:p-4">
+            <div className="grid min-h-0 flex-1 gap-0 md:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)] xl:grid-cols-[minmax(17rem,21rem)_minmax(0,1fr)]">
+              <div className="order-2 max-h-[38dvh] overflow-y-auto border-t border-white/10 bg-black/35 p-3 sm:p-4 md:order-1 md:max-h-none md:min-h-0 md:self-stretch md:overflow-visible md:border-r md:border-t-0 md:p-3">
                 <SketchToolbar
                   copy={copy}
                   tool={tool}
@@ -1117,7 +1120,7 @@ export default function DreamSketchBoard({
                 />
               </div>
 
-              <div className="order-1 flex min-h-[34rem] flex-col bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.12),transparent_42%),#05070a] md:order-2 md:min-h-0">
+              <div className="order-1 flex min-h-[48dvh] flex-col bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.12),transparent_42%),#05070a] md:order-2 md:min-h-0">
                 <div className="hidden shrink-0 justify-end gap-3 border-b border-white/10 bg-zinc-950/95 p-3 md:flex md:flex-wrap md:items-center">
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
                     <button
@@ -1155,7 +1158,7 @@ export default function DreamSketchBoard({
                         onPointerMove={movePointer}
                         onPointerUp={endPointer}
                         onPointerCancel={endPointer}
-                        className="block h-auto max-h-[calc(100dvh-17rem)] w-auto max-w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)] sm:max-h-[calc(100dvh-15rem)] md:max-h-[calc(100dvh-8.5rem)]"
+                        className="block h-auto max-h-[calc(62dvh-8rem)] w-auto max-w-full touch-none rounded-2xl border border-cyan-300/25 bg-black shadow-[0_0_32px_rgba(34,211,238,.14)] sm:max-h-[calc(62dvh-7rem)] md:max-h-[calc(100dvh-7.5rem)]"
                       />
                       {textLayers.map((label) => (
                         <button
@@ -1220,8 +1223,9 @@ export default function DreamSketchBoard({
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body
+        )}
     </section>
   );
 }
@@ -1260,8 +1264,8 @@ function SketchToolbar({
   const activeShapeTool = SHAPE_TOOLS.has(tool) ? tool : "";
 
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
+    <div className="space-y-1.5">
+      <div className="grid grid-cols-3 gap-1.5">
         <ToolButton active={tool === "brush"} onClick={() => setTool("brush")}>
           {copy.draw}
         </ToolButton>
@@ -1279,8 +1283,8 @@ function SketchToolbar({
         </ToolButton>
       </div>
 
-      <label className="block rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
-        <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+      <label className="block rounded-xl border border-white/10 bg-white/[0.03] p-2">
+        <span className="mb-1 block font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">
           {copy.geometric || copy.rectangle}
         </span>
         <select
@@ -1289,7 +1293,7 @@ function SketchToolbar({
             if (event.target.value) setTool(event.target.value);
           }}
           className={[
-            "w-full rounded-xl border px-3 py-2.5 font-mono text-xs font-bold uppercase tracking-[0.12em] outline-none",
+            "w-full rounded-xl border px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] outline-none",
             activeShapeTool
               ? "border-cyan-300/40 bg-cyan-300 text-zinc-950"
               : "border-cyan-300/15 bg-black/40 text-cyan-50",
@@ -1303,7 +1307,7 @@ function SketchToolbar({
         </select>
       </label>
 
-      <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+      <div className="grid grid-cols-4 gap-1.5">
         <ToolButton onClick={onUndo} disabled={undoDisabled}>
           {copy.undo}
         </ToolButton>
@@ -1317,7 +1321,7 @@ function SketchToolbar({
       </div>
 
       <label className="block">
-        <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+        <span className="mb-1 block font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">
           {copy.frameThickness || copy.brushSize}
         </span>
         <input
@@ -1337,7 +1341,7 @@ function SketchToolbar({
       />
 
       <label className="block">
-        <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+        <span className="mb-1 block font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">
           {copy.opacity}
         </span>
         <input
@@ -1352,17 +1356,17 @@ function SketchToolbar({
       </label>
 
       <div>
-        <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+        <p className="mb-1 font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">
           {copy.color}
         </p>
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1.5">
           {PALETTE.map((swatch) => (
             <button
               key={swatch}
               type="button"
               onClick={() => setColor(swatch)}
               className={[
-                "h-7 rounded-full border transition",
+                "h-6 rounded-full border transition",
                 color === swatch ? "border-white ring-2 ring-cyan-300/50" : "border-white/20",
               ].join(" ")}
               style={{ backgroundColor: swatch }}
@@ -1372,37 +1376,37 @@ function SketchToolbar({
         </div>
       </div>
 
-      <label className="block rounded-xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-2.5">
-        <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-fuchsia-100">
+      <label className="block rounded-xl border border-fuchsia-300/15 bg-fuchsia-300/5 p-2">
+        <span className="mb-1 block font-mono text-[9px] uppercase tracking-[0.18em] text-fuchsia-100">
           {copy.labelText}
         </span>
         <input
           value={labelDraft}
           onChange={(event) => setLabelDraft(event.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2.5 font-mono text-sm text-cyan-50 outline-none"
+          className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 font-mono text-sm text-cyan-50 outline-none"
         />
-        <span className="mt-2 block text-xs leading-5 text-slate-300">
+        <span className="mt-1 hidden text-xs leading-5 text-slate-300 2xl:block">
           {copy.placeText}
         </span>
         <button
           type="button"
           onClick={onDeleteText}
           disabled={!selectedText}
-          className="mt-2 w-full rounded-xl border border-red-300/20 bg-red-400/5 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-100 disabled:cursor-not-allowed disabled:opacity-45"
+          className="mt-1.5 w-full rounded-xl border border-red-300/20 bg-red-400/5 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-100 disabled:cursor-not-allowed disabled:opacity-45"
         >
           {copy.deleteText}
         </button>
       </label>
 
-      <div className="grid grid-cols-1 gap-2 xl:grid-cols-3">
+      <div className="grid grid-cols-3 gap-1.5">
         <label className="block">
-          <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+          <span className="mb-1 block font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">
             {copy.format}
           </span>
           <select
             value={exportMimeType}
             onChange={(event) => setExportMimeType(event.target.value)}
-            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-2.5 font-mono text-xs text-cyan-50 outline-none"
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-2 py-2 font-mono text-[10px] text-cyan-50 outline-none"
           >
             <option value="image/png">{copy.png}</option>
             <option value="image/webp">{copy.webp}</option>
@@ -1410,13 +1414,13 @@ function SketchToolbar({
         </label>
 
         <label className="block">
-          <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+          <span className="mb-1 block font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">
             {copy.canvasSize}
           </span>
           <select
             value={canvasMode}
             onChange={(event) => setCanvasMode(event.target.value)}
-            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-2.5 font-mono text-xs text-cyan-50 outline-none"
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-2 py-2 font-mono text-[10px] text-cyan-50 outline-none"
           >
             {Object.keys(CANVAS_SIZES).map((mode) => (
               <option key={mode} value={mode}>
@@ -1427,13 +1431,13 @@ function SketchToolbar({
         </label>
 
         <label className="block">
-          <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+          <span className="mb-1 block font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">
             {copy.background}
           </span>
           <select
             value={backgroundMode}
             onChange={(event) => setBackgroundMode(event.target.value)}
-            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3 py-2.5 font-mono text-xs text-cyan-50 outline-none"
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-2 py-2 font-mono text-[10px] text-cyan-50 outline-none"
           >
             <option value="dark">{copy.dark}</option>
             <option value="white">{copy.white}</option>
@@ -1459,7 +1463,7 @@ function ToolButton({ active = false, danger = false, disabled = false, onClick,
       disabled={disabled}
       aria-label={typeof children === "string" ? children : undefined}
       className={[
-        "min-h-10 rounded-xl border px-2.5 py-2.5 font-mono text-[10px] font-bold uppercase leading-4 tracking-[0.14em] transition",
+        "min-h-9 rounded-xl border px-2 py-2 font-mono text-[9px] font-bold uppercase leading-4 tracking-[0.12em] transition sm:text-[10px]",
         active
           ? "border-cyan-300/40 bg-cyan-300 text-zinc-950"
           : danger

@@ -36,6 +36,7 @@ import {
   exportPersonalDreamsJson,
   EXPORT_DETAIL_LEVELS,
 } from "../lib/researchExportService.js";
+import { deleteAccountAndData } from "../lib/dataRightsService.js";
 import { suggestTagsForDream } from "../lib/dreamDiaryImportService.js";
 import {
   PRIVACY_SHARING_MODES,
@@ -313,6 +314,14 @@ const DASHBOARD_COPY = {
       "Sign in with Google again, then return here to set the password.",
     showAccountPassword: "Show password",
     hideAccountPassword: "Hide password",
+    deleteAccountButton: "Delete account",
+    deleteAccountConfirm:
+      "Delete this account and its dream data? Export your data first. You may need to sign in again if Firebase asks for recent login.",
+    deleteAccountNotice:
+      "This permanently removes the account and owned dream records.",
+    accountDeleted: "Account deletion completed.",
+    accountDeleteRecentLogin:
+      "Firebase requires a recent login before account deletion. Sign in again, then return here.",
     joinedDate: "Joined",
     hiddenAge: "Hidden",
     originalLanguageLabel: "Original language",
@@ -598,6 +607,13 @@ const DASHBOARD_COPY = {
       "請重新使用 Google 登入，再回到這裡設定密碼。",
     showAccountPassword: "顯示密碼",
     hideAccountPassword: "隱藏密碼",
+    deleteAccountButton: "刪除帳戶",
+    deleteAccountConfirm:
+      "確定要刪除此帳戶與夢境資料嗎？建議先匯出資料。Firebase 可能會要求你重新登入。",
+    deleteAccountNotice: "這會永久移除帳戶與此帳戶擁有的夢境紀錄。",
+    accountDeleted: "帳戶刪除已完成。",
+    accountDeleteRecentLogin:
+      "Firebase 需要近期登入才能刪除帳戶。請重新登入後再回到這裡。",
     joinedDate: "加入日期",
     hiddenAge: "已隱藏",
     originalLanguageLabel: "原始語言",
@@ -894,6 +910,14 @@ const DASHBOARD_COPY = {
       "Vuelve a entrar con Google y regresa aquí para establecer la contraseña.",
     showAccountPassword: "Mostrar contraseña",
     hideAccountPassword: "Ocultar contraseña",
+    deleteAccountButton: "Eliminar cuenta",
+    deleteAccountConfirm:
+      "¿Eliminar esta cuenta y sus datos de sueños? Exporta tus datos primero. Firebase puede pedir un inicio de sesión reciente.",
+    deleteAccountNotice:
+      "Esto elimina permanentemente la cuenta y los sueños que le pertenecen.",
+    accountDeleted: "Eliminación de cuenta completada.",
+    accountDeleteRecentLogin:
+      "Firebase requiere un inicio de sesión reciente para eliminar la cuenta. Entra de nuevo y vuelve aquí.",
     joinedDate: "Fecha de ingreso",
     hiddenAge: "Oculta",
     originalLanguageLabel: "Idioma original",
@@ -1122,6 +1146,8 @@ export default function UserDashboard({
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [accountPasswordSaving, setAccountPasswordSaving] = useState(false);
   const [accountPasswordNotice, setAccountPasswordNotice] = useState("");
+  const [accountDeleteBusy, setAccountDeleteBusy] = useState(false);
+  const [accountDeleteNotice, setAccountDeleteNotice] = useState("");
   const [observations, setObservations] = useState([]);
   const [savedRecords, setSavedRecords] = useState([]);
   const [collectionRecords, setCollectionRecords] = useState([]);
@@ -1336,6 +1362,35 @@ export default function UserDashboard({
       );
     } finally {
       setAccountPasswordSaving(false);
+    }
+  }
+
+  async function handleDeleteAccountFromDetails() {
+    if (!window.confirm(copy.deleteAccountConfirm)) return;
+
+    setAccountDeleteBusy(true);
+    setAccountDeleteNotice("");
+
+    try {
+      await trackSafeAnalyticsEvent("account_deletion_started", {
+        currentUser: user,
+        language,
+      });
+      await deleteAccountAndData(user);
+      await trackSafeAnalyticsEvent("account_deletion_completed", {
+        currentUser: user,
+        language,
+      });
+      setAccountDeleteNotice(copy.accountDeleted);
+      onAccountDeleted?.();
+    } catch (error) {
+      setAccountDeleteNotice(
+        error?.code === "auth/requires-recent-login"
+          ? copy.accountDeleteRecentLogin
+          : error?.message || copy.accountDeleteRecentLogin
+      );
+    } finally {
+      setAccountDeleteBusy(false);
     }
   }
 
@@ -1637,55 +1692,55 @@ export default function UserDashboard({
           </div>
         </header>
 
-        <section className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/75 shadow-terminal backdrop-blur">
-          <div className="p-5 sm:p-7 lg:p-8">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center">
-              <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_34px_rgba(34,211,238,.16)]">
-                <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_58%)]" />
-                <span className="relative font-mono text-xl font-bold text-cyan-100">
-                  {avatarText}
-                </span>
-              </div>
+        <section className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/75 shadow-terminal backdrop-blur">
+          <div className="p-4 sm:p-5 lg:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.14)] sm:h-16 sm:w-16">
+                  <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_58%)]" />
+                  <span className="relative font-mono text-base font-bold text-cyan-100 sm:text-lg">
+                    {avatarText}
+                  </span>
+                </div>
 
-              <div className="min-w-0">
-                <p className="cdo-kicker">
-                  {copy.consoleLabel}
-                </p>
-                <h1 className="mt-2 truncate text-2xl font-semibold text-zinc-50 sm:text-3xl">
-                  {displayUser.displayName || displayUser.pseudoId || copy.privateAccountLabel}
-                </h1>
-                <p className="mt-2 truncate font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
-                  {displayUser.showEmail && displayUser.email
-                    ? displayUser.email
-                    : copy.accountEmailHidden}
-                </p>
-                <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
-                  {displayUser.pseudoId} / {copy.memberSince} {displayUser.memberSince}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <ProfilePill label={copy.countryLabel} value={displayUser.country || "--"} />
-                  <ProfilePill
-                    label={copy.ageLabel}
-                    value={
-                      displayUser.showAge && displayUser.age
-                        ? String(displayUser.age)
-                        : copy.hiddenAge
-                    }
-                  />
-                  <ProfilePill
-                    label={copy.biologicalSexLabel}
-                    value={
-                      displayUser.showBiologicalSex && displayUser.biologicalSex
-                        ? getBiologicalSexLabel(displayUser.biologicalSex, copy)
-                        : copy.hiddenAge
-                    }
-                  />
+                <div className="min-w-0">
+                  <p className="cdo-kicker">
+                    {copy.consoleLabel}
+                  </p>
+                  <h1 className="mt-1 truncate text-xl font-semibold text-zinc-50 sm:text-2xl">
+                    {displayUser.displayName || displayUser.pseudoId || copy.privateAccountLabel}
+                  </h1>
+                  <p className="mt-1 truncate font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 sm:text-xs">
+                    {displayUser.showEmail && displayUser.email
+                      ? displayUser.email
+                      : copy.accountEmailHidden}
+                  </p>
+                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 sm:text-xs">
+                    {displayUser.pseudoId} / {copy.memberSince} {displayUser.memberSince}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <ProfilePill label={copy.countryLabel} value={displayUser.country || "--"} />
+                    <ProfilePill
+                      label={copy.ageLabel}
+                      value={
+                        displayUser.showAge && displayUser.age
+                          ? String(displayUser.age)
+                          : copy.hiddenAge
+                      }
+                    />
+                    <ProfilePill
+                      label={copy.biologicalSexLabel}
+                      value={
+                        displayUser.showBiologicalSex && displayUser.biologicalSex
+                          ? getBiologicalSexLabel(displayUser.biologicalSex, copy)
+                          : copy.hiddenAge
+                      }
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-              <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-2xl xl:grid-cols-4">
+              <div className="grid w-full gap-2 sm:grid-cols-2 lg:max-w-xl xl:grid-cols-4">
                 <StatusBlock label={copy.observationCount} value={String(observations.length)} />
                 <StatusBlock label={copy.savedCount} value={String(savedRecords.length)} />
                 <StatusBlock label={copy.collectionsTab} value={String(collectionRecords.length)} />
@@ -1718,6 +1773,9 @@ export default function UserDashboard({
           }
           onSetAccountPassword={handleSetAccountPassword}
           canSetAccountPassword={Boolean(user?.email && !user?.isAnonymous)}
+          accountDeleteBusy={accountDeleteBusy}
+          accountDeleteNotice={accountDeleteNotice}
+          onDeleteAccount={handleDeleteAccountFromDetails}
         />
 
         <AccountReadinessPanel
@@ -1726,7 +1784,6 @@ export default function UserDashboard({
           profile={profile}
           observations={observations}
           onDreamsDeleted={() => setObservations([])}
-          onAccountDeleted={onAccountDeleted}
         />
 
         <BetaAdminPanel language={language} user={user} profile={profile} />
@@ -2889,21 +2946,24 @@ function AccountDetailsSection({
   onToggleAccountPassword,
   onSetAccountPassword,
   canSetAccountPassword,
+  accountDeleteBusy,
+  accountDeleteNotice,
+  onDeleteAccount,
 }) {
   if (!profileDraft) return null;
 
   return (
-    <section className="mb-6 rounded-3xl border border-white/10 bg-zinc-950/60 p-5 backdrop-blur sm:p-7">
+    <section className="mb-5 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 backdrop-blur sm:p-5">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="cdo-panel-heading">
           {copy.accountDetails}
         </h2>
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 sm:text-xs">
           {copy.joinedDate}: {displayUser.memberSince}
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <label className="block">
           <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
             {copy.displayNameLabel}
@@ -2917,7 +2977,7 @@ function AccountDetailsSection({
               }))
             }
             placeholder={copy.displayNamePlaceholder}
-            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3.5 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
           />
         </label>
 
@@ -2934,7 +2994,7 @@ function AccountDetailsSection({
               }))
             }
             placeholder={copy.countryPlaceholder}
-            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3.5 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
           />
         </label>
 
@@ -2953,7 +3013,7 @@ function AccountDetailsSection({
               }))
             }
             placeholder={copy.agePlaceholder}
-            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3.5 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
           />
         </label>
 
@@ -2969,7 +3029,7 @@ function AccountDetailsSection({
                 biologicalSex: event.target.value,
               }))
             }
-            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3.5 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
           >
             {BIOLOGICAL_SEX_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -2993,7 +3053,7 @@ function AccountDetailsSection({
               }));
               setLanguage(nextLanguage);
             }}
-            className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+            className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3.5 py-3 font-mono text-sm text-cyan-50 outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
           >
             {LANGUAGE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -3004,8 +3064,8 @@ function AccountDetailsSection({
         </label>
       </div>
 
-      <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           <VisibilityCheckbox
             checked={Boolean(profileDraft.showEmail)}
             label={copy.showEmailLabel}
@@ -3036,7 +3096,7 @@ function AccountDetailsSection({
           type="button"
           onClick={onSave}
           disabled={profileSaving}
-          className="rounded-2xl border border-cyan-300/35 bg-cyan-300 px-5 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70 sm:tracking-[0.2em] lg:min-w-48"
+          className="rounded-xl border border-cyan-300/35 bg-cyan-300 px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-70 sm:tracking-[0.18em] lg:min-w-44"
         >
           {profileSaving ? "..." : copy.saveProfile}
         </button>
@@ -3049,7 +3109,7 @@ function AccountDetailsSection({
       )}
 
       {canSetAccountPassword && (
-      <div className="mt-6 border-t border-white/10 pt-5">
+      <div className="mt-5 border-t border-white/10 pt-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,1fr)] lg:items-end">
           <div>
             <h3 className="cdo-card-heading">{copy.accountPasswordTitle}</h3>
@@ -3070,7 +3130,7 @@ function AccountDetailsSection({
                   onChange={(event) => onAccountPasswordChange(event.target.value)}
                   placeholder={copy.accountPasswordPlaceholder}
                   autoComplete="new-password"
-                  className="w-full rounded-2xl border border-cyan-300/15 bg-black/40 px-4 py-3.5 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                  className="w-full rounded-xl border border-cyan-300/15 bg-black/40 px-3.5 py-3 font-mono text-sm text-cyan-50 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
                 />
                 <button
                   type="button"
@@ -3088,7 +3148,7 @@ function AccountDetailsSection({
               type="button"
               onClick={onSetAccountPassword}
               disabled={accountPasswordSaving}
-              className="min-h-12 rounded-2xl border border-cyan-300/35 bg-cyan-300 px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:self-end"
+              className="min-h-11 rounded-xl border border-cyan-300/35 bg-cyan-300 px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:self-end"
             >
               {accountPasswordSaving
                 ? copy.accountPasswordSaving
@@ -3104,20 +3164,40 @@ function AccountDetailsSection({
         )}
       </div>
       )}
+
+      <div className="mt-5 flex flex-col gap-3 border-t border-red-300/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="max-w-2xl text-xs leading-relaxed text-red-100/75">
+          {copy.deleteAccountNotice}
+        </p>
+        <button
+          type="button"
+          onClick={onDeleteAccount}
+          disabled={accountDeleteBusy}
+          className="rounded-xl border border-red-300/30 bg-red-400/5 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-red-100 transition hover:border-red-300/50 hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-40"
+        >
+          {accountDeleteBusy ? "..." : copy.deleteAccountButton}
+        </button>
+      </div>
+
+      {accountDeleteNotice && (
+        <p className="mt-3 rounded-xl border border-red-300/20 bg-red-400/5 p-3 text-xs leading-relaxed text-red-100">
+          {accountDeleteNotice}
+        </p>
+      )}
     </section>
   );
 }
 
 function VisibilityCheckbox({ checked, label, onChange }) {
   return (
-    <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+    <label className="flex min-h-10 items-center gap-3 rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5">
       <input
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
         className="h-4 w-4 accent-cyan-300"
       />
-      <span className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-300">
+      <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-300 sm:text-xs">
         <span className="break-words">{label}</span>
       </span>
     </label>
@@ -3741,7 +3821,7 @@ function ReflectionList({ title, questions = [], empty }) {
 
 function ProfilePill({ label, value }) {
   return (
-    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-300">
+    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-zinc-300 sm:text-[10px]">
       <span className="text-zinc-500">{label}: </span>
       <span className="text-cyan-100">{value}</span>
     </span>
@@ -3750,11 +3830,11 @@ function ProfilePill({ label, value }) {
 
 function StatusBlock({ label, value }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
       <p className="cdo-metric-label">
         {label}
       </p>
-      <p className="cdo-metric-value mt-2 truncate">
+      <p className="mt-1 truncate font-mono text-lg font-bold text-cyan-100">
         {value}
       </p>
     </div>
@@ -3795,11 +3875,31 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
     <article
       onClick={onOpen}
       className={[
-        "cdo-record-card cursor-pointer overflow-hidden rounded-3xl border bg-zinc-950/80 backdrop-blur transition duration-300 hover:-translate-y-1",
+        "cdo-record-card relative cursor-pointer overflow-hidden rounded-3xl border bg-zinc-950/80 backdrop-blur transition duration-300 hover:-translate-y-1",
         style.border,
         style.glow,
       ].join(" ")}
     >
+      <button
+        type="button"
+        disabled={locked}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (locked) return;
+          onRemove();
+        }}
+        className={[
+          "absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-full border font-mono text-base font-bold leading-none transition",
+          locked
+            ? "cursor-not-allowed border-white/10 bg-black/40 text-zinc-600"
+            : "border-red-300/25 bg-black/70 text-red-100 hover:border-red-300/50 hover:bg-red-400/10",
+        ].join(" ")}
+        aria-label={actionLabel}
+        title={actionLabel}
+      >
+        ×
+      </button>
+
       {showThumbnail && (
         <div className="relative h-44 border-b border-white/10 bg-black">
           <img
@@ -3813,7 +3913,7 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
           <div className="absolute bottom-4 left-4 rounded-xl border border-white/10 bg-black/45 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-cyan-100 backdrop-blur">
             {item.hash}
           </div>
-          <span className={`absolute right-4 top-4 h-3 w-3 rounded-full ${style.dot}`} />
+          <span className={`absolute right-14 top-6 h-3 w-3 rounded-full ${style.dot}`} />
         </div>
       )}
 
@@ -3850,23 +3950,6 @@ function RecordCard({ item, language, copy, actionLabel, onOpen, onRemove, locke
           {copy.originalLanguageLabel}: {getLanguageName(item.originalLanguage, language)}
         </p>
 
-        <button
-          type="button"
-          disabled={locked}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (locked) return;
-            onRemove();
-          }}
-          className={[
-            "mt-6 w-full rounded-xl border px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.2em] transition",
-            locked
-              ? "cursor-not-allowed border-white/10 bg-white/[0.03] text-zinc-500"
-              : "border-red-300/20 bg-red-400/5 text-red-100 hover:border-red-300/45 hover:bg-red-400/10",
-          ].join(" ")}
-        >
-          {actionLabel}
-        </button>
       </div>
     </article>
   );

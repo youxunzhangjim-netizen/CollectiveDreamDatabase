@@ -41,6 +41,10 @@ export default function PWAInstallPrompt({ language = "zh" }) {
   useEffect(() => {
     if (isStandaloneDisplay()) return undefined;
 
+    function handleOpenInstallPrompt() {
+      setVisible(true);
+    }
+
     function handleBeforeInstallPrompt(event) {
       event.preventDefault();
       setDeferredPrompt(event);
@@ -53,10 +57,12 @@ export default function PWAInstallPrompt({ language = "zh" }) {
       trackSafeAnalyticsEvent("pwa_installed", { language }).catch(() => {});
     }
 
+    window.addEventListener("cdo:open-install-prompt", handleOpenInstallPrompt);
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleInstalled);
 
     return () => {
+      window.removeEventListener("cdo:open-install-prompt", handleOpenInstallPrompt);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleInstalled);
     };
@@ -86,17 +92,7 @@ export default function PWAInstallPrompt({ language = "zh" }) {
     setVisible(false);
   }
 
-  if (!visible) {
-    return (
-      <button
-        type="button"
-        onClick={() => setVisible(true)}
-        className="fixed bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] right-3 z-[61] rounded-full border border-cyan-300/25 bg-zinc-950/90 px-4 py-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,.16)] backdrop-blur transition hover:border-cyan-300/45 hover:bg-cyan-300/10 sm:bottom-4 sm:right-4"
-      >
-        {copy.install}
-      </button>
-    );
-  }
+  if (!visible) return null;
 
   return (
     <aside className="fixed bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] right-3 z-[62] w-[min(22rem,calc(100vw-1.5rem))] rounded-2xl border border-cyan-300/25 bg-zinc-950/92 p-4 text-zinc-100 shadow-[0_0_38px_rgba(34,211,238,.18)] backdrop-blur sm:bottom-4 sm:right-4">

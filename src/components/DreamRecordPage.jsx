@@ -581,7 +581,7 @@ export default function DreamRecordPage({
   const [collecting, setCollecting] = useState(false);
   const [sharingSaving, setSharingSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [rulesExpanded, setRulesExpanded] = useState(true);
+  const [rulesExpanded, setRulesExpanded] = useState(false);
   const [activeSketchId, setActiveSketchId] = useState("");
   const title = getDisplayRecordTitle(normalizedRecord, language);
   const body = getDisplayRecordText(normalizedRecord, language);
@@ -1352,27 +1352,22 @@ export default function DreamRecordPage({
                 />
               </div>
 
-              <div className="mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-fuchsia-200/70">
-                    {copy.recorderRulesTitle}
-                  </p>
-                  <button
-                    type="button"
-                    aria-expanded={rulesExpanded}
-                    onClick={() => setRulesExpanded((current) => !current)}
-                    className="shrink-0 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-fuchsia-100 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-300/15"
-                  >
-                    {rulesExpanded
-                      ? copy.recorderRulesCollapse
-                      : copy.recorderRulesExpand}
-                  </button>
-                </div>
+              <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <button
+                  type="button"
+                  aria-expanded={rulesExpanded}
+                  onClick={() => setRulesExpanded((current) => !current)}
+                  className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-fuchsia-100 underline-offset-4 transition hover:text-fuchsia-50 hover:underline"
+                >
+                  {rulesExpanded
+                    ? copy.recorderRulesCollapse
+                    : copy.recorderRulesExpand}
+                </button>
                 {rulesExpanded && (
-                  <ul className="mt-4 space-y-3 text-sm leading-relaxed text-slate-300">
-                    {copy.recorderRules.map((rule) => (
+                  <ul className="mt-3 grid gap-2 text-xs leading-5 text-slate-300">
+                    {copy.recorderRules.slice(0, 6).map((rule) => (
                       <li key={rule} className="flex gap-2">
-                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+                        <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-cyan-300" />
                         <span>{rule}</span>
                       </li>
                     ))}

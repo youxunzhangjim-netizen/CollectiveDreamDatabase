@@ -797,9 +797,7 @@ export default function ImportDreamDiaryPage({
               <p className="cdo-body-copy mt-4 max-w-3xl">{copy.subtitle}</p>
             </div>
             <aside className="border-t border-white/10 bg-black/30 p-6 sm:p-8 lg:border-l lg:border-t-0">
-              <InfoNotice title={copy.privacyTitle} text={copy.privacyText} />
-              <div className="mt-4" />
-              <InfoNotice title={copy.disclaimerTitle} text={copy.disclaimerText} tone="fuchsia" />
+              <ImportCompactGuidance copy={copy} />
             </aside>
           </div>
         </section>
@@ -1206,16 +1204,30 @@ function getImportDisplayError(error, copy) {
   return message || copy.importFailed;
 }
 
-function InfoNotice({ title, text, tone = "cyan" }) {
-  const toneClass =
-    tone === "fuchsia"
-      ? "border-fuchsia-300/20 bg-fuchsia-300/5 text-fuchsia-100"
-      : "border-cyan-300/20 bg-cyan-300/5 text-cyan-100";
-
+function ImportCompactGuidance({ copy }) {
   return (
-    <section className={`rounded-2xl border p-4 ${toneClass}`}>
-      <h3 className="cdo-card-heading">{title}</h3>
-      <p className="cdo-body-copy mt-2">{text}</p>
+    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-slate-300">
+      <p>{copy.privacyText}</p>
+      <p className="mt-3 text-xs leading-5 text-slate-500">
+        {copy.disclaimerText}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em]">
+        <a
+          href="/privacy"
+          className="text-cyan-100 underline-offset-4 transition hover:text-cyan-50 hover:underline"
+        >
+          {copy.privacyTitle}
+        </a>
+        <span className="text-slate-600" aria-hidden="true">
+          /
+        </span>
+        <a
+          href="/not-diagnosis"
+          className="text-fuchsia-100 underline-offset-4 transition hover:text-fuchsia-50 hover:underline"
+        >
+          {copy.disclaimerTitle}
+        </a>
+      </div>
     </section>
   );
 }

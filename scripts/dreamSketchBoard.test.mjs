@@ -89,12 +89,12 @@ const privateSketch = {
   assert.match(sketchSource, /md:flex md:flex-wrap/);
   assert.match(sketchSource, /z-\[90\] overflow-hidden bg-black\/95/);
   assert.match(sketchSource, /h-\[100dvh\] w-screen max-w-none/);
-  assert.match(sketchSource, /md:grid-cols-\[minmax\(18rem,24rem\)_minmax\(0,1fr\)\]/);
+  assert.match(sketchSource, /md:grid-cols-\[minmax\(16rem,20rem\)_minmax\(0,1fr\)\]/);
   assert.match(sketchSource, /md:max-h-none md:min-h-0/);
   assert.match(sketchSource, /md:overflow-visible/);
   assert.doesNotMatch(sketchSource, /min-w-\[16rem\] flex-1 text-sm leading-relaxed text-slate-300/);
   assert.match(sketchSource, /max-w-\[96rem\]/);
-  assert.match(sketchSource, /md:max-h-\[calc\(100dvh-8\.5rem\)\]/);
+  assert.match(sketchSource, /md:max-h-\[calc\(100dvh-7\.5rem\)\]/);
   assert.match(sketchSource, /md:hidden/);
   assert.match(sketchSource, /tool === "fill"/);
   assert.match(sketchSource, /copy\.geometric/);

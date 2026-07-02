@@ -224,36 +224,36 @@ export default function LegalInfoPage({
   const activeContent = copy.pages[activePage] || copy.pages.privacy;
 
   return (
-    <main className="min-h-screen bg-[#030407] px-4 py-6 text-zinc-100 selection:bg-cyan-300/30 selection:text-cyan-50 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#030407] px-4 py-5 text-zinc-100 selection:bg-cyan-300/30 selection:text-cyan-50 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
         <header className="mb-6 flex flex-col gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={onBack}
-            className="self-start rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-300/45"
+            className="self-start font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100 underline underline-offset-4 transition hover:text-cyan-50"
           >
             {copy.back}
           </button>
           <LanguageMenu language={language} setLanguage={setLanguage} copy={copy} />
         </header>
 
-        <section className="rounded-3xl border border-cyan-300/15 bg-zinc-950/75 p-6 shadow-terminal backdrop-blur sm:p-8">
+        <section className="rounded-2xl border border-cyan-300/15 bg-zinc-950/75 p-5 shadow-terminal backdrop-blur sm:p-6">
           <p className="cdo-kicker">{copy.title}</p>
-          <h1 className="mt-4 text-3xl font-semibold text-zinc-50 sm:text-5xl">
+          <h1 className="mt-3 text-3xl font-semibold text-zinc-50 sm:text-4xl">
             {activeContent.title}
           </h1>
-          <p className="cdo-body-copy mt-4 max-w-3xl">{copy.subtitle}</p>
+          <p className="cdo-body-copy mt-3 max-w-3xl">{copy.subtitle}</p>
 
-          <nav className="mt-7 flex gap-2 overflow-x-auto pb-2">
+          <nav className="mt-6 flex flex-wrap gap-x-4 gap-y-2" aria-label={copy.title}>
             {PAGE_ORDER.map((item) => (
               <a
                 key={item}
                 href={`/${item}`}
                 className={[
-                  "shrink-0 rounded-full border px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] transition",
+                  "font-mono text-[10px] font-bold uppercase tracking-[0.14em] underline-offset-4 transition",
                   item === activePage
-                    ? "border-cyan-300/45 bg-cyan-300 text-zinc-950"
-                    : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100",
+                    ? "text-cyan-100 underline"
+                    : "text-zinc-500 hover:text-cyan-100 hover:underline",
                 ].join(" ")}
               >
                 {copy.pages[item].title}
@@ -261,11 +261,11 @@ export default function LegalInfoPage({
             ))}
           </nav>
 
-          <div className="mt-8 space-y-4">
+          <div className="mt-7 space-y-3">
             {activeContent.body.map((paragraph) => (
               <p
                 key={paragraph}
-                className="rounded-2xl border border-white/10 bg-black/25 p-5 text-base leading-8 text-slate-300"
+                className="border-l border-cyan-300/20 pl-4 text-sm leading-7 text-slate-300 sm:text-base"
               >
                 {paragraph}
               </p>
