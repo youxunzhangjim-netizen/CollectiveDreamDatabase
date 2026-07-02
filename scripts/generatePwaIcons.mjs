@@ -11,6 +11,8 @@ mkdirSync(iconDir, { recursive: true });
 
 const source = decodePng(readFileSync(sourcePath));
 const outputs = [
+  ["observatory-icon-32.png", 32],
+  ["observatory-icon-48.png", 48],
   ["observatory-icon-192.png", 192],
   ["observatory-icon-512.png", 512],
   ["observatory-maskable-icon-192.png", 192],
@@ -32,7 +34,11 @@ writeFileSync(join(iconDir, "icon.svg"), svg);
 writeFileSync(join(iconDir, "maskable-icon.svg"), svg);
 writeFileSync(join(iconDir, "observatory-icon.svg"), svg);
 writeFileSync(join(iconDir, "observatory-maskable-icon.svg"), svg);
-writeFileSync(join(root, "public", "favicon.ico"), encodeIco(readFileSync(join(iconDir, "observatory-icon-192.png"))));
+writeFileSync(join(root, "public", "favicon.ico"), encodeIco([
+  readFileSync(join(iconDir, "observatory-icon-32.png")),
+  readFileSync(join(iconDir, "observatory-icon-48.png")),
+  readFileSync(join(iconDir, "observatory-icon-192.png")),
+]));
 
 function decodePng(buffer) {
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -201,23 +207,31 @@ function renderEmbeddedSvg(pngBuffer) {
 `;
 }
 
-function encodeIco(pngBuffer) {
+function encodeIco(pngBuffers) {
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0);
   header.writeUInt16LE(1, 2);
-  header.writeUInt16LE(1, 4);
+  header.writeUInt16LE(pngBuffers.length, 4);
 
-  const entry = Buffer.alloc(16);
-  entry[0] = 192;
-  entry[1] = 192;
-  entry[2] = 0;
-  entry[3] = 0;
-  entry.writeUInt16LE(1, 4);
-  entry.writeUInt16LE(32, 6);
-  entry.writeUInt32LE(pngBuffer.length, 8);
-  entry.writeUInt32LE(header.length + entry.length, 12);
+  const entries = [];
+  let imageOffset = header.length + pngBuffers.length * 16;
 
-  return Buffer.concat([header, entry, pngBuffer]);
+  for (const pngBuffer of pngBuffers) {
+    const size = pngBuffer.readUInt32BE(16);
+    const entry = Buffer.alloc(16);
+    entry[0] = size >= 256 ? 0 : size;
+    entry[1] = size >= 256 ? 0 : size;
+    entry[2] = 0;
+    entry[3] = 0;
+    entry.writeUInt16LE(1, 4);
+    entry.writeUInt16LE(32, 6);
+    entry.writeUInt32LE(pngBuffer.length, 8);
+    entry.writeUInt32LE(imageOffset, 12);
+    entries.push(entry);
+    imageOffset += pngBuffer.length;
+  }
+
+  return Buffer.concat([header, ...entries, ...pngBuffers]);
 }
 
 function encodePng(width, height, rgba) {

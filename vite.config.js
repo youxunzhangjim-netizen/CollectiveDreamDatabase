@@ -13,6 +13,8 @@ export default defineConfig({
         "favicon.ico",
         "icons/observatory-icon.svg",
         "icons/observatory-maskable-icon.svg",
+        "icons/observatory-icon-32.png",
+        "icons/observatory-icon-48.png",
         "icons/observatory-icon-192.png",
         "icons/observatory-icon-512.png",
         "icons/observatory-maskable-icon-192.png",
@@ -25,12 +27,12 @@ export default defineConfig({
         "icons/maskable-icon-512.png",
       ],
       manifest: {
-        id: "/",
+        id: "/?appId=collective-dream-observatory-20260702b",
         name: "Collective Dream Observatory",
         short_name: "Dream Observatory",
         description:
           "A privacy-first dream journal, public dream archive, and collective dream research platform.",
-        start_url: "/",
+        start_url: "/?source=pwa&icon=observatory-20260702b",
         scope: "/",
         display: "standalone",
         orientation: "portrait-primary",

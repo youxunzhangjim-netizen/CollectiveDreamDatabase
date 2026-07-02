@@ -17,6 +17,8 @@ assert.ok(packageJson.devDependencies["vite-plugin-pwa"]);
 assert.ok(viteConfig.includes("VitePWA"));
 assert.ok(viteConfig.includes('name: "Collective Dream Observatory"'));
 assert.ok(viteConfig.includes('short_name: "Dream Observatory"'));
+assert.ok(viteConfig.includes('id: "/?appId=collective-dream-observatory-20260702b"'));
+assert.ok(viteConfig.includes('start_url: "/?source=pwa&icon=observatory-20260702b"'));
 assert.ok(viteConfig.includes("Record Dream"));
 assert.ok(viteConfig.includes("Import Diary"));
 assert.ok(viteConfig.includes("Explore Dreams"));
@@ -26,9 +28,10 @@ assert.ok(viteConfig.includes("url.origin === self.location.origin"));
 assert.ok(viteConfig.includes("navigateFallback"));
 assert.ok(viteConfig.includes("supabase"));
 
-assert.ok(indexHtml.includes('<link rel="manifest" href="/manifest.webmanifest?v=observatory-icon-20260702"'));
+assert.ok(indexHtml.includes('<link rel="manifest" href="/manifest.webmanifest?v=observatory-icon-20260702b"'));
 assert.ok(indexHtml.includes("apple-mobile-web-app-capable"));
 assert.ok(indexHtml.includes("Dream Observatory"));
+assert.ok(indexHtml.includes("/icons/observatory-icon-32.png"));
 assert.ok(indexHtml.includes("/icons/observatory-icon-192.png"));
 
 assert.ok(app.includes("useRegisterSW"));
@@ -48,6 +51,8 @@ assert.ok(!offlineService.includes("caches."));
   "public/icons/maskable-icon.svg",
   "public/icons/observatory-icon.svg",
   "public/icons/observatory-maskable-icon.svg",
+  "public/icons/observatory-icon-32.png",
+  "public/icons/observatory-icon-48.png",
   "public/icons/observatory-icon-192.png",
   "public/icons/observatory-icon-512.png",
   "public/icons/observatory-maskable-icon-192.png",
@@ -64,6 +69,8 @@ assert.ok(!offlineService.includes("caches."));
 });
 
 [
+  "public/icons/observatory-icon-32.png",
+  "public/icons/observatory-icon-48.png",
   "public/icons/observatory-icon-192.png",
   "public/icons/observatory-icon-512.png",
   "public/icons/observatory-maskable-icon-192.png",
