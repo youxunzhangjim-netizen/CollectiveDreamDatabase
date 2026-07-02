@@ -1,141 +1,197 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { deflateSync } from "node:zlib";
+import { deflateSync, inflateSync } from "node:zlib";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const iconDir = join(root, "public", "icons");
+const sourcePath = join(root, "assets", "brand", "collective-dream-observatory-icon.png");
 
 mkdirSync(iconDir, { recursive: true });
 
+const source = decodePng(readFileSync(sourcePath));
 const outputs = [
-  ["icon-192.png", 192, false],
-  ["icon-512.png", 512, false],
-  ["maskable-icon-192.png", 192, true],
-  ["maskable-icon-512.png", 512, true],
+  ["icon-192.png", 192],
+  ["icon-512.png", 512],
+  ["maskable-icon-192.png", 192],
+  ["maskable-icon-512.png", 512],
 ];
 
-for (const [name, size, maskable] of outputs) {
-  writeFileSync(join(iconDir, name), renderPng(size, maskable));
+for (const [name, size] of outputs) {
+  const resized = resizeContain(source, size, size);
+  writeFileSync(join(iconDir, name), encodePng(size, size, resized));
 }
 
-function renderPng(size, maskable) {
-  const pixels = Buffer.alloc(size * size * 4);
-  const scale = size / 512;
-  const safePad = maskable ? 0 : 36 * scale;
-  const cornerRadius = maskable ? 0 : 96 * scale;
+const svg = renderEmbeddedSvg(readFileSync(join(iconDir, "icon-512.png")));
+writeFileSync(join(root, "public", "app-icon.svg"), svg);
+writeFileSync(join(iconDir, "icon.svg"), svg);
+writeFileSync(join(iconDir, "maskable-icon.svg"), svg);
 
-  fillRoundedRect(pixels, size, safePad, safePad, size - safePad * 2, size - safePad * 2, cornerRadius, [3, 4, 7, 255]);
-  drawCircle(pixels, size, 256 * scale, 256 * scale, 174 * scale, [6, 21, 29, 255]);
-  strokeCircle(pixels, size, 256 * scale, 256 * scale, 174 * scale, 18 * scale, [34, 211, 238, 255]);
-  drawCircle(pixels, size, 256 * scale, 256 * scale, 105 * scale, [11, 16, 32, 255]);
-  strokeCircle(pixels, size, 256 * scale, 256 * scale, 105 * scale, 10 * scale, [217, 70, 239, 230]);
-  strokeEye(pixels, size, scale);
-  drawCircle(pixels, size, 256 * scale, 270 * scale, 35 * scale, [34, 211, 238, 255]);
-  drawLine(pixels, size, 256 * scale, 84 * scale, 256 * scale, 132 * scale, 16 * scale, [103, 232, 249, 255]);
-  drawLine(pixels, size, 256 * scale, 380 * scale, 256 * scale, 428 * scale, 16 * scale, [103, 232, 249, 255]);
-  drawLine(pixels, size, 84 * scale, 256 * scale, 132 * scale, 256 * scale, 16 * scale, [103, 232, 249, 255]);
-  drawLine(pixels, size, 380 * scale, 256 * scale, 428 * scale, 256 * scale, 16 * scale, [103, 232, 249, 255]);
+function decodePng(buffer) {
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  if (!buffer.subarray(0, 8).equals(signature)) {
+    throw new Error("Source icon must be a PNG file.");
+  }
 
-  return encodePng(size, size, pixels);
-}
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let bitDepth = 0;
+  let colorType = 0;
+  const idatChunks = [];
 
-function fillRoundedRect(pixels, size, x, y, width, height, radius, color) {
-  for (let py = 0; py < size; py += 1) {
-    for (let px = 0; px < size; px += 1) {
-      if (insideRoundedRect(px, py, x, y, width, height, radius)) {
-        setPixel(pixels, size, px, py, color);
+  while (offset < buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString("ascii", offset + 4, offset + 8);
+    const data = buffer.subarray(offset + 8, offset + 8 + length);
+    offset += length + 12;
+
+    if (type === "IHDR") {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      bitDepth = data[8];
+      colorType = data[9];
+
+      if (bitDepth !== 8 || ![2, 6].includes(colorType) || data[10] !== 0 || data[11] !== 0 || data[12] !== 0) {
+        throw new Error("Source icon must be a non-interlaced 8-bit RGB or RGBA PNG.");
       }
     }
+
+    if (type === "IDAT") idatChunks.push(data);
+    if (type === "IEND") break;
+  }
+
+  const bytesPerPixel = colorType === 6 ? 4 : 3;
+  const stride = width * bytesPerPixel;
+  const inflated = inflateSync(Buffer.concat(idatChunks));
+  const rgba = Buffer.alloc(width * height * 4);
+  const previous = Buffer.alloc(stride);
+  let inputOffset = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    const filterType = inflated[inputOffset];
+    inputOffset += 1;
+    const current = Buffer.from(inflated.subarray(inputOffset, inputOffset + stride));
+    inputOffset += stride;
+    unfilterRow(current, previous, filterType, bytesPerPixel);
+
+    for (let x = 0; x < width; x += 1) {
+      const sourceIndex = x * bytesPerPixel;
+      const targetIndex = (y * width + x) * 4;
+      rgba[targetIndex] = current[sourceIndex];
+      rgba[targetIndex + 1] = current[sourceIndex + 1];
+      rgba[targetIndex + 2] = current[sourceIndex + 2];
+      rgba[targetIndex + 3] = colorType === 6 ? current[sourceIndex + 3] : 255;
+    }
+
+    current.copy(previous);
+  }
+
+  return { width, height, rgba };
+}
+
+function unfilterRow(current, previous, filterType, bytesPerPixel) {
+  for (let index = 0; index < current.length; index += 1) {
+    const left = index >= bytesPerPixel ? current[index - bytesPerPixel] : 0;
+    const up = previous[index] || 0;
+    const upLeft = index >= bytesPerPixel ? previous[index - bytesPerPixel] || 0 : 0;
+
+    if (filterType === 1) current[index] = (current[index] + left) & 255;
+    else if (filterType === 2) current[index] = (current[index] + up) & 255;
+    else if (filterType === 3) current[index] = (current[index] + Math.floor((left + up) / 2)) & 255;
+    else if (filterType === 4) current[index] = (current[index] + paeth(left, up, upLeft)) & 255;
+    else if (filterType !== 0) throw new Error(`Unsupported PNG filter type: ${filterType}`);
   }
 }
 
-function insideRoundedRect(px, py, x, y, width, height, radius) {
-  if (px < x || py < y || px > x + width || py > y + height) return false;
-  if (radius <= 0) return true;
-
-  const cx = px < x + radius ? x + radius : px > x + width - radius ? x + width - radius : px;
-  const cy = py < y + radius ? y + radius : py > y + height - radius ? y + height - radius : py;
-  return (px - cx) ** 2 + (py - cy) ** 2 <= radius ** 2;
+function paeth(left, up, upLeft) {
+  const estimate = left + up - upLeft;
+  const leftDistance = Math.abs(estimate - left);
+  const upDistance = Math.abs(estimate - up);
+  const upLeftDistance = Math.abs(estimate - upLeft);
+  if (leftDistance <= upDistance && leftDistance <= upLeftDistance) return left;
+  if (upDistance <= upLeftDistance) return up;
+  return upLeft;
 }
 
-function drawCircle(pixels, size, cx, cy, radius, color) {
-  const minX = Math.max(0, Math.floor(cx - radius));
-  const maxX = Math.min(size - 1, Math.ceil(cx + radius));
-  const minY = Math.max(0, Math.floor(cy - radius));
-  const maxY = Math.min(size - 1, Math.ceil(cy + radius));
+function resizeContain(sourceImage, width, height) {
+  const target = Buffer.alloc(width * height * 4);
+  fill(target, [3, 4, 7, 255]);
 
-  for (let y = minY; y <= maxY; y += 1) {
-    for (let x = minX; x <= maxX; x += 1) {
-      if ((x - cx) ** 2 + (y - cy) ** 2 <= radius ** 2) {
-        setPixel(pixels, size, x, y, color);
-      }
+  const scale = Math.min(width / sourceImage.width, height / sourceImage.height);
+  const drawWidth = Math.round(sourceImage.width * scale);
+  const drawHeight = Math.round(sourceImage.height * scale);
+  const offsetX = Math.round((width - drawWidth) / 2);
+  const offsetY = Math.round((height - drawHeight) / 2);
+
+  for (let y = 0; y < drawHeight; y += 1) {
+    for (let x = 0; x < drawWidth; x += 1) {
+      const sourceX = clamp(((x + 0.5) / scale) - 0.5, 0, sourceImage.width - 1);
+      const sourceY = clamp(((y + 0.5) / scale) - 0.5, 0, sourceImage.height - 1);
+      const color = sampleBilinear(sourceImage, sourceX, sourceY);
+      setPixel(target, width, x + offsetX, y + offsetY, color);
     }
+  }
+
+  return target;
+}
+
+function fill(buffer, color) {
+  for (let index = 0; index < buffer.length; index += 4) {
+    buffer[index] = color[0];
+    buffer[index + 1] = color[1];
+    buffer[index + 2] = color[2];
+    buffer[index + 3] = color[3];
   }
 }
 
-function strokeCircle(pixels, size, cx, cy, radius, thickness, color) {
-  const outer = radius + thickness / 2;
-  const inner = radius - thickness / 2;
-  const minX = Math.max(0, Math.floor(cx - outer));
-  const maxX = Math.min(size - 1, Math.ceil(cx + outer));
-  const minY = Math.max(0, Math.floor(cy - outer));
-  const maxY = Math.min(size - 1, Math.ceil(cy + outer));
+function sampleBilinear(image, x, y) {
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const x1 = Math.min(image.width - 1, x0 + 1);
+  const y1 = Math.min(image.height - 1, y0 + 1);
+  const tx = x - x0;
+  const ty = y - y0;
+  const c00 = getPixel(image, x0, y0);
+  const c10 = getPixel(image, x1, y0);
+  const c01 = getPixel(image, x0, y1);
+  const c11 = getPixel(image, x1, y1);
 
-  for (let y = minY; y <= maxY; y += 1) {
-    for (let x = minX; x <= maxX; x += 1) {
-      const distance = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-      if (distance >= inner && distance <= outer) {
-        setPixel(pixels, size, x, y, color);
-      }
-    }
-  }
+  return c00.map((_, channel) => {
+    const top = c00[channel] * (1 - tx) + c10[channel] * tx;
+    const bottom = c01[channel] * (1 - tx) + c11[channel] * tx;
+    return Math.round(top * (1 - ty) + bottom * ty);
+  });
 }
 
-function strokeEye(pixels, size, scale) {
-  const cx = 256 * scale;
-  const cy = 270 * scale;
-  const rx = 112 * scale;
-  const ry = 58 * scale;
-  const thickness = Math.max(3, 16 * scale);
-
-  for (let y = Math.max(0, Math.floor(cy - ry - thickness)); y <= Math.min(size - 1, Math.ceil(cy + ry + thickness)); y += 1) {
-    for (let x = Math.max(0, Math.floor(cx - rx - thickness)); x <= Math.min(size - 1, Math.ceil(cx + rx + thickness)); x += 1) {
-      const normalized = ((x - cx) ** 2) / (rx ** 2) + ((y - cy) ** 2) / (ry ** 2);
-      if (normalized >= 0.78 && normalized <= 1.08) {
-        setPixel(pixels, size, x, y, [165, 243, 252, 255]);
-      }
-    }
-  }
+function getPixel(image, x, y) {
+  const index = (y * image.width + x) * 4;
+  return [
+    image.rgba[index],
+    image.rgba[index + 1],
+    image.rgba[index + 2],
+    image.rgba[index + 3],
+  ];
 }
 
-function drawLine(pixels, size, x1, y1, x2, y2, thickness, color) {
-  const minX = Math.max(0, Math.floor(Math.min(x1, x2) - thickness));
-  const maxX = Math.min(size - 1, Math.ceil(Math.max(x1, x2) + thickness));
-  const minY = Math.max(0, Math.floor(Math.min(y1, y2) - thickness));
-  const maxY = Math.min(size - 1, Math.ceil(Math.max(y1, y2) + thickness));
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const lengthSquared = dx * dx + dy * dy || 1;
-
-  for (let y = minY; y <= maxY; y += 1) {
-    for (let x = minX; x <= maxX; x += 1) {
-      const t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lengthSquared));
-      const px = x1 + t * dx;
-      const py = y1 + t * dy;
-      if ((x - px) ** 2 + (y - py) ** 2 <= (thickness / 2) ** 2) {
-        setPixel(pixels, size, x, y, color);
-      }
-    }
-  }
+function setPixel(buffer, width, x, y, color) {
+  const index = (y * width + x) * 4;
+  buffer[index] = color[0];
+  buffer[index + 1] = color[1];
+  buffer[index + 2] = color[2];
+  buffer[index + 3] = color[3];
 }
 
-function setPixel(pixels, size, x, y, color) {
-  const index = (Math.floor(y) * size + Math.floor(x)) * 4;
-  pixels[index] = color[0];
-  pixels[index + 1] = color[1];
-  pixels[index + 2] = color[2];
-  pixels[index + 3] = color[3];
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function renderEmbeddedSvg(pngBuffer) {
+  const base64 = pngBuffer.toString("base64");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Collective Dream Observatory icon">
+  <image href="data:image/png;base64,${base64}" width="512" height="512" preserveAspectRatio="xMidYMid meet"/>
+</svg>
+`;
 }
 
 function encodePng(width, height, rgba) {

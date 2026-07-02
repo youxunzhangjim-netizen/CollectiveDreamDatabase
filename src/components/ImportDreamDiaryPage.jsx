@@ -757,8 +757,12 @@ export default function ImportDreamDiaryPage({
         <header className="mb-5 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <button type="button" onClick={onOpenDatabase} className="group flex min-w-0 items-center gap-3 self-start">
             <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)] sm:h-10 sm:w-10">
-              <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.35),transparent_55%)]" />
-              <span className="relative font-mono text-sm font-bold text-cyan-100">C∴</span>
+              <img
+                src="/icons/icon-192.png"
+                alt=""
+                className="h-full w-full object-cover"
+                draggable="false"
+              />
             </span>
             <span className="min-w-0">
               <span className="block font-mono text-xs uppercase tracking-[0.36em] text-cyan-200/80">CDO</span>
