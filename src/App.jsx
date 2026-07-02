@@ -543,12 +543,21 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
       aria-label={`${copy.label}: ${morningMode ? copy.morning : copy.night}`}
       onClick={() => setAppearance(nextAppearance)}
       className={[
-        "fixed bottom-3 left-3 z-50 flex items-center overflow-hidden rounded-full border p-0.5 shadow-[0_0_20px_rgba(34,211,238,.14)] backdrop-blur transition sm:bottom-4 sm:left-4",
+        "fixed bottom-3 left-3 z-50 flex h-9 w-[4.25rem] items-center overflow-hidden rounded-full border p-0.5 shadow-[0_0_20px_rgba(34,211,238,.14)] backdrop-blur transition sm:bottom-4 sm:left-4 sm:h-10 sm:w-[4.75rem]",
         morningMode
-          ? "border-cyan-700/20 bg-white/80"
-          : "border-cyan-300/30 bg-zinc-950/85",
+          ? "border-cyan-700/25 bg-white/85 hover:bg-white"
+          : "border-cyan-300/30 bg-zinc-950/90 hover:bg-zinc-900",
       ].join(" ")}
     >
+      <span
+        aria-hidden="true"
+        className={[
+          "absolute left-0.5 top-0.5 h-8 w-8 rounded-full transition-transform duration-300 ease-out sm:h-9 sm:w-9",
+          morningMode
+            ? "translate-x-0 bg-cyan-200 shadow-[0_0_18px_rgba(14,165,233,.32)]"
+            : "translate-x-8 bg-zinc-950 shadow-[0_0_18px_rgba(34,211,238,.28)] ring-1 ring-cyan-300/35 sm:translate-x-9",
+        ].join(" ")}
+      />
       {["morning", "night"].map((option) => {
         const active = appearance === option;
 
@@ -557,14 +566,14 @@ function AppearanceToggle({ language, appearance, setAppearance }) {
             key={option}
             aria-hidden="true"
             className={[
-              "flex h-8 w-8 items-center justify-center rounded-full transition sm:h-9 sm:w-9",
+              "relative z-10 flex h-8 w-8 items-center justify-center rounded-full transition-colors sm:h-9 sm:w-9",
               active
                 ? option === "night"
-                  ? "bg-zinc-950 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,.22)]"
-                  : "bg-cyan-200 text-sky-950 shadow-[0_0_16px_rgba(34,211,238,.25)]"
+                  ? "text-cyan-100"
+                  : "text-sky-950"
                 : morningMode
-                  ? "text-slate-600 hover:bg-cyan-100/70 hover:text-sky-800"
-                  : "text-cyan-100 hover:bg-white/10 hover:text-cyan-50",
+                  ? "text-slate-500"
+                  : "text-slate-500",
             ].join(" ")}
           >
             {option === "morning" ? <SunIcon /> : <CrescentIcon />}
