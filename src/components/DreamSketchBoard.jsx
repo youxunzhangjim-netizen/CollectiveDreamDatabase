@@ -1143,7 +1143,7 @@ export default function DreamSketchBoard({
                     </button>
                   </div>
                 </div>
-                <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto overscroll-contain p-3 sm:p-4 md:p-5">
+                <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto overscroll-contain p-3 pt-6 sm:p-4 sm:pt-7 md:p-5 md:pt-8">
                   <div className="mx-auto flex w-full max-w-[96rem] justify-center">
                     <div
                       className="relative inline-block max-w-full touch-none select-none align-top"
