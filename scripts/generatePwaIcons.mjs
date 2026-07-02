@@ -11,6 +11,13 @@ mkdirSync(iconDir, { recursive: true });
 
 const source = decodePng(readFileSync(sourcePath));
 const outputs = [
+  ["observatory-20260702c-icon-16.png", 16],
+  ["observatory-20260702c-icon-32.png", 32],
+  ["observatory-20260702c-icon-48.png", 48],
+  ["observatory-20260702c-icon-192.png", 192],
+  ["observatory-20260702c-icon-512.png", 512],
+  ["observatory-20260702c-maskable-icon-192.png", 192],
+  ["observatory-20260702c-maskable-icon-512.png", 512],
   ["observatory-icon-32.png", 32],
   ["observatory-icon-48.png", 48],
   ["observatory-icon-192.png", 192],
@@ -34,10 +41,18 @@ writeFileSync(join(iconDir, "icon.svg"), svg);
 writeFileSync(join(iconDir, "maskable-icon.svg"), svg);
 writeFileSync(join(iconDir, "observatory-icon.svg"), svg);
 writeFileSync(join(iconDir, "observatory-maskable-icon.svg"), svg);
+writeFileSync(join(iconDir, "observatory-20260702c-icon.svg"), svg);
+writeFileSync(join(iconDir, "observatory-20260702c-maskable-icon.svg"), svg);
 writeFileSync(join(root, "public", "favicon.ico"), encodeIco([
   readFileSync(join(iconDir, "observatory-icon-32.png")),
   readFileSync(join(iconDir, "observatory-icon-48.png")),
   readFileSync(join(iconDir, "observatory-icon-192.png")),
+]));
+writeFileSync(join(root, "public", "observatory-20260702c-favicon.ico"), encodeIco([
+  readFileSync(join(iconDir, "observatory-20260702c-icon-16.png")),
+  readFileSync(join(iconDir, "observatory-20260702c-icon-32.png")),
+  readFileSync(join(iconDir, "observatory-20260702c-icon-48.png")),
+  readFileSync(join(iconDir, "observatory-20260702c-icon-192.png")),
 ]));
 
 function decodePng(buffer) {

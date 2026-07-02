@@ -349,7 +349,7 @@ export default function AuthPanel({
           >
             <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,.16)]">
               <img
-                src="/icons/observatory-icon-192.png"
+                src="/icons/observatory-20260702c-icon-192.png"
                 alt=""
                 className="h-full w-full object-cover"
                 draggable="false"
