@@ -14,6 +14,7 @@
     "test:sketch": "node scripts/dreamSketchBoard.test.mjs",
     "test:tags": "node scripts/tagLocalization.test.mjs",
     "test:pwa": "node scripts/pwaAssets.test.mjs",
+    "test:seo": "node scripts/seoReadiness.test.mjs",
     "icons:pwa": "node scripts/generatePwaIcons.mjs",
     "tags:audit": "node scripts/curateCurrentCustomTags.mjs",
     "android:sync": "npm run build && cap sync android",

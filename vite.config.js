@@ -11,6 +11,13 @@ export default defineConfig({
       includeAssets: [
         "app-icon.svg",
         "favicon.ico",
+        "favicon-48x48.png",
+        "favicon-96x96.png",
+        "apple-touch-icon.png",
+        "icon-192.png",
+        "icon-512.png",
+        "icon-maskable-512.png",
+        "og-image.png",
         "observatory-20260702c-favicon.ico",
         "icons/observatory-20260702c-icon.svg",
         "icons/observatory-20260702c-maskable-icon.svg",

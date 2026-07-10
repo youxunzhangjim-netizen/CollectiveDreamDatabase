@@ -31,7 +31,7 @@ assert.ok(viteConfig.includes("supabase"));
 assert.ok(indexHtml.includes('<link rel="manifest" href="/manifest.webmanifest?v=observatory-icon-20260702c"'));
 assert.ok(indexHtml.includes("apple-mobile-web-app-capable"));
 assert.ok(indexHtml.includes("Dream Observatory"));
-assert.ok(indexHtml.includes("/observatory-20260702c-favicon.ico"));
+assert.ok(indexHtml.includes('<link rel="icon" href="/favicon.ico" sizes="any"'));
 assert.ok(indexHtml.includes("/icons/observatory-20260702c-icon-32.png"));
 assert.ok(indexHtml.includes("/icons/observatory-20260702c-icon-192.png"));
 

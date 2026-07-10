@@ -11,6 +11,12 @@ mkdirSync(iconDir, { recursive: true });
 
 const source = decodePng(readFileSync(sourcePath));
 const outputs = [
+  ["favicon-48x48.png", 48],
+  ["favicon-96x96.png", 96],
+  ["apple-touch-icon.png", 180],
+  ["icon-192.png", 192],
+  ["icon-512.png", 512],
+  ["icon-maskable-512.png", 512],
   ["observatory-20260702c-icon-16.png", 16],
   ["observatory-20260702c-icon-32.png", 32],
   ["observatory-20260702c-icon-48.png", 48],
@@ -24,18 +30,29 @@ const outputs = [
   ["observatory-icon-512.png", 512],
   ["observatory-maskable-icon-192.png", 192],
   ["observatory-maskable-icon-512.png", 512],
-  ["icon-192.png", 192],
-  ["icon-512.png", 512],
   ["maskable-icon-192.png", 192],
   ["maskable-icon-512.png", 512],
 ];
 
 for (const [name, size] of outputs) {
   const resized = resizeContain(source, size, size);
-  writeFileSync(join(iconDir, name), encodePng(size, size, resized));
+  const outputPath =
+    name.startsWith("favicon-") ||
+    name === "apple-touch-icon.png" ||
+    name === "icon-192.png" ||
+    name === "icon-512.png" ||
+    name === "icon-maskable-512.png"
+      ? join(root, "public", name)
+      : join(iconDir, name);
+  writeFileSync(outputPath, encodePng(size, size, resized));
 }
 
-const svg = renderEmbeddedSvg(readFileSync(join(iconDir, "icon-512.png")));
+writeFileSync(join(iconDir, "icon-192.png"), readFileSync(join(root, "public", "icon-192.png")));
+writeFileSync(join(iconDir, "icon-512.png"), readFileSync(join(root, "public", "icon-512.png")));
+writeFileSync(join(iconDir, "maskable-icon-512.png"), readFileSync(join(root, "public", "icon-maskable-512.png")));
+writeFileSync(join(root, "public", "og-image.png"), encodePng(1200, 630, renderOgImage(source)));
+
+const svg = renderEmbeddedSvg(readFileSync(join(root, "public", "icon-512.png")));
 writeFileSync(join(root, "public", "app-icon.svg"), svg);
 writeFileSync(join(iconDir, "icon.svg"), svg);
 writeFileSync(join(iconDir, "maskable-icon.svg"), svg);
@@ -158,6 +175,52 @@ function resizeContain(sourceImage, width, height) {
       const sourceY = clamp(((y + 0.5) / scale) - 0.5, 0, sourceImage.height - 1);
       const color = sampleBilinear(sourceImage, sourceX, sourceY);
       setPixel(target, width, x + offsetX, y + offsetY, color);
+    }
+  }
+
+  return target;
+}
+
+function renderOgImage(sourceImage) {
+  const width = 1200;
+  const height = 630;
+  const target = Buffer.alloc(width * height * 4);
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const nx = x / (width - 1);
+      const ny = y / (height - 1);
+      const glow = Math.max(0, 1 - Math.hypot(nx - 0.5, ny - 0.48) * 1.9);
+      const cyan = Math.round(18 + glow * 30);
+      const violet = Math.round(22 + Math.max(0, 1 - Math.hypot(nx - 0.72, ny - 0.7) * 2.2) * 42);
+      setPixel(target, width, x, y, [
+        Math.round(3 + glow * 7),
+        Math.round(6 + cyan * 0.45),
+        Math.round(14 + violet * 0.5),
+        255,
+      ]);
+    }
+  }
+
+  const iconSize = 430;
+  const icon = resizeContain(sourceImage, iconSize, iconSize);
+  const offsetX = Math.round((width - iconSize) / 2);
+  const offsetY = 78;
+
+  for (let y = 0; y < iconSize; y += 1) {
+    for (let x = 0; x < iconSize; x += 1) {
+      const sourceIndex = (y * iconSize + x) * 4;
+      const alpha = icon[sourceIndex + 3] / 255;
+      const targetX = offsetX + x;
+      const targetY = offsetY + y;
+      const targetIndex = (targetY * width + targetX) * 4;
+
+      for (let channel = 0; channel < 3; channel += 1) {
+        target[targetIndex + channel] = Math.round(
+          target[targetIndex + channel] * (1 - alpha) + icon[sourceIndex + channel] * alpha
+        );
+      }
+      target[targetIndex + 3] = 255;
     }
   }
 

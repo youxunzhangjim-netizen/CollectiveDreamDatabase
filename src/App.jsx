@@ -13,6 +13,7 @@ import OfflineStatusBanner from "./components/OfflineStatusBanner.jsx";
 import PWAInstallPrompt from "./components/PWAInstallPrompt.jsx";
 import PWAUpdatePrompt from "./components/PWAUpdatePrompt.jsx";
 import RecordDreamPage from "./components/RecordDreamPage.jsx";
+import SeoHead from "./components/SeoHead.jsx";
 import UserDashboard from "./components/UserDashboard.jsx";
 import { useAuth } from "./hooks/useAuth.js";
 import { logout } from "./lib/authService.js";
@@ -311,6 +312,7 @@ export default function App() {
 
     return (
       <>
+        <SeoHead activeView={activeView} legalPage={legalPage} language={language} />
         <AppearanceToggle
           language={language}
           appearance={appearance}

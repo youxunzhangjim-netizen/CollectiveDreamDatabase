@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /account/delete
+Disallow: /account/
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /dashboard/private
+Disallow: /moderation
+Disallow: /offline-drafts
+
+Sitemap: https://collectivedreamdatabase.vercel.app/sitemap.xml
