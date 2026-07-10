@@ -5,10 +5,27 @@ export const SITE_URL = "https://collectivedreamdatabase.vercel.app";
 const DEFAULT_DESCRIPTION =
   "A privacy-first dream journal, public dream archive, and collective dream research platform. Record dreams privately, share anonymously, explore dreams from around the world, and contribute to anonymous collective dream statistics.";
 
+const HOME_COPY = {
+  en: {
+    title: "Collective Dream Observatory — Record Dreams, Explore Collective Imagination",
+    description: DEFAULT_DESCRIPTION,
+  },
+  zh: {
+    title: "集體夢境觀測站 — 記錄夢境，探索集體想像",
+    description:
+      "集體夢境觀測站是一個以隱私為核心的夢境記錄、公開分享與集體夢境統計平台。你可以私人記錄夢、匿名分享夢、閱讀世界各地的夢，並以匿名方式參與集體夢境研究。",
+  },
+  es: {
+    title: "Observatorio Colectivo de Sueños — Registra sueños, explora la imaginación colectiva",
+    description:
+      "Observatorio Colectivo de Sueños es una plataforma centrada en la privacidad para registrar sueños, compartirlos de forma anónima, explorar sueños de todo el mundo y contribuir a estadísticas colectivas.",
+  },
+};
+
 const ROUTE_META = {
   database: {
     path: "/",
-    title: "Collective Dream Observatory - Record Dreams, Explore Collective Imagination",
+    title: HOME_COPY.en.title,
     description: DEFAULT_DESCRIPTION,
   },
   explore: {
@@ -109,9 +126,12 @@ const LEGAL_META = {
 export default function SeoHead({ activeView = "database", legalPage = "", language = "en" }) {
   useEffect(() => {
     const resolvedView = resolveView(activeView);
-    const meta = resolvedView === "legal"
+    const baseMeta = resolvedView === "legal"
       ? LEGAL_META[legalPage] || LEGAL_META.privacy
       : ROUTE_META[resolvedView] || ROUTE_META.database;
+    const meta = resolvedView === "database"
+      ? { ...baseMeta, ...(HOME_COPY[language] || HOME_COPY.en) }
+      : baseMeta;
     const url = `${SITE_URL}${meta.path}`;
     const locale = language === "zh" ? "zh-Hant" : language === "es" ? "es" : "en";
 

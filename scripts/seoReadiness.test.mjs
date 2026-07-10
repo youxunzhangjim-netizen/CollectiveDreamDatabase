@@ -13,7 +13,7 @@ const setup = readText("SEO_SETUP.md");
 
 assert.ok(indexHtml.includes('name="google-site-verification"'));
 assert.ok(indexHtml.includes("I4KYU9sXxXt2IuSO_d27mj9d5coiL9v_ePj8cVoqcrg"));
-assert.ok(indexHtml.includes("Collective Dream Observatory - Record Dreams, Explore Collective Imagination"));
+assert.ok(indexHtml.includes("Collective Dream Observatory — Record Dreams, Explore Collective Imagination"));
 assert.ok(indexHtml.includes('property="og:image" content="https://collectivedreamdatabase.vercel.app/og-image.png"'));
 assert.ok(indexHtml.includes('name="twitter:card" content="summary_large_image"'));
 assert.ok(indexHtml.includes('rel="canonical" href="https://collectivedreamdatabase.vercel.app/"'));
@@ -22,6 +22,9 @@ assert.ok(indexHtml.includes('"@type": "WebSite"'));
 assert.ok(indexHtml.includes('"@type": "WebApplication"'));
 
 assert.ok(app.includes("SeoHead"));
+assert.ok(seoHead.includes("Collective Dream Observatory — Record Dreams, Explore Collective Imagination"));
+assert.ok(seoHead.includes("集體夢境觀測站是一個以隱私為核心的夢境記錄、公開分享與集體夢境統計平台"));
+assert.ok(seoHead.includes("Observatorio Colectivo de Sueños es una plataforma centrada en la privacidad"));
 assert.ok(seoHead.includes("Privacy Policy - Collective Dream Observatory"));
 assert.ok(seoHead.includes("Research Archive - Collective Dream Observatory"));
 assert.ok(seoHead.includes("noindex,nofollow"));
